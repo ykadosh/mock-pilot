@@ -95,6 +95,7 @@ interface CanvasPreviewProps {
 export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: CanvasPreviewProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
+  const [iframeWidth, setIframeWidth] = useState(1280);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -111,15 +112,15 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: C
     doc.documentElement.style.overflow = "hidden";
     doc.body.style.overflow = "hidden";
 
-    // Report content height to parent
-    const height = doc.documentElement.scrollHeight;
-    setIframeHeight(height);
+    // Report content dimensions to parent
+    const updateDimensions = () => {
+      setIframeHeight(doc.documentElement.scrollHeight);
+      setIframeWidth(Math.max(1280, doc.documentElement.scrollWidth));
+    };
+    updateDimensions();
 
     // Observe resize changes
-    const resizeObserver = new ResizeObserver(() => {
-      const h = doc.documentElement.scrollHeight;
-      setIframeHeight(h);
-    });
+    const resizeObserver = new ResizeObserver(updateDimensions);
     resizeObserver.observe(doc.body);
 
     // Inject picker script
@@ -156,7 +157,7 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: C
       <div
         className="bg-white shadow-2xl self-start overflow-hidden rounded-lg relative"
         style={{
-          width: `${1280 * scale}px`,
+          width: `${iframeWidth * scale}px`,
           height: `${iframeHeight * scale}px`,
         }}
       >
@@ -167,7 +168,7 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: C
               srcDoc={html}
               className="border-none origin-top-left"
               style={{
-                width: "1280px",
+                width: `${iframeWidth}px`,
                 height: `${iframeHeight}px`,
                 transform: `scale(${scale})`,
               }}
