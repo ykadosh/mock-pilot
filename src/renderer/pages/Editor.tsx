@@ -54,7 +54,7 @@ export function Editor() {
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">
             <div className="flex items-center gap-md">
-              <div className="absolute -bottom-[1px] left-md translate-y-full flex items-center bg-[#020617] rounded-b-lg px-1 pb-1 pt-0.5 border border-t-0 border-[#334155]">
+              <div className="absolute top-0 bottom-[-5px] left-md flex items-center bg-[#020617] rounded-b-lg px-1 border border-t-0 border-[#334155]">
                 <button
                   onClick={() => setDevice("desktop")}
                   className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
