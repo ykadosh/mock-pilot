@@ -6,4 +6,9 @@ export default defineConfig({
       external: ["puppeteer"],
     },
   },
+  resolve: {
+    // Ensure Node.js built-in modules are not bundled
+    browserField: false,
+    mainFields: ["module", "main"],
+  },
 });
