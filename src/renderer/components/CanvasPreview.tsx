@@ -108,15 +108,22 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: C
     if (!iframe?.contentWindow) return;
     const doc = iframe.contentWindow.document;
 
+    // Report content dimensions to parent
+    const updateDimensions = () => {
+      // Temporarily allow overflow to get true content dimensions
+      doc.documentElement.style.overflow = "visible";
+      doc.body.style.overflow = "visible";
+      const w = Math.max(1280, doc.documentElement.scrollWidth, doc.body.scrollWidth);
+      const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+      doc.documentElement.style.overflow = "hidden";
+      doc.body.style.overflow = "hidden";
+      setIframeHeight(h);
+      setIframeWidth(w);
+    };
+
     // Disable iframe scrolling — canvas handles it
     doc.documentElement.style.overflow = "hidden";
     doc.body.style.overflow = "hidden";
-
-    // Report content dimensions to parent
-    const updateDimensions = () => {
-      setIframeHeight(doc.documentElement.scrollHeight);
-      setIframeWidth(Math.max(1280, doc.documentElement.scrollWidth));
-    };
     updateDimensions();
 
     // Observe resize changes
@@ -153,9 +160,9 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: C
   const scale = zoom / 100;
 
   return (
-    <div className="flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] flex justify-center">
+    <div className="flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
       <div
-        className="bg-white shadow-2xl self-start overflow-hidden rounded-lg relative"
+        className="bg-white shadow-2xl overflow-hidden rounded-lg relative mx-auto"
         style={{
           width: `${iframeWidth * scale}px`,
           height: `${iframeHeight * scale}px`,
