@@ -42,7 +42,7 @@ const projects = [
 
 export function Dashboard() {
   return (
-    <main className="ml-64 mt-12 p-lg min-h-[calc(100vh-48px)] bg-[#020617]">
+    <main className="mt-12 p-lg min-h-[calc(100vh-48px)] bg-[#020617]">
       {/* Dashboard Header */}
       <section className="flex justify-between items-end mb-xl">
         <div className="space-y-xs">
