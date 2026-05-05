@@ -25,7 +25,7 @@ export function Dialog({ open, onClose, children }: DialogProps) {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
       {/* Content */}
-      <div className="relative bg-surface-container border border-outline-variant/40 rounded-xl shadow-2xl p-lg max-w-md w-full mx-4">
+      <div className="relative bg-surface-container border border-outline-variant/40 rounded-xl shadow-2xl p-lg w-[28rem] max-w-[calc(100vw-2rem)]">
         {children}
       </div>
     </div>
