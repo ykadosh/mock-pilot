@@ -95,6 +95,21 @@ app.on("ready", () => {
     return { success: true, html };
   });
 
+  // Delete a project
+  ipcMain.handle("delete-project", (_event, id: string) => {
+    const projects = getProjectsIndex();
+    const updated = projects.filter((p) => p.id !== id);
+    saveProjectsIndex(updated);
+
+    // Remove files
+    const htmlPath = path.join(projectsDir, `${id}.html`);
+    const pngPath = path.join(projectsDir, `${id}.png`);
+    if (fs.existsSync(htmlPath)) fs.unlinkSync(htmlPath);
+    if (fs.existsSync(pngPath)) fs.unlinkSync(pngPath);
+
+    return { success: true };
+  });
+
   // Get project thumbnail
   ipcMain.handle("get-project-thumbnail", (_event, id: string) => {
     const pngPath = path.join(projectsDir, `${id}.png`);

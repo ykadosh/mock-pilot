@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import { Dashboard } from "@/pages/Dashboard";
 import { Editor } from "@/pages/Editor";
 import { Assets } from "@/pages/Assets";
+import { Settings } from "@/pages/Settings";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route path="/editor" element={<Editor />} />
           <Route path="/editor/:projectId" element={<Editor />} />
           <Route path="/assets" element={<Assets />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </HashRouter>
     </div>

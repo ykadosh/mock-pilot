@@ -24,6 +24,7 @@ declare global {
         html?: string;
         error?: string;
       }>;
+      deleteProject: (id: string) => Promise<{ success: boolean }>;
       getProjectThumbnail: (id: string) => Promise<string | null>;
     };
   }
