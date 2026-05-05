@@ -38,9 +38,6 @@ export function PropertiesPanel({ element, onClose, onApplyModification }: Prope
       setLoading(false);
     }
   };
-  const selector = element.tagName +
-    (element.id ? `#${element.id}` : "") +
-    (element.className ? `.${element.className.trim().split(/\s+/).slice(0, 2).join(".")}` : "");
 
   return (
     <aside className="absolute right-4 top-14 bottom-4 w-72 bg-slate-900/90 backdrop-blur-md border border-[#334155] rounded-lg flex flex-col overflow-hidden shadow-2xl">
