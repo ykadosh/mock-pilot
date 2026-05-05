@@ -113,11 +113,11 @@ function ComponentCard({
 export function Assets() {
   return (
     <div className="overflow-hidden">
-      <TopNav activeTab="assets">
+      <TopNav>
         <SearchBar />
       </TopNav>
       <div className="flex pt-12 h-screen">
-        <SideNav defaultCollapsed />
+        <SideNav activeTab="assets" defaultCollapsed />
 
         <main className="flex-1 grid grid-cols-12 h-full overflow-hidden">
           {/* Center: Component Bank */}

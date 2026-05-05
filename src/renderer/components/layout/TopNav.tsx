@@ -1,20 +1,11 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
-type ActiveTab = "editor" | "assets" | "settings";
-
 interface TopNavProps {
-  activeTab?: ActiveTab;
   children?: ReactNode;
 }
 
-const tabs: { label: string; key: ActiveTab; to: string }[] = [
-  { label: "Editor", key: "editor", to: "/editor" },
-  { label: "Assets", key: "assets", to: "/assets" },
-  { label: "Settings", key: "settings", to: "/settings" },
-];
-
-export function TopNav({ activeTab, children }: TopNavProps) {
+export function TopNav({ children }: TopNavProps) {
   const navigate = useNavigate();
 
   return (
@@ -26,23 +17,6 @@ export function TopNav({ activeTab, children }: TopNavProps) {
         >
           MockPilot
         </span>
-        {activeTab && (
-          <nav className="hidden md:flex gap-sm ml-xl items-center">
-            {tabs.map((tab) => (
-              <span
-                key={tab.key}
-                onClick={() => navigate(tab.to)}
-                className={`cursor-pointer px-2 py-1 transition-colors ${
-                  tab.key === activeTab
-                    ? "text-white bg-slate-800 rounded-sm"
-                    : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
-                }`}
-              >
-                {tab.label}
-              </span>
-            ))}
-          </nav>
-        )}
       </div>
       <div className="flex items-center gap-md">
         {children}

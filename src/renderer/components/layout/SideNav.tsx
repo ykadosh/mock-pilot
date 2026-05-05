@@ -1,15 +1,20 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+type ActiveTab = "editor" | "assets" | "settings";
 
 interface NavItemProps {
   icon: string;
   label: string;
   active?: boolean;
   collapsed: boolean;
+  onClick?: () => void;
 }
 
-function NavItem({ icon, label, active, collapsed }: NavItemProps) {
+function NavItem({ icon, label, active, collapsed, onClick }: NavItemProps) {
   return (
     <button
+      onClick={onClick}
       className={`relative flex items-center w-full h-12 group cursor-pointer transition-all ${
         collapsed ? "justify-center" : "gap-sm px-md"
       } ${
@@ -32,12 +37,20 @@ function NavItem({ icon, label, active, collapsed }: NavItemProps) {
   );
 }
 
+const pageTabs: { label: string; key: ActiveTab; to: string; icon: string }[] = [
+  { label: "Editor", key: "editor", to: "/editor", icon: "edit" },
+  { label: "Assets", key: "assets", to: "/assets", icon: "widgets" },
+  { label: "Settings", key: "settings", to: "/settings", icon: "settings" },
+];
+
 interface SideNavProps {
+  activeTab?: ActiveTab;
   defaultCollapsed?: boolean;
 }
 
-export function SideNav({ defaultCollapsed = false }: SideNavProps) {
+export function SideNav({ activeTab, defaultCollapsed = false }: SideNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const navigate = useNavigate();
 
   return (
     <aside
@@ -65,6 +78,21 @@ export function SideNav({ defaultCollapsed = false }: SideNavProps) {
         )}
       </div>
 
+      {/* Page-level tabs */}
+      <div className="border-b border-slate-700 py-sm flex flex-col gap-1">
+        {pageTabs.map((tab) => (
+          <NavItem
+            key={tab.key}
+            icon={tab.icon}
+            label={tab.label}
+            active={tab.key === activeTab}
+            collapsed={collapsed}
+            onClick={() => navigate(tab.to)}
+          />
+        ))}
+      </div>
+
+      {/* Tool items */}
       <nav className="flex-1 overflow-y-auto py-sm flex flex-col gap-1">
         <NavItem icon="ads_click" label="Element Picker" collapsed={collapsed} />
         <NavItem icon="layers" label="Layers" collapsed={collapsed} />
@@ -79,5 +107,3 @@ export function SideNav({ defaultCollapsed = false }: SideNavProps) {
     </aside>
   );
 }
-
-

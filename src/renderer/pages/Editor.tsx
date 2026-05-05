@@ -6,9 +6,9 @@ import { PropertiesPanel } from "../components/PropertiesPanel";
 export function Editor() {
   return (
     <div className="overflow-hidden">
-      <TopNav activeTab="editor" />
+      <TopNav />
       <div className="flex pt-12 h-screen">
-        <SideNav />
+        <SideNav activeTab="editor" />
         <main className="flex-1 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container">
