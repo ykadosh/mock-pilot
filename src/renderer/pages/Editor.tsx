@@ -14,6 +14,7 @@ export interface SelectedElement {
 export function Editor() {
   const [pickerActive, setPickerActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
+  const [zoom, setZoom] = useState(100);
 
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {
@@ -25,6 +26,9 @@ export function Editor() {
     setSelectedElement(element);
     setPickerActive(false);
   };
+
+  const zoomIn = () => setZoom((z) => Math.min(z + 25, 200));
+  const zoomOut = () => setZoom((z) => Math.max(z - 25, 25));
 
   return (
     <div className="overflow-hidden">
@@ -57,14 +61,14 @@ export function Editor() {
                 </button>
               </div>
               <span className="text-ui-small font-body-main text-slate-400">
-                1280 x 800 (100%)
+                1280 x 800 ({zoom}%)
               </span>
             </div>
             <div className="flex items-center gap-sm">
-              <button className="material-symbols-outlined text-slate-500 hover:text-white">
+              <button onClick={zoomIn} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
                 zoom_in
               </button>
-              <button className="material-symbols-outlined text-slate-500 hover:text-white">
+              <button onClick={zoomOut} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
                 zoom_out
               </button>
               <div className="w-px h-4 bg-slate-700 mx-2" />
@@ -81,6 +85,7 @@ export function Editor() {
           <CanvasPreview
             pickerActive={pickerActive}
             onElementSelected={handleElementSelected}
+            zoom={zoom}
           />
 
           {/* Properties Panel */}

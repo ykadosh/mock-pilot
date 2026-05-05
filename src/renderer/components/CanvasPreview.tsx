@@ -89,9 +89,10 @@ const PICKER_SCRIPT = `
 interface CanvasPreviewProps {
   pickerActive?: boolean;
   onElementSelected?: (element: SelectedElement) => void;
+  zoom?: number;
 }
 
-export function CanvasPreview({ pickerActive, onElementSelected }: CanvasPreviewProps) {
+export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: CanvasPreviewProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -148,16 +149,28 @@ export function CanvasPreview({ pickerActive, onElementSelected }: CanvasPreview
     return () => window.removeEventListener("message", handleMessage);
   }, [onElementSelected]);
 
+  const scale = zoom / 100;
+
   return (
     <div className="flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] flex justify-center">
-      <div className="w-full max-w-5xl bg-white shadow-2xl self-start overflow-hidden rounded-lg relative">
+      <div
+        className="bg-white shadow-2xl self-start overflow-hidden rounded-lg relative"
+        style={{
+          width: `${1280 * scale}px`,
+          height: `${iframeHeight * scale}px`,
+        }}
+      >
         {html ? (
           <>
             <iframe
               ref={iframeRef}
               srcDoc={html}
-              className="w-full border-none"
-              style={{ height: `${iframeHeight}px` }}
+              className="border-none origin-top-left"
+              style={{
+                width: "1280px",
+                height: `${iframeHeight}px`,
+                transform: `scale(${scale})`,
+              }}
               sandbox="allow-same-origin allow-scripts"
               title="Website Preview"
               onLoad={handleIframeLoad}
