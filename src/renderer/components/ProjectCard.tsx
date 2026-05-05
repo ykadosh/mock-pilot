@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Dialog } from "./ui/Dialog";
 
 interface ProjectCardProps {
   title: string;
@@ -84,21 +86,59 @@ export function ProjectCard({
 
 export function NewProjectCard() {
   const navigate = useNavigate();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [url, setUrl] = useState("");
+
+  const handleCreate = () => {
+    setDialogOpen(false);
+    navigate("/editor");
+  };
 
   return (
-    <div
-      onClick={() => navigate("/editor")}
-      className="group border-2 border-dashed border-outline-variant/30 rounded flex flex-col items-center justify-center p-xl hover:border-primary/50 transition-all bg-surface-container/20 cursor-pointer"
-    >
-      <div className="w-12 h-12 rounded-full border border-outline-variant/50 flex items-center justify-center mb-md group-hover:scale-110 group-hover:bg-primary/10 transition-all">
-        <span className="material-symbols-outlined text-primary">add</span>
+    <>
+      <div
+        onClick={() => setDialogOpen(true)}
+        className="group border-2 border-dashed border-outline-variant/30 rounded flex flex-col items-center justify-center p-xl hover:border-primary/50 transition-all bg-surface-container/20 cursor-pointer"
+      >
+        <div className="w-12 h-12 rounded-full border border-outline-variant/50 flex items-center justify-center mb-md group-hover:scale-110 group-hover:bg-primary/10 transition-all">
+          <span className="material-symbols-outlined text-primary">add</span>
+        </div>
+        <span className="font-headline-md text-on-surface-variant">
+          Start a New Project
+        </span>
+        <p className="text-ui-small text-on-surface-variant/40 mt-xs text-center">
+          Import from URL or use a pre-built template.
+        </p>
       </div>
-      <span className="font-headline-md text-on-surface-variant">
-        Start a New Project
-      </span>
-      <p className="text-ui-small text-on-surface-variant/40 mt-xs text-center">
-        Import from URL or use a pre-built template.
-      </p>
-    </div>
+
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+        <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">
+          New Project
+        </h2>
+        <p className="text-body-main text-on-surface-variant mb-lg">
+          Paste the URL of the website you want to mock.
+        </p>
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://example.com"
+          className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary transition-colors mb-lg"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && url.trim()) handleCreate();
+          }}
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={handleCreate}
+            disabled={!url.trim()}
+            className="bg-primary-container text-on-primary-container px-lg py-sm font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Create
+          </button>
+        </div>
+      </Dialog>
+    </>
   );
 }

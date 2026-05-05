@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { ProjectCard, NewProjectCard } from "../components/ProjectCard";
 import { TopNav } from "../components/layout/TopNav";
+import { Dialog } from "../components/ui/Dialog";
 import { useNavigate } from "react-router-dom";
 
 const projects = [
@@ -44,6 +46,13 @@ const projects = [
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [url, setUrl] = useState("");
+
+  const handleCreate = () => {
+    setDialogOpen(false);
+    navigate("/editor");
+  };
 
   return (
     <>
@@ -60,7 +69,7 @@ export function Dashboard() {
           </p>
         </div>
         <button
-          onClick={() => navigate("/editor")}
+          onClick={() => setDialogOpen(true)}
           className="bg-primary hover:bg-surface-tint text-on-primary-fixed flex items-center gap-sm px-lg py-md rounded transition-all font-ui-small font-bold shadow-lg shadow-primary/10"
         >
           <span className="material-symbols-outlined">add_circle</span>
@@ -148,6 +157,35 @@ export function Dashboard() {
         </div>
       </div>
     </main>
+
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+        <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">
+          New Project
+        </h2>
+        <p className="text-body-main text-on-surface-variant mb-lg">
+          Paste the URL of the website you want to mock.
+        </p>
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://example.com"
+          className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary transition-colors mb-lg"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && url.trim()) handleCreate();
+          }}
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={handleCreate}
+            disabled={!url.trim()}
+            className="bg-primary-container text-on-primary-container px-lg py-sm font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Create
+          </button>
+        </div>
+      </Dialog>
     </>
   );
 }
