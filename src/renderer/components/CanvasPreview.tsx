@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { getCapturedHtml } from "../lib/store";
 import type { SelectedElement } from "../pages/Editor";
 
@@ -47,6 +47,22 @@ const PICKER_SCRIPT = `
     label.textContent = getSelector(el);
   }
 
+  function getUniquePath(el) {
+    const path = [];
+    while (el && el !== document.body) {
+      let selector = el.tagName.toLowerCase();
+      if (el.id) { path.unshift('#' + el.id); break; }
+      const parent = el.parentElement;
+      if (parent) {
+        const siblings = Array.from(parent.children).filter(c => c.tagName === el.tagName);
+        if (siblings.length > 1) selector += ':nth-of-type(' + (siblings.indexOf(el) + 1) + ')';
+      }
+      path.unshift(selector);
+      el = parent;
+    }
+    return 'body > ' + path.join(' > ');
+  }
+
   function handleClick(e) {
     if (!active) return;
     e.preventDefault();
@@ -63,7 +79,9 @@ const PICKER_SCRIPT = `
         tagName: el.tagName.toLowerCase(),
         id: el.id || '',
         className: (typeof el.className === 'string' ? el.className : ''),
-        computedStyle: style
+        computedStyle: style,
+        outerHTML: el.outerHTML,
+        cssPath: getUniquePath(el)
       }
     }, '*');
   }
@@ -78,6 +96,19 @@ const PICKER_SCRIPT = `
       if (overlay) overlay.style.display = 'none';
       if (label) label.style.display = 'none';
       document.body.style.cursor = '';
+    } else if (e.data && e.data.type === 'apply-modification') {
+      const { cssPath, html } = e.data;
+      try {
+        const el = document.querySelector(cssPath);
+        if (el) {
+          el.outerHTML = html;
+          window.parent.postMessage({ type: 'modification-applied', success: true }, '*');
+        } else {
+          window.parent.postMessage({ type: 'modification-applied', success: false, error: 'Element not found' }, '*');
+        }
+      } catch (err) {
+        window.parent.postMessage({ type: 'modification-applied', success: false, error: err.message }, '*');
+      }
     }
   });
 
@@ -86,6 +117,10 @@ const PICKER_SCRIPT = `
 })();
 `;
 
+export interface CanvasPreviewHandle {
+  applyModification: (cssPath: string, newHTML: string) => void;
+}
+
 interface CanvasPreviewProps {
   pickerActive?: boolean;
   onElementSelected?: (element: SelectedElement) => void;
@@ -93,10 +128,18 @@ interface CanvasPreviewProps {
   viewportWidth?: number;
 }
 
-export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280 }: CanvasPreviewProps) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280 }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    applyModification(cssPath: string, newHTML: string) {
+      const iframe = iframeRef.current;
+      if (!iframe?.contentWindow) return;
+      iframe.contentWindow.postMessage({ type: "apply-modification", cssPath, html: newHTML }, "*");
+    },
+  }));
 
   useEffect(() => {
     setHtml(getCapturedHtml());
@@ -215,4 +258,4 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, vie
       </div>
     </div>
   );
-}
+});

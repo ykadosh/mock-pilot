@@ -27,6 +27,11 @@ declare global {
       renameProject: (id: string, newTitle: string) => Promise<{ success: boolean }>;
       deleteProject: (id: string) => Promise<{ success: boolean }>;
       getProjectThumbnail: (id: string) => Promise<string | null>;
+      aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => Promise<{
+        success: boolean;
+        html?: string;
+        error?: string;
+      }>;
     };
   }
 }

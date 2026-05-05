@@ -9,4 +9,6 @@ contextBridge.exposeInMainWorld("api", {
   renameProject: (id: string, newTitle: string) => ipcRenderer.invoke("rename-project", id, newTitle),
   deleteProject: (id: string) => ipcRenderer.invoke("delete-project", id),
   getProjectThumbnail: (id: string) => ipcRenderer.invoke("get-project-thumbnail", id),
+  aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) =>
+    ipcRenderer.invoke("ai-modify-element", data),
 });

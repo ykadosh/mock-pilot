@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import fs from "fs";
+import { execSync } from "child_process";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -191,6 +192,75 @@ app.on("ready", () => {
       } finally {
         await browser.close();
       }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: message };
+    }
+  });
+
+  // AI element modification
+  ipcMain.handle("ai-modify-element", async (_event, data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => {
+    try {
+      // Get GitHub token from gh CLI
+      let token: string;
+      try {
+        token = execSync("gh auth token", { encoding: "utf-8" }).trim();
+      } catch {
+        return { success: false, error: "Not authenticated with GitHub. Run `gh auth login` first." };
+      }
+
+      const systemPrompt = `You are an expert front-end developer. The user has selected an HTML element and wants to modify it.
+You will receive the element's current HTML and computed CSS styles.
+Based on the user's instructions, return ONLY the modified HTML for that element.
+
+Rules:
+- Return only the modified outerHTML of the element, nothing else.
+- Do not wrap in markdown code blocks or add any explanation.
+- Preserve the overall structure but apply the requested changes.
+- You may modify inline styles, classes, attributes, text content, or child elements.
+- If adding styles, use inline styles (style attribute) since you don't have access to a stylesheet.
+- Keep the same tag type unless the user explicitly asks to change it.`;
+
+      const userMessage = `Here is the selected element's HTML:
+\`\`\`html
+${data.outerHTML}
+\`\`\`
+
+Here are its current computed styles:
+${Object.entries(data.computedStyle).map(([k, v]) => `${k}: ${v}`).join("\n")}
+
+User's requested modification: ${data.prompt}
+
+Return only the modified HTML element:`;
+
+      const response = await fetch("https://models.github.ai/inference/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          temperature: 0.3,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return { success: false, error: `API error (${response.status}): ${errorText}` };
+      }
+
+      const result = await response.json();
+      let modifiedHTML = result.choices?.[0]?.message?.content?.trim() || "";
+
+      // Strip markdown code blocks if present
+      modifiedHTML = modifiedHTML.replace(/^```(?:html)?\n?/i, "").replace(/\n?```$/i, "").trim();
+
+      return { success: true, html: modifiedHTML };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       return { success: false, error: message };

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
 import { SideNav } from "../components/layout/SideNav";
-import { CanvasPreview } from "../components/CanvasPreview";
+import { CanvasPreview, CanvasPreviewHandle } from "../components/CanvasPreview";
 import { PropertiesPanel } from "../components/PropertiesPanel";
 
 export interface SelectedElement {
@@ -10,6 +10,8 @@ export interface SelectedElement {
   id: string;
   className: string;
   computedStyle: Record<string, string>;
+  outerHTML: string;
+  cssPath: string;
 }
 
 type DevicePreset = "desktop" | "tablet" | "phone";
@@ -26,6 +28,7 @@ export function Editor() {
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [zoom, setZoom] = useState(100);
   const [device, setDevice] = useState<DevicePreset>("desktop");
+  const canvasRef = useRef<CanvasPreviewHandle>(null);
 
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {
@@ -36,6 +39,10 @@ export function Editor() {
   const handleElementSelected = (element: SelectedElement) => {
     setSelectedElement(element);
     setPickerActive(false);
+  };
+
+  const handleApplyModification = (cssPath: string, newHTML: string) => {
+    canvasRef.current?.applyModification(cssPath, newHTML);
   };
 
   const zoomIn = () => setZoom((z) => Math.min(z + 25, 200));
@@ -99,6 +106,7 @@ export function Editor() {
 
           {/* Canvas */}
           <CanvasPreview
+            ref={canvasRef}
             pickerActive={pickerActive}
             onElementSelected={handleElementSelected}
             zoom={zoom}
@@ -110,6 +118,7 @@ export function Editor() {
             <PropertiesPanel
               element={selectedElement}
               onClose={() => setSelectedElement(null)}
+              onApplyModification={handleApplyModification}
             />
           )}
         </main>

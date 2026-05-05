@@ -1,11 +1,43 @@
+import { useState } from "react";
 import type { SelectedElement } from "../pages/Editor";
 
 interface PropertiesPanelProps {
   element: SelectedElement;
   onClose: () => void;
+  onApplyModification?: (cssPath: string, newHTML: string) => void;
 }
 
-export function PropertiesPanel({ element, onClose }: PropertiesPanelProps) {
+export function PropertiesPanel({ element, onClose, onApplyModification }: PropertiesPanelProps) {
+  const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const selector = element.tagName +
+    (element.id ? `#${element.id}` : "") +
+    (element.className ? `.${element.className.trim().split(/\s+/).slice(0, 2).join(".")}` : "");
+
+  const handleApply = async () => {
+    if (!prompt.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      const result = await window.api.aiModifyElement({
+        prompt: prompt.trim(),
+        outerHTML: element.outerHTML,
+        computedStyle: element.computedStyle,
+      });
+      if (result.success && result.html) {
+        onApplyModification?.(element.cssPath, result.html);
+        setPrompt("");
+      } else {
+        setError(result.error || "Failed to modify element");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unexpected error");
+    } finally {
+      setLoading(false);
+    }
+  };
   const selector = element.tagName +
     (element.id ? `#${element.id}` : "") +
     (element.className ? `.${element.className.trim().split(/\s+/).slice(0, 2).join(".")}` : "");
@@ -43,12 +75,34 @@ export function PropertiesPanel({ element, onClose }: PropertiesPanelProps) {
             AI MODIFIER
           </h3>
           <textarea
-            className="w-full bg-[#020617] border border-[#334155] rounded p-sm text-ui-small font-body-main text-on-surface focus:outline-none focus:border-primary-container h-24 resize-none placeholder-slate-600 mb-sm"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            disabled={loading}
+            className="w-full bg-[#020617] border border-[#334155] rounded p-sm text-ui-small font-body-main text-on-surface focus:outline-none focus:border-primary-container h-24 resize-none placeholder-slate-600 mb-sm disabled:opacity-50"
             placeholder="Describe changes to the selected element..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.metaKey && prompt.trim() && !loading) handleApply();
+            }}
           />
-          <button className="w-full bg-violet-600 hover:bg-violet-700 text-white font-ui-small text-ui-small py-1.5 rounded transition-colors flex items-center justify-center gap-xs">
-            <span className="material-symbols-outlined text-sm">bolt</span>
-            Apply Modification
+          {error && (
+            <p className="text-[10px] text-error mb-sm">{error}</p>
+          )}
+          <button
+            onClick={handleApply}
+            disabled={!prompt.trim() || loading}
+            className="w-full bg-violet-600 hover:bg-violet-700 text-white font-ui-small text-ui-small py-1.5 rounded transition-colors flex items-center justify-center gap-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {loading ? (
+              <>
+                <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                Generating...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-sm">bolt</span>
+                Apply Modification
+              </>
+            )}
           </button>
         </div>
 
