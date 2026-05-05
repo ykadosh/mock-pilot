@@ -10,6 +10,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/editor" element={<Editor />} />
+          <Route path="/editor/:projectId" element={<Editor />} />
           <Route path="/assets" element={<Assets />} />
         </Routes>
       </HashRouter>

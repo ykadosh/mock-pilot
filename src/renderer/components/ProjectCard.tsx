@@ -5,10 +5,11 @@ import { Dialog } from "./ui/Dialog";
 interface ProjectCardProps {
   title: string;
   url: string;
-  imageUrl: string;
+  imageUrl?: string;
   lastEdit: string;
   isHero?: boolean;
   isActive?: boolean;
+  onClick?: () => void;
 }
 
 export function ProjectCard({
@@ -18,10 +19,12 @@ export function ProjectCard({
   lastEdit,
   isHero,
   isActive,
+  onClick,
 }: ProjectCardProps) {
   return (
     <div
-      className={`group relative bg-surface-container border border-outline-variant/30 overflow-hidden hover:border-primary/50 transition-all flex flex-col ${
+      onClick={onClick}
+      className={`group relative bg-surface-container border border-outline-variant/30 overflow-hidden hover:border-primary/50 transition-all flex flex-col cursor-pointer ${
         isHero ? "col-span-1 lg:col-span-2 row-span-1" : ""
       }`}
     >
@@ -30,11 +33,17 @@ export function ProjectCard({
           isHero ? "h-64" : "h-40"
         }`}
       >
-        <img
-          className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500"
-          src={imageUrl}
-          alt={title}
-        />
+        {imageUrl ? (
+          <img
+            className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500"
+            src={imageUrl}
+            alt={title}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="material-symbols-outlined text-4xl text-slate-600">language</span>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-transparent to-transparent" />
         {isActive && (
           <div className="absolute top-md right-md bg-primary-container/80 backdrop-blur-md px-sm py-xs text-[10px] font-bold text-on-primary-container uppercase tracking-widest rounded-sm border border-primary/20">
@@ -97,10 +106,17 @@ export function NewProjectCard() {
     try {
       const result = await window.api.captureWebsite(url.trim());
       if (result.success && result.html) {
+        let title: string;
+        try {
+          title = new URL(url.trim()).hostname.replace(/^www\./, "");
+        } catch {
+          title = url.trim();
+        }
+        const project = await window.api.saveProject({ url: url.trim(), title, html: result.html });
         const { setCapturedHtml } = await import("../lib/store");
         setCapturedHtml(result.html);
         setDialogOpen(false);
-        navigate("/editor");
+        navigate(`/editor/${project.id}`);
       } else {
         setError(result.error || "Failed to capture website");
       }

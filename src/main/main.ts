@@ -1,8 +1,40 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
+import fs from "fs";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
+
+// Projects storage
+const projectsDir = path.join(app.getPath("userData"), "projects");
+
+function ensureProjectsDir() {
+  if (!fs.existsSync(projectsDir)) {
+    fs.mkdirSync(projectsDir, { recursive: true });
+  }
+}
+
+interface ProjectMeta {
+  id: string;
+  title: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function getProjectsIndex(): ProjectMeta[] {
+  const indexPath = path.join(projectsDir, "index.json");
+  if (!fs.existsSync(indexPath)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(indexPath, "utf-8"));
+  } catch {
+    return [];
+  }
+}
+
+function saveProjectsIndex(projects: ProjectMeta[]) {
+  fs.writeFileSync(path.join(projectsDir, "index.json"), JSON.stringify(projects, null, 2));
+}
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
@@ -25,6 +57,38 @@ const createWindow = () => {
 };
 
 app.on("ready", () => {
+  ensureProjectsDir();
+
+  // List all projects
+  ipcMain.handle("list-projects", () => {
+    return getProjectsIndex();
+  });
+
+  // Save a new project
+  ipcMain.handle("save-project", (_event, data: { url: string; title: string; html: string }) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const now = new Date().toISOString();
+    const meta: ProjectMeta = { id, title: data.title, url: data.url, createdAt: now, updatedAt: now };
+
+    // Save HTML file
+    fs.writeFileSync(path.join(projectsDir, `${id}.html`), data.html, "utf-8");
+
+    // Update index
+    const projects = getProjectsIndex();
+    projects.unshift(meta);
+    saveProjectsIndex(projects);
+
+    return meta;
+  });
+
+  // Load a project's HTML
+  ipcMain.handle("load-project", (_event, id: string) => {
+    const htmlPath = path.join(projectsDir, `${id}.html`);
+    if (!fs.existsSync(htmlPath)) return { success: false, error: "Project not found" };
+    const html = fs.readFileSync(htmlPath, "utf-8");
+    return { success: true, html };
+  });
+
   // Register IPC handlers before creating window
   ipcMain.handle("capture-website", async (_event, url: string) => {
     try {
