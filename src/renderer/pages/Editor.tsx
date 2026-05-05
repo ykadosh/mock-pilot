@@ -53,31 +53,30 @@ export function Editor() {
         <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">
-            <div className="flex items-center gap-md">
-              <div className="absolute top-0 bottom-[-5px] left-md flex items-center bg-[#020617] rounded-b-lg px-1 border border-t-0 border-[#334155]">
-                <button
-                  onClick={() => setDevice("desktop")}
-                  className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  <span className="material-symbols-outlined text-lg leading-none">desktop_windows</span>
-                </button>
-                <button
-                  onClick={() => setDevice("tablet")}
-                  className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  <span className="material-symbols-outlined text-lg leading-none">tablet_mac</span>
-                </button>
-                <button
-                  onClick={() => setDevice("phone")}
-                  className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  <span className="material-symbols-outlined text-lg leading-none">smartphone</span>
-                </button>
-              </div>
-              <span className="text-ui-small font-body-main text-slate-400">
-                {deviceWidth} x {deviceHeight} ({zoom}%)
-              </span>
+            {/* Device buttons lip — absolutely positioned */}
+            <div className="absolute top-0 bottom-[-5px] left-md flex items-center bg-[#020617] rounded-b-lg px-1 border border-t-0 border-[#334155]">
+              <button
+                onClick={() => setDevice("desktop")}
+                className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+              >
+                <span className="material-symbols-outlined text-lg leading-none">desktop_windows</span>
+              </button>
+              <button
+                onClick={() => setDevice("tablet")}
+                className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+              >
+                <span className="material-symbols-outlined text-lg leading-none">tablet_mac</span>
+              </button>
+              <button
+                onClick={() => setDevice("phone")}
+                className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+              >
+                <span className="material-symbols-outlined text-lg leading-none">smartphone</span>
+              </button>
             </div>
+            <span className="text-ui-small font-body-main text-slate-400 mx-auto">
+              {deviceWidth} x {deviceHeight} ({zoom}%)
+            </span>
             <div className="flex items-center gap-sm">
               <button onClick={zoomIn} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
                 zoom_in
