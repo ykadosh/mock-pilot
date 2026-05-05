@@ -39,7 +39,7 @@ export function Editor() {
           activeTool={pickerActive ? "Element Picker" : undefined}
           onToolClick={handleToolClick}
         />
-        <main className="flex-1 bg-[#020617] flex flex-col h-full relative">
+        <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container">
             <div className="flex items-center gap-md">
