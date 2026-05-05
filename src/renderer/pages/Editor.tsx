@@ -1,4 +1,4 @@
-import { EditorTopNav } from "../components/layout/EditorTopNav";
+import { TopNav } from "../components/layout/TopNav";
 import { EditorSideNav } from "../components/layout/EditorSideNav";
 import { CanvasPreview } from "../components/CanvasPreview";
 import { PropertiesPanel } from "../components/PropertiesPanel";
@@ -6,7 +6,7 @@ import { PropertiesPanel } from "../components/PropertiesPanel";
 export function Editor() {
   return (
     <div className="overflow-hidden">
-      <EditorTopNav />
+      <TopNav activeTab="editor" />
       <div className="flex pt-12 h-screen">
         <EditorSideNav />
         <main className="ml-64 flex-1 bg-[#020617] flex flex-col h-full relative">

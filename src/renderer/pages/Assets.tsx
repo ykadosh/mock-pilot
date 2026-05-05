@@ -1,5 +1,20 @@
-import { AssetsTopNav } from "../components/layout/AssetsTopNav";
+import { TopNav } from "../components/layout/TopNav";
 import { AssetsIconNav } from "../components/layout/AssetsIconNav";
+
+function SearchBar() {
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant px-2 py-1 flex items-center gap-2 rounded">
+      <span className="material-symbols-outlined text-outline text-[16px]">
+        search
+      </span>
+      <input
+        className="bg-transparent border-none focus:ring-0 focus:outline-none text-ui-small w-48 text-on-surface"
+        placeholder="Search Components..."
+        type="text"
+      />
+    </div>
+  );
+}
 
 function LibraryCard({
   name,
@@ -98,7 +113,9 @@ function ComponentCard({
 export function Assets() {
   return (
     <div className="overflow-hidden">
-      <AssetsTopNav />
+      <TopNav activeTab="assets">
+        <SearchBar />
+      </TopNav>
       <div className="flex pt-12 h-screen">
         <AssetsIconNav />
 
