@@ -46,9 +46,11 @@ const pageTabs: { label: string; key: ActiveTab; to: string; icon: string }[] = 
 interface SideNavProps {
   activeTab?: ActiveTab;
   defaultCollapsed?: boolean;
+  activeTool?: string;
+  onToolClick?: (tool: string) => void;
 }
 
-export function SideNav({ activeTab, defaultCollapsed = false }: SideNavProps) {
+export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToolClick }: SideNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const navigate = useNavigate();
 
@@ -94,10 +96,10 @@ export function SideNav({ activeTab, defaultCollapsed = false }: SideNavProps) {
 
       {/* Tool items */}
       <nav className="flex-1 overflow-y-auto py-sm flex flex-col gap-1">
-        <NavItem icon="ads_click" label="Element Picker" collapsed={collapsed} />
-        <NavItem icon="layers" label="Layers" collapsed={collapsed} />
-        <NavItem icon="code" label="Code Editor" collapsed={collapsed} />
-        <NavItem icon="ios_share" label="Export" collapsed={collapsed} />
+        <NavItem icon="ads_click" label="Element Picker" active={activeTool === "Element Picker"} collapsed={collapsed} onClick={() => onToolClick?.("Element Picker")} />
+        <NavItem icon="layers" label="Layers" active={activeTool === "Layers"} collapsed={collapsed} onClick={() => onToolClick?.("Layers")} />
+        <NavItem icon="code" label="Code Editor" active={activeTool === "Code Editor"} collapsed={collapsed} onClick={() => onToolClick?.("Code Editor")} />
+        <NavItem icon="ios_share" label="Export" active={activeTool === "Export"} collapsed={collapsed} onClick={() => onToolClick?.("Export")} />
       </nav>
 
       <div className="border-t border-slate-700 p-sm flex flex-col gap-1">

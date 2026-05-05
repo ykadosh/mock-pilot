@@ -1,14 +1,40 @@
+import { useState } from "react";
 import { TopNav } from "../components/layout/TopNav";
 import { SideNav } from "../components/layout/SideNav";
 import { CanvasPreview } from "../components/CanvasPreview";
 import { PropertiesPanel } from "../components/PropertiesPanel";
 
+export interface SelectedElement {
+  tagName: string;
+  id: string;
+  className: string;
+  computedStyle: Record<string, string>;
+}
+
 export function Editor() {
+  const [pickerActive, setPickerActive] = useState(false);
+  const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
+
+  const handleToolClick = (tool: string) => {
+    if (tool === "Element Picker") {
+      setPickerActive((prev) => !prev);
+    }
+  };
+
+  const handleElementSelected = (element: SelectedElement) => {
+    setSelectedElement(element);
+    setPickerActive(false);
+  };
+
   return (
     <div className="overflow-hidden">
       <TopNav />
       <div className="flex pt-12 h-screen">
-        <SideNav activeTab="editor" />
+        <SideNav
+          activeTab="editor"
+          activeTool={pickerActive ? "Element Picker" : undefined}
+          onToolClick={handleToolClick}
+        />
         <main className="flex-1 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container">
@@ -52,10 +78,18 @@ export function Editor() {
           </div>
 
           {/* Canvas */}
-          <CanvasPreview />
+          <CanvasPreview
+            pickerActive={pickerActive}
+            onElementSelected={handleElementSelected}
+          />
 
           {/* Properties Panel */}
-          <PropertiesPanel />
+          {selectedElement && (
+            <PropertiesPanel
+              element={selectedElement}
+              onClose={() => setSelectedElement(null)}
+            />
+          )}
         </main>
       </div>
     </div>

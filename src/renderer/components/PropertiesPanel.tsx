@@ -1,13 +1,39 @@
-export function PropertiesPanel() {
+import type { SelectedElement } from "../pages/Editor";
+
+interface PropertiesPanelProps {
+  element: SelectedElement;
+  onClose: () => void;
+}
+
+export function PropertiesPanel({ element, onClose }: PropertiesPanelProps) {
+  const selector = element.tagName +
+    (element.id ? `#${element.id}` : "") +
+    (element.className ? `.${element.className.trim().split(/\s+/).slice(0, 2).join(".")}` : "");
+
   return (
     <aside className="absolute right-4 top-14 bottom-4 w-72 bg-slate-900/90 backdrop-blur-md border border-[#334155] rounded-lg flex flex-col overflow-hidden shadow-2xl">
       <div className="p-sm border-b border-slate-700 flex justify-between items-center bg-slate-800">
         <span className="font-label-caps text-label-caps text-slate-300">
           ELEMENT PROPERTIES
         </span>
-        <span className="material-symbols-outlined text-sm text-slate-500">
-          more_vert
-        </span>
+        <button
+          onClick={onClose}
+          className="material-symbols-outlined text-sm text-slate-500 hover:text-slate-200 cursor-pointer"
+        >
+          close
+        </button>
+      </div>
+
+      {/* Selected element indicator */}
+      <div className="p-sm border-b border-slate-800 bg-violet-900/20">
+        <div className="flex items-center gap-sm">
+          <span className="material-symbols-outlined text-sm text-violet-400">
+            ads_click
+          </span>
+          <span className="text-[11px] font-mono text-violet-300 truncate">
+            {selector}
+          </span>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -32,9 +58,6 @@ export function PropertiesPanel() {
             <span className="font-label-caps text-label-caps text-slate-500">
               LAYOUT
             </span>
-            <span className="material-symbols-outlined text-xs text-slate-600">
-              expand_less
-            </span>
           </div>
           <div className="grid grid-cols-2 gap-sm">
             <div className="space-y-1">
@@ -44,7 +67,8 @@ export function PropertiesPanel() {
               <input
                 className="w-full bg-[#020617] border border-[#334155] rounded px-2 py-1 text-xs font-mono text-slate-300"
                 type="text"
-                defaultValue="100%"
+                value={element.computedStyle.width || "auto"}
+                readOnly
               />
             </div>
             <div className="space-y-1">
@@ -54,7 +78,30 @@ export function PropertiesPanel() {
               <input
                 className="w-full bg-[#020617] border border-[#334155] rounded px-2 py-1 text-xs font-mono text-slate-300"
                 type="text"
-                defaultValue="Auto"
+                value={element.computedStyle.height || "auto"}
+                readOnly
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-500 uppercase font-bold">
+                Padding
+              </label>
+              <input
+                className="w-full bg-[#020617] border border-[#334155] rounded px-2 py-1 text-xs font-mono text-slate-300"
+                type="text"
+                value={element.computedStyle.padding || "0"}
+                readOnly
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-500 uppercase font-bold">
+                Margin
+              </label>
+              <input
+                className="w-full bg-[#020617] border border-[#334155] rounded px-2 py-1 text-xs font-mono text-slate-300"
+                type="text"
+                value={element.computedStyle.margin || "0"}
+                readOnly
               />
             </div>
           </div>
@@ -66,64 +113,50 @@ export function PropertiesPanel() {
             <span className="font-label-caps text-label-caps text-slate-500">
               APPEARANCE
             </span>
-            <span className="material-symbols-outlined text-xs text-slate-600">
-              expand_less
-            </span>
           </div>
           <div className="space-y-md">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-slate-400">Fill Color</span>
+              <span className="text-xs text-slate-400">Background</span>
               <div className="flex items-center gap-sm">
                 <span className="text-[10px] font-mono text-slate-500">
-                  #F8FAFC
+                  {element.computedStyle["background-color"] || "transparent"}
                 </span>
-                <div className="w-4 h-4 rounded-sm border border-slate-600 bg-slate-50" />
               </div>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs text-slate-400">Border Radius</span>
-              <div className="flex items-center gap-sm bg-[#020617] border border-[#334155] rounded px-1">
-                <input
-                  className="w-8 bg-transparent border-none p-1 text-xs font-mono text-slate-300"
-                  type="number"
-                  defaultValue={12}
-                />
-                <span className="text-[10px] text-slate-600 px-1">px</span>
+              <span className="text-xs text-slate-400">Color</span>
+              <div className="flex items-center gap-sm">
+                <span className="text-[10px] font-mono text-slate-500">
+                  {element.computedStyle.color || "inherit"}
+                </span>
               </div>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-400">Font Size</span>
+              <span className="text-[10px] font-mono text-slate-500">
+                {element.computedStyle["font-size"] || "inherit"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-400">Border Radius</span>
+              <span className="text-[10px] font-mono text-slate-500">
+                {element.computedStyle["border-radius"] || "0"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-400">Display</span>
+              <span className="text-[10px] font-mono text-slate-500">
+                {element.computedStyle.display || "block"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-400">Position</span>
+              <span className="text-[10px] font-mono text-slate-500">
+                {element.computedStyle.position || "static"}
+              </span>
             </div>
           </div>
         </div>
-
-        {/* Effects */}
-        <div className="p-md">
-          <div className="flex justify-between items-center mb-md">
-            <span className="font-label-caps text-label-caps text-slate-500">
-              EFFECTS
-            </span>
-            <span className="material-symbols-outlined text-xs text-slate-400">
-              add
-            </span>
-          </div>
-          <div className="flex items-center justify-between bg-slate-800/50 p-sm rounded border border-dashed border-slate-700">
-            <span className="text-[10px] text-slate-500">
-              No effects applied
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Active AI Suggestion */}
-      <div className="p-md bg-violet-900/20 border-t border-violet-500/30">
-        <div className="flex items-center gap-sm text-violet-400 mb-1">
-          <span className="material-symbols-outlined text-sm">bolt</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest">
-            Active AI Suggestion
-          </span>
-        </div>
-        <p className="text-[11px] text-violet-300/80 leading-relaxed italic">
-          "Try applying a glassmorphism effect to the header to match the modern
-          aesthetic."
-        </p>
       </div>
     </aside>
   );
