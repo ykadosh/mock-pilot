@@ -1,0 +1,49 @@
+{
+  "name": "mock-pilot",
+  "version": "1.0.0",
+  "description": "MockPilot - Electron app",
+  "main": ".vite/build/main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "config": {
+    "forge": "./forge.config.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ykadosh/mock-pilot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ykadosh/mock-pilot/issues"
+  },
+  "homepage": "https://github.com/ykadosh/mock-pilot#readme",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-deb": "^7.11.1",
+    "@electron-forge/maker-rpm": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/plugin-vite": "^7.11.1",
+    "@tailwindcss/vite": "^4.2.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "electron": "^41.5.0",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.14.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tailwind-merge": "^3.5.0"
+  }
+}
