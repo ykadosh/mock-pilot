@@ -17,14 +17,27 @@ export function Settings() {
   const navigate = useNavigate();
   const [project, setProject] = useState<ProjectMeta | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [name, setName] = useState("");
+  const [nameSaved, setNameSaved] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
     window.api.listProjects().then((projects) => {
       const found = projects.find((p) => p.id === projectId);
-      if (found) setProject(found);
+      if (found) {
+        setProject(found);
+        setName(found.title);
+      }
     });
   }, [projectId]);
+
+  const handleRename = async () => {
+    if (!projectId || !name.trim() || name === project?.title) return;
+    await window.api.renameProject(projectId, name.trim());
+    setProject((prev) => prev ? { ...prev, title: name.trim() } : prev);
+    setNameSaved(true);
+    setTimeout(() => setNameSaved(false), 2000);
+  };
 
   const handleDelete = async () => {
     if (!projectId) return;
@@ -55,7 +68,22 @@ export function Settings() {
                     <label className="text-ui-small text-on-surface-variant uppercase font-bold tracking-wider">
                       Project Name
                     </label>
-                    <p className="text-body-main text-on-surface mt-xs">{project.title}</p>
+                    <div className="flex items-center gap-sm mt-xs">
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+                        className="flex-1 bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-sm py-xs text-body-main text-on-surface focus:outline-none focus:border-primary transition-colors"
+                      />
+                      <button
+                        onClick={handleRename}
+                        disabled={!name.trim() || name === project.title}
+                        className="text-ui-small text-primary hover:text-surface-tint disabled:text-slate-600 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                      >
+                        {nameSaved ? "Saved ✓" : "Save"}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-ui-small text-on-surface-variant uppercase font-bold tracking-wider">

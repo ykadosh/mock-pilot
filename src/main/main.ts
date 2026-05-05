@@ -95,6 +95,17 @@ app.on("ready", () => {
     return { success: true, html };
   });
 
+  // Rename a project
+  ipcMain.handle("rename-project", (_event, id: string, newTitle: string) => {
+    const projects = getProjectsIndex();
+    const project = projects.find((p) => p.id === id);
+    if (!project) return { success: false };
+    project.title = newTitle;
+    project.updatedAt = new Date().toISOString();
+    saveProjectsIndex(projects);
+    return { success: true };
+  });
+
   // Delete a project
   ipcMain.handle("delete-project", (_event, id: string) => {
     const projects = getProjectsIndex();
