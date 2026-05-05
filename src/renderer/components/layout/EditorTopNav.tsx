@@ -1,15 +1,25 @@
+import { useNavigate } from "react-router-dom";
+
 export function EditorTopNav() {
+  const navigate = useNavigate();
+
   return (
     <header className="bg-slate-900 border-b border-slate-700 flex justify-between items-center px-4 h-12 w-full fixed top-0 z-50">
       <div className="flex items-center gap-md">
-        <span className="text-lg font-bold tracking-tighter text-slate-50 font-inter">
+        <span
+          onClick={() => navigate("/")}
+          className="text-lg font-bold tracking-tighter text-slate-50 font-inter cursor-pointer"
+        >
           MockPilot
         </span>
         <div className="hidden md:flex gap-sm ml-xl">
           <span className="font-inter text-sm tracking-tight text-white bg-slate-800 cursor-pointer transition-colors px-2 py-1 rounded-sm">
             Editor
           </span>
-          <span className="font-inter text-sm tracking-tight text-slate-500 cursor-pointer hover:bg-slate-800 transition-colors px-2 py-1">
+          <span
+            onClick={() => navigate("/assets")}
+            className="font-inter text-sm tracking-tight text-slate-500 cursor-pointer hover:bg-slate-800 transition-colors px-2 py-1"
+          >
             Assets
           </span>
           <span className="font-inter text-sm tracking-tight text-slate-500 cursor-pointer hover:bg-slate-800 transition-colors px-2 py-1">
