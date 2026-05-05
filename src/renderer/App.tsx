@@ -1,13 +1,13 @@
-import { Button } from "@/components/ui/button";
+import { TopNav } from "@/components/layout/TopNav";
+import { SideNav } from "@/components/layout/SideNav";
+import { Dashboard } from "@/pages/Dashboard";
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-      <h1 className="text-4xl font-bold">Hello, MockPilot!</h1>
-      <p className="text-muted-foreground">
-        Electron + React + Vite + shadcn/ui
-      </p>
-      <Button>Get Started</Button>
+    <div className="dark">
+      <TopNav />
+      <SideNav />
+      <Dashboard />
     </div>
   );
 }

@@ -3,82 +3,140 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-}
+  /* Design System Colors (Material Design 3 tokens) */
+  --color-tertiary: #ffb784;
+  --color-inverse-on-surface: #283044;
+  --color-on-secondary-container: #00344e;
+  --color-on-tertiary-fixed-variant: #713700;
+  --color-on-error-container: #ffdad6;
+  --color-inverse-primary: #732ee4;
+  --color-on-error: #690005;
+  --color-secondary-container: #00a2e6;
+  --color-on-tertiary: #4f2500;
+  --color-on-primary-container: #ede0ff;
+  --color-on-secondary-fixed-variant: #004c6e;
+  --color-surface-variant: #2d3449;
+  --color-secondary: #89ceff;
+  --color-on-tertiary-fixed: #301400;
+  --color-error-container: #93000a;
+  --color-background: #0b1326;
+  --color-inverse-surface: #dae2fd;
+  --color-outline: #958da1;
+  --color-on-background: #dae2fd;
+  --color-tertiary-container: #a15100;
+  --color-on-primary-fixed: #25005a;
+  --color-primary-fixed: #eaddff;
+  --color-on-primary: #3f008e;
+  --color-on-surface: #dae2fd;
+  --color-error: #ffb4ab;
+  --color-on-secondary-fixed: #001e2f;
+  --color-surface-container-lowest: #060e20;
+  --color-surface: #0b1326;
+  --color-secondary-fixed-dim: #89ceff;
+  --color-surface-container-highest: #2d3449;
+  --color-surface-container-high: #222a3d;
+  --color-surface-container-low: #131b2e;
+  --color-surface-tint: #d2bbff;
+  --color-surface-container: #171f33;
+  --color-on-tertiary-container: #ffe0cd;
+  --color-surface-dim: #0b1326;
+  --color-secondary-fixed: #c9e6ff;
+  --color-primary: #d2bbff;
+  --color-on-surface-variant: #ccc3d8;
+  --color-primary-fixed-dim: #d2bbff;
+  --color-outline-variant: #4a4455;
+  --color-primary-container: #7c3aed;
+  --color-tertiary-fixed-dim: #ffb784;
+  --color-surface-bright: #31394d;
+  --color-on-primary-fixed-variant: #5a00c6;
+  --color-tertiary-fixed: #ffdcc6;
+  --color-on-secondary: #00344d;
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
-}
+  /* Border Radius */
+  --radius-DEFAULT: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  /* Spacing */
+  --spacing-md: 16px;
+  --spacing-xl: 48px;
+  --spacing-gutter: 1px;
+  --spacing-unit: 4px;
+  --spacing-lg: 24px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+
+  /* Font Families */
+  --font-headline-md: "Inter", system-ui, sans-serif;
+  --font-code-block: monospace;
+  --font-body-main: "Inter", system-ui, sans-serif;
+  --font-ui-small: "Inter", system-ui, sans-serif;
+  --font-label-caps: "Space Grotesk", system-ui, sans-serif;
+  --font-headline-lg: "Inter", system-ui, sans-serif;
+
+  /* Font Sizes */
+  --text-headline-md: 18px;
+  --text-headline-md--line-height: 24px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 600;
+
+  --text-code-block: 13px;
+  --text-code-block--line-height: 1.6;
+  --text-code-block--font-weight: 400;
+
+  --text-body-main: 14px;
+  --text-body-main--line-height: 20px;
+  --text-body-main--font-weight: 400;
+
+  --text-ui-small: 12px;
+  --text-ui-small--line-height: 16px;
+  --text-ui-small--font-weight: 500;
+
+  --text-label-caps: 11px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--letter-spacing: 0.05em;
+  --text-label-caps--font-weight: 700;
+
+  --text-headline-lg: 24px;
+  --text-headline-lg--line-height: 32px;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 600;
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-background text-foreground;
-    font-family: "Geist", system-ui, sans-serif;
+    background-color: #020617;
+    margin: 0;
+    padding: 0;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0b1326;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
   }
 }
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
