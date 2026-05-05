@@ -11,10 +11,19 @@ export interface SelectedElement {
   computedStyle: Record<string, string>;
 }
 
+type DevicePreset = "desktop" | "tablet" | "phone";
+
+const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number }> = {
+  desktop: { width: 1280, height: 800 },
+  tablet: { width: 768, height: 1024 },
+  phone: { width: 390, height: 844 },
+};
+
 export function Editor() {
   const [pickerActive, setPickerActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [zoom, setZoom] = useState(100);
+  const [device, setDevice] = useState<DevicePreset>("desktop");
 
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {
@@ -30,6 +39,8 @@ export function Editor() {
   const zoomIn = () => setZoom((z) => Math.min(z + 25, 200));
   const zoomOut = () => setZoom((z) => Math.max(z - 25, 25));
 
+  const { width: deviceWidth, height: deviceHeight } = DEVICE_SIZES[device];
+
   return (
     <div className="overflow-hidden">
       <TopNav />
@@ -41,27 +52,30 @@ export function Editor() {
         />
         <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
-          <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container">
+          <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">
             <div className="flex items-center gap-md">
-              <div className="flex bg-[#020617] rounded p-0.5 border border-[#334155]">
-                <button className="p-1 px-2 text-primary-container">
-                  <span className="material-symbols-outlined text-lg">
-                    desktop_windows
-                  </span>
+              <div className="flex items-center bg-[#020617] rounded p-0.5 border border-[#334155]">
+                <button
+                  onClick={() => setDevice("desktop")}
+                  className={`p-1 px-2 flex items-center justify-center cursor-pointer ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                >
+                  <span className="material-symbols-outlined text-lg leading-none">desktop_windows</span>
                 </button>
-                <button className="p-1 px-2 text-slate-500 hover:text-slate-300">
-                  <span className="material-symbols-outlined text-lg">
-                    tablet_mac
-                  </span>
+                <button
+                  onClick={() => setDevice("tablet")}
+                  className={`p-1 px-2 flex items-center justify-center cursor-pointer ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                >
+                  <span className="material-symbols-outlined text-lg leading-none">tablet_mac</span>
                 </button>
-                <button className="p-1 px-2 text-slate-500 hover:text-slate-300">
-                  <span className="material-symbols-outlined text-lg">
-                    smartphone
-                  </span>
+                <button
+                  onClick={() => setDevice("phone")}
+                  className={`p-1 px-2 flex items-center justify-center cursor-pointer ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                >
+                  <span className="material-symbols-outlined text-lg leading-none">smartphone</span>
                 </button>
               </div>
               <span className="text-ui-small font-body-main text-slate-400">
-                1280 x 800 ({zoom}%)
+                {deviceWidth} x {deviceHeight} ({zoom}%)
               </span>
             </div>
             <div className="flex items-center gap-sm">
@@ -86,6 +100,7 @@ export function Editor() {
             pickerActive={pickerActive}
             onElementSelected={handleElementSelected}
             zoom={zoom}
+            viewportWidth={deviceWidth}
           />
 
           {/* Properties Panel */}

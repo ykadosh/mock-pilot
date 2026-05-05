@@ -90,9 +90,10 @@ interface CanvasPreviewProps {
   pickerActive?: boolean;
   onElementSelected?: (element: SelectedElement) => void;
   zoom?: number;
+  viewportWidth?: number;
 }
 
-export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: CanvasPreviewProps) {
+export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280 }: CanvasPreviewProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const [iframeWidth, setIframeWidth] = useState(1280);
@@ -113,7 +114,7 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: C
       // Temporarily allow overflow to get true content dimensions
       doc.documentElement.style.overflow = "visible";
       doc.body.style.overflow = "visible";
-      const w = Math.max(1280, doc.documentElement.scrollWidth, doc.body.scrollWidth);
+      const w = Math.max(viewportWidth, doc.documentElement.scrollWidth, doc.body.scrollWidth);
       const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
       doc.documentElement.style.overflow = "hidden";
       doc.body.style.overflow = "hidden";
@@ -135,6 +136,21 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100 }: C
     script.textContent = PICKER_SCRIPT;
     doc.body.appendChild(script);
   };
+
+  // Update iframe dimensions when viewport width changes
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow) return;
+    const doc = iframe.contentWindow.document;
+    doc.documentElement.style.overflow = "visible";
+    doc.body.style.overflow = "visible";
+    const w = Math.max(viewportWidth, doc.documentElement.scrollWidth, doc.body.scrollWidth);
+    const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+    doc.documentElement.style.overflow = "hidden";
+    doc.body.style.overflow = "hidden";
+    setIframeWidth(w);
+    setIframeHeight(h);
+  }, [viewportWidth]);
 
   // Activate/deactivate picker in iframe
   useEffect(() => {
