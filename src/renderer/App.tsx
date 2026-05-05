@@ -1,11 +1,16 @@
-import { TopNav } from "@/components/layout/TopNav";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import { Dashboard } from "@/pages/Dashboard";
+import { Editor } from "@/pages/Editor";
 
 function App() {
   return (
     <div className="dark">
-      <TopNav />
-      <Dashboard />
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/editor" element={<Editor />} />
+        </Routes>
+      </HashRouter>
     </div>
   );
 }

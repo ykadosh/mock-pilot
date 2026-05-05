@@ -1,4 +1,6 @@
 import { ProjectCard, NewProjectCard } from "../components/ProjectCard";
+import { TopNav } from "../components/layout/TopNav";
+import { useNavigate } from "react-router-dom";
 
 const projects = [
   {
@@ -41,8 +43,12 @@ const projects = [
 ];
 
 export function Dashboard() {
+  const navigate = useNavigate();
+
   return (
-    <main className="mt-12 p-lg min-h-[calc(100vh-48px)] bg-[#020617]">
+    <>
+      <TopNav />
+      <main className="mt-12 p-lg min-h-[calc(100vh-48px)] bg-[#020617]">
       {/* Dashboard Header */}
       <section className="flex justify-between items-end mb-xl">
         <div className="space-y-xs">
@@ -53,7 +59,10 @@ export function Dashboard() {
             Manage and iterate on your active workspace deployments.
           </p>
         </div>
-        <button className="bg-primary hover:bg-surface-tint text-on-primary-fixed flex items-center gap-sm px-lg py-md rounded transition-all font-ui-small font-bold shadow-lg shadow-primary/10">
+        <button
+          onClick={() => navigate("/editor")}
+          className="bg-primary hover:bg-surface-tint text-on-primary-fixed flex items-center gap-sm px-lg py-md rounded transition-all font-ui-small font-bold shadow-lg shadow-primary/10"
+        >
           <span className="material-symbols-outlined">add_circle</span>
           New Project
         </button>
@@ -139,5 +148,6 @@ export function Dashboard() {
         </div>
       </div>
     </main>
+    </>
   );
 }

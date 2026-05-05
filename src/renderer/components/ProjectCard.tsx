@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 interface ProjectCardProps {
   title: string;
   url: string;
@@ -81,8 +83,13 @@ export function ProjectCard({
 }
 
 export function NewProjectCard() {
+  const navigate = useNavigate();
+
   return (
-    <div className="group border-2 border-dashed border-outline-variant/30 rounded flex flex-col items-center justify-center p-xl hover:border-primary/50 transition-all bg-surface-container/20 cursor-pointer">
+    <div
+      onClick={() => navigate("/editor")}
+      className="group border-2 border-dashed border-outline-variant/30 rounded flex flex-col items-center justify-center p-xl hover:border-primary/50 transition-all bg-surface-container/20 cursor-pointer"
+    >
       <div className="w-12 h-12 rounded-full border border-outline-variant/50 flex items-center justify-center mb-md group-hover:scale-110 group-hover:bg-primary/10 transition-all">
         <span className="material-symbols-outlined text-primary">add</span>
       </div>
