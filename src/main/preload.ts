@@ -1,2 +1,5 @@
-// Preload script - runs in renderer context with Node.js access
-// Use contextBridge to expose APIs to the renderer safely
+import { contextBridge, ipcRenderer } from "electron";
+
+contextBridge.exposeInMainWorld("api", {
+  captureWebsite: (url: string) => ipcRenderer.invoke("capture-website", url),
+});

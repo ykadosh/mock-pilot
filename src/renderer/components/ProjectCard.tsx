@@ -88,10 +88,27 @@ export function NewProjectCard() {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleCreate = () => {
-    setDialogOpen(false);
-    navigate("/editor");
+  const handleCreate = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await window.api.captureWebsite(url.trim());
+      if (result.success && result.html) {
+        const { setCapturedHtml } = await import("../lib/store");
+        setCapturedHtml(result.html);
+        setDialogOpen(false);
+        navigate("/editor");
+      } else {
+        setError(result.error || "Failed to capture website");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unexpected error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -111,7 +128,7 @@ export function NewProjectCard() {
         </p>
       </div>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+      <Dialog open={dialogOpen} onClose={() => !loading && setDialogOpen(false)}>
         <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">
           New Project
         </h2>
@@ -123,19 +140,28 @@ export function NewProjectCard() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://example.com"
-          className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary transition-colors mb-lg"
+          disabled={loading}
+          className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary transition-colors mb-sm disabled:opacity-50"
           autoFocus
           onKeyDown={(e) => {
-            if (e.key === "Enter" && url.trim()) handleCreate();
+            if (e.key === "Enter" && url.trim() && !loading) handleCreate();
           }}
         />
-        <div className="flex justify-end">
+        {error && (
+          <p className="text-ui-small text-error mb-sm">{error}</p>
+        )}
+        <div className="flex justify-end mt-md">
           <button
             onClick={handleCreate}
-            disabled={!url.trim()}
-            className="bg-primary-container text-on-primary-container px-lg py-sm font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={!url.trim() || loading}
+            className="bg-primary-container text-on-primary-container px-lg py-sm font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-sm"
           >
-            Create
+            {loading && (
+              <span className="material-symbols-outlined animate-spin text-sm">
+                progress_activity
+              </span>
+            )}
+            {loading ? "Capturing..." : "Create"}
           </button>
         </div>
       </Dialog>

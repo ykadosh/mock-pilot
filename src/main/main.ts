@@ -1,5 +1,6 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
+import { captureWebsite } from "./capture";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -21,6 +22,17 @@ const createWindow = () => {
     );
   }
 };
+
+// IPC handler for capturing websites
+ipcMain.handle("capture-website", async (_event, url: string) => {
+  try {
+    const html = await captureWebsite(url);
+    return { success: true, html };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: message };
+  }
+});
 
 app.on("ready", createWindow);
 
