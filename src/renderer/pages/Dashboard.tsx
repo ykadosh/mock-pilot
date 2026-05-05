@@ -11,6 +11,7 @@ interface SavedProject {
   url: string;
   createdAt: string;
   updatedAt: string;
+  thumbnail?: string;
 }
 
 export function Dashboard() {
@@ -22,7 +23,18 @@ export function Dashboard() {
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
 
   useEffect(() => {
-    window.api.listProjects().then(setSavedProjects);
+    async function loadProjects() {
+      const projects = await window.api.listProjects();
+      // Load thumbnails
+      const withThumbnails = await Promise.all(
+        projects.map(async (p) => {
+          const thumbnail = await window.api.getProjectThumbnail(p.id);
+          return { ...p, thumbnail: thumbnail || undefined };
+        })
+      );
+      setSavedProjects(withThumbnails);
+    }
+    loadProjects();
   }, []);
 
   const handleCreate = async () => {
@@ -31,7 +43,6 @@ export function Dashboard() {
     try {
       const result = await window.api.captureWebsite(url.trim());
       if (result.success && result.html) {
-        // Extract title from URL
         let title: string;
         try {
           title = new URL(url.trim()).hostname.replace(/^www\./, "");
@@ -39,11 +50,11 @@ export function Dashboard() {
           title = url.trim();
         }
 
-        // Save project
         const project = await window.api.saveProject({
           url: url.trim(),
           title,
           html: result.html,
+          thumbnail: result.thumbnail,
         });
 
         setCapturedHtml(result.html);
@@ -109,6 +120,7 @@ export function Dashboard() {
             key={project.id}
             title={project.title}
             url={project.url}
+            imageUrl={project.thumbnail}
             lastEdit={formatDate(project.updatedAt)}
             isHero={i === 0}
             isActive={i === 0}

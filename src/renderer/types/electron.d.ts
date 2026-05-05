@@ -14,15 +14,17 @@ declare global {
       captureWebsite: (url: string) => Promise<{
         success: boolean;
         html?: string;
+        thumbnail?: string;
         error?: string;
       }>;
       listProjects: () => Promise<ProjectMeta[]>;
-      saveProject: (data: { url: string; title: string; html: string }) => Promise<ProjectMeta>;
+      saveProject: (data: { url: string; title: string; html: string; thumbnail?: string }) => Promise<ProjectMeta>;
       loadProject: (id: string) => Promise<{
         success: boolean;
         html?: string;
         error?: string;
       }>;
+      getProjectThumbnail: (id: string) => Promise<string | null>;
     };
   }
 }

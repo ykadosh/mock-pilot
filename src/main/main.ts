@@ -65,13 +65,19 @@ app.on("ready", () => {
   });
 
   // Save a new project
-  ipcMain.handle("save-project", (_event, data: { url: string; title: string; html: string }) => {
+  ipcMain.handle("save-project", (_event, data: { url: string; title: string; html: string; thumbnail?: string }) => {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     const now = new Date().toISOString();
     const meta: ProjectMeta = { id, title: data.title, url: data.url, createdAt: now, updatedAt: now };
 
     // Save HTML file
     fs.writeFileSync(path.join(projectsDir, `${id}.html`), data.html, "utf-8");
+
+    // Save thumbnail if provided
+    if (data.thumbnail) {
+      const base64Data = data.thumbnail.replace(/^data:image\/png;base64,/, "");
+      fs.writeFileSync(path.join(projectsDir, `${id}.png`), base64Data, "base64");
+    }
 
     // Update index
     const projects = getProjectsIndex();
@@ -87,6 +93,14 @@ app.on("ready", () => {
     if (!fs.existsSync(htmlPath)) return { success: false, error: "Project not found" };
     const html = fs.readFileSync(htmlPath, "utf-8");
     return { success: true, html };
+  });
+
+  // Get project thumbnail
+  ipcMain.handle("get-project-thumbnail", (_event, id: string) => {
+    const pngPath = path.join(projectsDir, `${id}.png`);
+    if (!fs.existsSync(pngPath)) return null;
+    const base64 = fs.readFileSync(pngPath, "base64");
+    return `data:image/png;base64,${base64}`;
   });
 
   // Register IPC handlers before creating window
@@ -144,7 +158,10 @@ app.on("ready", () => {
           return document.documentElement.outerHTML;
         });
 
-        return { success: true, html: `<!DOCTYPE html>\n${html}` };
+        // Take screenshot for thumbnail
+        const screenshot = await page.screenshot({ type: "png", encoding: "base64" });
+
+        return { success: true, html: `<!DOCTYPE html>\n${html}`, thumbnail: `data:image/png;base64,${screenshot}` };
       } finally {
         await browser.close();
       }

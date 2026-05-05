@@ -112,7 +112,7 @@ export function NewProjectCard() {
         } catch {
           title = url.trim();
         }
-        const project = await window.api.saveProject({ url: url.trim(), title, html: result.html });
+        const project = await window.api.saveProject({ url: url.trim(), title, html: result.html, thumbnail: result.thumbnail });
         const { setCapturedHtml } = await import("../lib/store");
         setCapturedHtml(result.html);
         setDialogOpen(false);
