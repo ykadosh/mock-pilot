@@ -54,22 +54,22 @@ export function Editor() {
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">
             <div className="flex items-center gap-md">
-              <div className="flex items-center bg-[#020617] rounded p-0.5 border border-[#334155]">
+              <div className="absolute -bottom-[1px] left-md translate-y-full flex items-center bg-[#020617] rounded-b-lg px-1 pb-1 pt-0.5 border border-t-0 border-[#334155]">
                 <button
                   onClick={() => setDevice("desktop")}
-                  className={`p-1 px-2 flex items-center justify-center cursor-pointer ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                  className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
                 >
                   <span className="material-symbols-outlined text-lg leading-none">desktop_windows</span>
                 </button>
                 <button
                   onClick={() => setDevice("tablet")}
-                  className={`p-1 px-2 flex items-center justify-center cursor-pointer ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                  className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
                 >
                   <span className="material-symbols-outlined text-lg leading-none">tablet_mac</span>
                 </button>
                 <button
                   onClick={() => setDevice("phone")}
-                  className={`p-1 px-2 flex items-center justify-center cursor-pointer ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                  className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
                 >
                   <span className="material-symbols-outlined text-lg leading-none">smartphone</span>
                 </button>

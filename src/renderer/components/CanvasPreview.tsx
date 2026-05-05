@@ -96,7 +96,6 @@ interface CanvasPreviewProps {
 export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280 }: CanvasPreviewProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
-  const [iframeWidth, setIframeWidth] = useState(1280);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -109,17 +108,14 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, vie
     if (!iframe?.contentWindow) return;
     const doc = iframe.contentWindow.document;
 
-    // Report content dimensions to parent
+    // Report content height to parent
     const updateDimensions = () => {
-      // Temporarily allow overflow to get true content dimensions
       doc.documentElement.style.overflow = "visible";
       doc.body.style.overflow = "visible";
-      const w = Math.max(viewportWidth, doc.documentElement.scrollWidth, doc.body.scrollWidth);
       const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
       doc.documentElement.style.overflow = "hidden";
       doc.body.style.overflow = "hidden";
       setIframeHeight(h);
-      setIframeWidth(w);
     };
 
     // Disable iframe scrolling — canvas handles it
@@ -137,19 +133,20 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, vie
     doc.body.appendChild(script);
   };
 
-  // Update iframe dimensions when viewport width changes
+  // Re-measure height when viewport width changes (content reflows)
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
     const doc = iframe.contentWindow.document;
-    doc.documentElement.style.overflow = "visible";
-    doc.body.style.overflow = "visible";
-    const w = Math.max(viewportWidth, doc.documentElement.scrollWidth, doc.body.scrollWidth);
-    const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
-    doc.documentElement.style.overflow = "hidden";
-    doc.body.style.overflow = "hidden";
-    setIframeWidth(w);
-    setIframeHeight(h);
+    // Allow brief reflow then measure
+    requestAnimationFrame(() => {
+      doc.documentElement.style.overflow = "visible";
+      doc.body.style.overflow = "visible";
+      const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+      doc.documentElement.style.overflow = "hidden";
+      doc.body.style.overflow = "hidden";
+      setIframeHeight(h);
+    });
   }, [viewportWidth]);
 
   // Activate/deactivate picker in iframe
@@ -180,7 +177,7 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, vie
       <div
         className="bg-white shadow-2xl overflow-hidden rounded-lg relative mx-auto"
         style={{
-          width: `${iframeWidth * scale}px`,
+          width: `${viewportWidth * scale}px`,
           height: `${iframeHeight * scale}px`,
         }}
       >
@@ -191,7 +188,7 @@ export function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, vie
               srcDoc={html}
               className="border-none origin-top-left"
               style={{
-                width: `${iframeWidth}px`,
+                width: `${viewportWidth}px`,
                 height: `${iframeHeight}px`,
                 transform: `scale(${scale})`,
               }}
