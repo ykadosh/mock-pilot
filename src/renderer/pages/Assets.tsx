@@ -1,5 +1,5 @@
 import { TopNav } from "../components/layout/TopNav";
-import { AssetsIconNav } from "../components/layout/AssetsIconNav";
+import { SideNav } from "../components/layout/SideNav";
 
 function SearchBar() {
   return (
@@ -117,9 +117,9 @@ export function Assets() {
         <SearchBar />
       </TopNav>
       <div className="flex pt-12 h-screen">
-        <AssetsIconNav />
+        <SideNav defaultCollapsed />
 
-        <main className="ml-16 flex-1 grid grid-cols-12 h-full overflow-hidden">
+        <main className="flex-1 grid grid-cols-12 h-full overflow-hidden">
           {/* Center: Component Bank */}
           <div className="col-span-9 bg-surface p-md overflow-y-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px]">
             {/* Library Selection */}

@@ -1,5 +1,5 @@
 import { TopNav } from "../components/layout/TopNav";
-import { EditorSideNav } from "../components/layout/EditorSideNav";
+import { SideNav } from "../components/layout/SideNav";
 import { CanvasPreview } from "../components/CanvasPreview";
 import { PropertiesPanel } from "../components/PropertiesPanel";
 
@@ -8,8 +8,8 @@ export function Editor() {
     <div className="overflow-hidden">
       <TopNav activeTab="editor" />
       <div className="flex pt-12 h-screen">
-        <EditorSideNav />
-        <main className="ml-64 flex-1 bg-[#020617] flex flex-col h-full relative">
+        <SideNav />
+        <main className="flex-1 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container">
             <div className="flex items-center gap-md">
