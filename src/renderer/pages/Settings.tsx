@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
 import { SideNav } from "../components/layout/SideNav";
 import { Dialog } from "../components/ui/Dialog";
@@ -12,93 +13,111 @@ interface ProjectMeta {
 }
 
 export function Settings() {
-  const [projects, setProjects] = useState<ProjectMeta[]>([]);
-  const [deleteTarget, setDeleteTarget] = useState<ProjectMeta | null>(null);
+  const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
+  const [project, setProject] = useState<ProjectMeta | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
-    window.api.listProjects().then(setProjects);
-  }, []);
+    if (!projectId) return;
+    window.api.listProjects().then((projects) => {
+      const found = projects.find((p) => p.id === projectId);
+      if (found) setProject(found);
+    });
+  }, [projectId]);
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
-    await window.api.deleteProject(deleteTarget.id);
-    setProjects((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-    setDeleteTarget(null);
-  };
-
-  const formatDate = (iso: string) => {
-    return new Date(iso).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    if (!projectId) return;
+    await window.api.deleteProject(projectId);
+    setShowDeleteDialog(false);
+    navigate("/");
   };
 
   return (
     <div className="overflow-hidden">
       <TopNav />
       <div className="flex pt-12 h-screen">
-        <SideNav activeTab="settings" defaultCollapsed />
+        <SideNav activeTab="settings" defaultCollapsed projectId={projectId} />
         <main className="flex-1 min-w-0 bg-[#020617] overflow-y-auto p-lg">
           <h1 className="font-headline-lg text-headline-lg text-on-surface mb-lg">
-            Settings
+            Project Settings
           </h1>
 
-          {/* Projects Section */}
-          <section className="mb-xl">
-            <h2 className="font-headline-md text-headline-md text-on-surface mb-md">
-              Projects
-            </h2>
-            <p className="text-body-main text-on-surface-variant mb-lg">
-              Manage your saved projects. Deleting a project removes all its data permanently.
-            </p>
-
-            {projects.length === 0 ? (
-              <p className="text-ui-small text-on-surface-variant opacity-50">
-                No projects saved yet.
-              </p>
-            ) : (
-              <div className="space-y-sm">
-                {projects.map((project) => (
-                  <div
-                    key={project.id}
-                    className="flex items-center justify-between bg-surface-container border border-outline-variant/20 rounded-lg px-md py-sm"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-body-main text-on-surface font-medium truncate">
-                        {project.title}
-                      </h3>
-                      <p className="text-ui-small text-on-surface-variant truncate">
-                        {project.url} · Created {formatDate(project.createdAt)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setDeleteTarget(project)}
-                      className="ml-md text-slate-500 hover:text-error transition-colors cursor-pointer flex items-center gap-xs"
-                    >
-                      <span className="material-symbols-outlined text-lg">delete</span>
-                    </button>
+          {project ? (
+            <div className="space-y-xl max-w-2xl">
+              {/* Project Info */}
+              <section>
+                <h2 className="font-headline-md text-headline-md text-on-surface mb-md">
+                  General
+                </h2>
+                <div className="bg-surface-container border border-outline-variant/20 rounded-lg p-md space-y-md">
+                  <div>
+                    <label className="text-ui-small text-on-surface-variant uppercase font-bold tracking-wider">
+                      Project Name
+                    </label>
+                    <p className="text-body-main text-on-surface mt-xs">{project.title}</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
+                  <div>
+                    <label className="text-ui-small text-on-surface-variant uppercase font-bold tracking-wider">
+                      Source URL
+                    </label>
+                    <p className="text-body-main text-on-surface mt-xs font-mono text-sm">{project.url}</p>
+                  </div>
+                  <div>
+                    <label className="text-ui-small text-on-surface-variant uppercase font-bold tracking-wider">
+                      Created
+                    </label>
+                    <p className="text-body-main text-on-surface mt-xs">
+                      {new Date(project.createdAt).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Danger Zone */}
+              <section>
+                <h2 className="font-headline-md text-headline-md text-error mb-md">
+                  Danger Zone
+                </h2>
+                <div className="bg-surface-container border border-error/20 rounded-lg p-md flex items-center justify-between">
+                  <div>
+                    <p className="text-body-main text-on-surface font-medium">Delete this project</p>
+                    <p className="text-ui-small text-on-surface-variant mt-xs">
+                      Permanently remove this project and all its data.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="bg-error-container text-on-error-container px-md py-sm font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all"
+                  >
+                    Delete Project
+                  </button>
+                </div>
+              </section>
+            </div>
+          ) : (
+            <p className="text-body-main text-on-surface-variant">No project selected.</p>
+          )}
 
           {/* Delete Confirmation Dialog */}
-          <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
+          <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
             <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">
               Delete Project
             </h2>
             <p className="text-body-main text-on-surface-variant mb-lg">
               Are you sure you want to delete{" "}
-              <span className="text-on-surface font-medium">
-                {deleteTarget?.title}
-              </span>
-              ? This action cannot be undone.
+              <span className="text-on-surface font-medium">{project?.title}</span>?
+              This action cannot be undone.
             </p>
             <div className="flex justify-end gap-sm">
               <button
-                onClick={() => setDeleteTarget(null)}
+                onClick={() => setShowDeleteDialog(false)}
                 className="px-md py-sm text-ui-small text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
               >
                 Cancel

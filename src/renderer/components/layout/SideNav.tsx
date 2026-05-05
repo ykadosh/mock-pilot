@@ -48,11 +48,17 @@ interface SideNavProps {
   defaultCollapsed?: boolean;
   activeTool?: string;
   onToolClick?: (tool: string) => void;
+  projectId?: string;
 }
 
-export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToolClick }: SideNavProps) {
+export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToolClick, projectId }: SideNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const navigate = useNavigate();
+
+  const getTabRoute = (tab: typeof pageTabs[0]) => {
+    if (projectId) return `${tab.to}/${projectId}`;
+    return tab.to;
+  };
 
   return (
     <aside
@@ -89,7 +95,7 @@ export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToo
             label={tab.label}
             active={tab.key === activeTab}
             collapsed={collapsed}
-            onClick={() => navigate(tab.to)}
+            onClick={() => navigate(getTabRoute(tab))}
           />
         ))}
       </div>

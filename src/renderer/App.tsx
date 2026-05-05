@@ -13,7 +13,7 @@ function App() {
           <Route path="/editor" element={<Editor />} />
           <Route path="/editor/:projectId" element={<Editor />} />
           <Route path="/assets" element={<Assets />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings/:projectId" element={<Settings />} />
         </Routes>
       </HashRouter>
     </div>

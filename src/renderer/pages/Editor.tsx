@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
 import { SideNav } from "../components/layout/SideNav";
 import { CanvasPreview } from "../components/CanvasPreview";
@@ -20,6 +21,7 @@ const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number }> = {
 };
 
 export function Editor() {
+  const { projectId } = useParams<{ projectId: string }>();
   const [pickerActive, setPickerActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [zoom, setZoom] = useState(100);
@@ -49,6 +51,7 @@ export function Editor() {
           activeTab="editor"
           activeTool={pickerActive ? "Element Picker" : undefined}
           onToolClick={handleToolClick}
+          projectId={projectId}
         />
         <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
