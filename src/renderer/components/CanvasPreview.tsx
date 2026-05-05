@@ -93,17 +93,35 @@ interface CanvasPreviewProps {
 
 export function CanvasPreview({ pickerActive, onElementSelected }: CanvasPreviewProps) {
   const [html, setHtml] = useState<string | null>(null);
+  const [iframeHeight, setIframeHeight] = useState(800);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     setHtml(getCapturedHtml());
   }, []);
 
-  // Inject picker script into iframe once loaded
+  // Inject picker script and auto-resize logic into iframe once loaded
   const handleIframeLoad = () => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
     const doc = iframe.contentWindow.document;
+
+    // Disable iframe scrolling — canvas handles it
+    doc.documentElement.style.overflow = "hidden";
+    doc.body.style.overflow = "hidden";
+
+    // Report content height to parent
+    const height = doc.documentElement.scrollHeight;
+    setIframeHeight(height);
+
+    // Observe resize changes
+    const resizeObserver = new ResizeObserver(() => {
+      const h = doc.documentElement.scrollHeight;
+      setIframeHeight(h);
+    });
+    resizeObserver.observe(doc.body);
+
+    // Inject picker script
     const script = doc.createElement("script");
     script.textContent = PICKER_SCRIPT;
     doc.body.appendChild(script);
@@ -138,7 +156,8 @@ export function CanvasPreview({ pickerActive, onElementSelected }: CanvasPreview
             <iframe
               ref={iframeRef}
               srcDoc={html}
-              className="w-full h-[800px] border-none"
+              className="w-full border-none"
+              style={{ height: `${iframeHeight}px` }}
               sandbox="allow-same-origin allow-scripts"
               title="Website Preview"
               onLoad={handleIframeLoad}
