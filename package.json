@@ -47,6 +47,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "codemirror": "^6.0.2",
+    "js-beautify": "^1.15.4",
     "lucide-react": "^1.14.0",
     "puppeteer": "^24.42.0",
     "react": "^19.2.5",

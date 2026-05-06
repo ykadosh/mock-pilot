@@ -3,6 +3,9 @@ import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { html_beautify } = require("js-beautify");
+
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
@@ -237,13 +240,44 @@ app.on("ready", () => {
           // Remove scripts
           document.querySelectorAll("script").forEach((s) => s.remove());
 
+          // Remove HTML comments
+          const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+          const comments: Comment[] = [];
+          while (walker.nextNode()) comments.push(walker.currentNode as Comment);
+          comments.forEach((c) => c.remove());
+
+          // Remove hidden elements and empty attributes
+          document.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach((el) => el.remove());
+
+          // Collapse whitespace-only text nodes
+          const textWalker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT);
+          const textNodes: Text[] = [];
+          while (textWalker.nextNode()) textNodes.push(textWalker.currentNode as Text);
+          textNodes.forEach((t) => {
+            if (t.textContent && /^\s+$/.test(t.textContent)) {
+              t.textContent = "\n";
+            }
+          });
+
           return document.documentElement.outerHTML;
         });
 
         // Take screenshot for thumbnail
         const screenshot = await page.screenshot({ type: "png", encoding: "base64" });
 
-        return { success: true, html: `<!DOCTYPE html>\n${html}`, thumbnail: `data:image/png;base64,${screenshot}` };
+        // Format the HTML with proper indentation
+        const formattedHtml = html_beautify(html, {
+          indent_size: 2,
+          indent_char: " ",
+          max_preserve_newlines: 1,
+          preserve_newlines: true,
+          wrap_line_length: 0,
+          end_with_newline: true,
+          indent_inner_html: true,
+          css_indent_size: 2,
+        });
+
+        return { success: true, html: `<!DOCTYPE html>\n${formattedHtml}`, thumbnail: `data:image/png;base64,${screenshot}` };
       } finally {
         await browser.close();
       }
