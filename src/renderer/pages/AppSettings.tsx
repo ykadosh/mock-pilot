@@ -11,27 +11,35 @@ interface AppSettingsData {
 }
 
 const AI_MODELS = [
-  {
-    id: "openai/gpt-4o",
-    name: "GPT-4o",
-    icon: "bolt",
-    iconColor: "text-primary",
-    description: "Multimodal powerhouse for complex reasoning and creative tasks.",
-  },
-  {
-    id: "anthropic/claude-sonnet-4",
-    name: "Claude Sonnet 4",
-    icon: "auto_awesome",
-    iconColor: "text-secondary",
-    description: "Balanced performance with exceptional coding and nuance handling.",
-  },
-  {
-    id: "google/gemini-2.5-pro",
-    name: "Gemini 2.5 Pro",
-    icon: "rocket_launch",
-    iconColor: "text-tertiary",
-    description: "Optimized for massive context windows and deep document analysis.",
-  },
+  // OpenAI
+  { id: "openai/gpt-4.1", name: "GPT-4.1", publisher: "OpenAI", description: "Top coding, instruction following, and long-context understanding." },
+  { id: "openai/gpt-4.1-mini", name: "GPT-4.1 Mini", publisher: "OpenAI", description: "Efficient variant with strong coding and long-context handling." },
+  { id: "openai/gpt-4.1-nano", name: "GPT-4.1 Nano", publisher: "OpenAI", description: "Lower latency and cost with solid performance." },
+  { id: "openai/gpt-4o", name: "GPT-4o", publisher: "OpenAI", description: "Advanced multimodal model for text and image tasks." },
+  { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", publisher: "OpenAI", description: "Affordable multimodal for diverse tasks." },
+  { id: "openai/o4-mini", name: "o4-mini", publisher: "OpenAI", description: "Improved reasoning with tool calling support." },
+  { id: "openai/o3", name: "o3", publisher: "OpenAI", description: "Advanced reasoning with streaming and tool use." },
+  { id: "openai/o3-mini", name: "o3-mini", publisher: "OpenAI", description: "Cost-efficient reasoning model." },
+  // Anthropic (available via GitHub Models API)
+  // Meta
+  { id: "meta/llama-4-maverick-17b-128e-instruct-fp8", name: "Llama 4 Maverick", publisher: "Meta", description: "Precise image understanding and creative writing." },
+  { id: "meta/llama-4-scout-17b-16e-instruct", name: "Llama 4 Scout", publisher: "Meta", description: "Multi-document summarization and codebase reasoning." },
+  { id: "meta/llama-3.3-70b-instruct", name: "Llama 3.3 70B", publisher: "Meta", description: "Enhanced reasoning with performance comparable to Llama 3.1 405B." },
+  // DeepSeek
+  { id: "deepseek/deepseek-r1-0528", name: "DeepSeek R1", publisher: "DeepSeek", description: "Improved reasoning with reduced hallucination and function calling." },
+  { id: "deepseek/deepseek-v3-0324", name: "DeepSeek V3", publisher: "DeepSeek", description: "Enhanced reasoning, function calling, and code generation." },
+  // Mistral
+  { id: "mistral-ai/mistral-medium-2505", name: "Mistral Medium 3", publisher: "Mistral AI", description: "Advanced reasoning, knowledge, coding and vision." },
+  { id: "mistral-ai/mistral-small-2503", name: "Mistral Small 3.1", publisher: "Mistral AI", description: "Multimodal with 128k context length." },
+  { id: "mistral-ai/codestral-2501", name: "Codestral", publisher: "Mistral AI", description: "Code generation optimized, supports 80+ languages." },
+  // xAI
+  { id: "xai/grok-3", name: "Grok 3", publisher: "xAI", description: "Excels in specialized domains like finance and healthcare." },
+  { id: "xai/grok-3-mini", name: "Grok 3 Mini", publisher: "xAI", description: "Lightweight reasoning model for logic-based tasks." },
+  // Microsoft
+  { id: "microsoft/phi-4-reasoning", name: "Phi-4 Reasoning", publisher: "Microsoft", description: "State-of-the-art open-weight reasoning model." },
+  { id: "microsoft/phi-4", name: "Phi-4", publisher: "Microsoft", description: "14B parameter model for low latency scenarios." },
+  // Cohere
+  { id: "cohere/cohere-command-a", name: "Command A", publisher: "Cohere", description: "Efficient model for agentic and multilingual use cases." },
 ];
 
 function formatBytes(bytes: number): string {
@@ -78,25 +86,43 @@ export function AppSettings() {
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
-                {AI_MODELS.map((model) => (
-                  <label key={model.id} className="relative group cursor-pointer">
-                    <input
-                      type="radio"
-                      name="llm_model"
-                      checked={settings.aiModel === model.id}
-                      onChange={() => handleModelChange(model.id)}
-                      className="peer sr-only"
-                    />
-                    <div className="h-full border border-outline-variant bg-surface-container p-md peer-checked:border-primary peer-checked:bg-surface-container-high transition-all">
-                      <div className="flex justify-between items-start mb-sm">
-                        <span className={`material-symbols-outlined ${model.iconColor}`}>{model.icon}</span>
-                        <div className="w-2 h-2 rounded-full bg-primary hidden peer-checked:block"></div>
-                      </div>
-                      <div className="font-headline-md text-headline-md text-on-surface">{model.name}</div>
-                      <div className="text-ui-small text-on-surface-variant mt-xs">{model.description}</div>
+              <div className="space-y-md">
+                {Object.entries(
+                  AI_MODELS.reduce((groups, model) => {
+                    (groups[model.publisher] ||= []).push(model);
+                    return groups;
+                  }, {} as Record<string, typeof AI_MODELS>)
+                ).map(([publisher, models]) => (
+                  <div key={publisher}>
+                    <h3 className="font-label-caps text-label-caps text-on-surface-variant mb-xs">{publisher}</h3>
+                    <div className="border border-outline-variant bg-surface-container divide-y divide-outline-variant/50 rounded">
+                      {models.map((model) => (
+                        <label
+                          key={model.id}
+                          className={`flex items-center gap-md px-md py-sm cursor-pointer transition-colors hover:bg-surface-container-high ${
+                            settings.aiModel === model.id ? "bg-surface-container-high" : ""
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="llm_model"
+                            checked={settings.aiModel === model.id}
+                            onChange={() => handleModelChange(model.id)}
+                            className="sr-only"
+                          />
+                          <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${
+                            settings.aiModel === model.id
+                              ? "border-primary bg-primary"
+                              : "border-outline"
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-body-main text-on-surface font-medium">{model.name}</div>
+                            <div className="text-ui-small text-on-surface-variant truncate">{model.description}</div>
+                          </div>
+                        </label>
+                      ))}
                     </div>
-                  </label>
+                  </div>
                 ))}
               </div>
             </section>
