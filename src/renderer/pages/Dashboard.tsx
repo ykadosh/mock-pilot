@@ -117,13 +117,14 @@ export function Dashboard() {
 
       {/* Project Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
-        {savedProjects.map((project) => (
+        {savedProjects.map((project, i) => (
           <ProjectCard
             key={project.id}
             title={project.title}
             url={project.url}
             imageUrl={project.thumbnail}
             lastEdit={formatDate(project.updatedAt)}
+            isHero={i === 0}
             onClick={() => handleOpenProject(project)}
           />
         ))}

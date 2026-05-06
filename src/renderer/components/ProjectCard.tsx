@@ -7,6 +7,7 @@ interface ProjectCardProps {
   url: string;
   imageUrl?: string;
   lastEdit: string;
+  isHero?: boolean;
   onClick?: () => void;
 }
 
@@ -15,12 +16,15 @@ export function ProjectCard({
   url,
   imageUrl,
   lastEdit,
+  isHero,
   onClick,
 }: ProjectCardProps) {
   return (
     <div
       onClick={onClick}
-      className="group relative bg-surface-container border border-outline-variant/30 overflow-hidden hover:border-primary/50 transition-all flex flex-col cursor-pointer"
+      className={`group relative bg-surface-container border border-outline-variant/30 overflow-hidden hover:border-primary/50 transition-all flex flex-col cursor-pointer ${
+        isHero ? "col-span-1 lg:col-span-2" : ""
+      }`}
     >
       <div className="relative overflow-hidden bg-surface-container-lowest h-40">
         {imageUrl ? (
