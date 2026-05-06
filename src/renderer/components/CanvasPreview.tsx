@@ -241,15 +241,22 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
     const doc = iframe.contentWindow.document;
-    // Allow brief reflow then measure
-    requestAnimationFrame(() => {
+
+    const measure = () => {
       doc.documentElement.style.overflow = "visible";
       doc.body.style.overflow = "visible";
+      // Force reflow by reading offsetHeight
+      void doc.body.offsetHeight;
       const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
       doc.documentElement.style.overflow = "hidden";
       doc.body.style.overflow = "hidden";
       setIframeHeight(h);
-    });
+    };
+
+    // Measure after a brief delay to allow content reflow at new width
+    const t1 = setTimeout(measure, 50);
+    const t2 = setTimeout(measure, 200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [viewportWidth]);
 
   // Activate/deactivate picker in iframe
