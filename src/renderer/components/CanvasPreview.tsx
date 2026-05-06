@@ -213,8 +213,11 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
     // Report content height to parent
     const updateDimensions = () => {
+      doc.documentElement.style.height = "auto";
+      doc.body.style.height = "auto";
       doc.documentElement.style.overflow = "visible";
       doc.body.style.overflow = "visible";
+      void doc.body.offsetHeight;
       const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
       doc.documentElement.style.overflow = "hidden";
       doc.body.style.overflow = "hidden";
@@ -243,20 +246,28 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     const doc = iframe.contentWindow.document;
 
     const measure = () => {
+      // Reset any fixed height on body/html so content can shrink
+      doc.documentElement.style.height = "auto";
+      doc.body.style.height = "auto";
       doc.documentElement.style.overflow = "visible";
       doc.body.style.overflow = "visible";
-      // Force reflow by reading offsetHeight
+      doc.documentElement.style.width = viewportWidth + "px";
+      doc.body.style.width = viewportWidth + "px";
+
+      // Force layout recalculation
       void doc.body.offsetHeight;
+
       const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
       doc.documentElement.style.overflow = "hidden";
       doc.body.style.overflow = "hidden";
       setIframeHeight(h);
     };
 
-    // Measure after a brief delay to allow content reflow at new width
-    const t1 = setTimeout(measure, 50);
-    const t2 = setTimeout(measure, 200);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // Measure multiple times to catch async layout
+    const t1 = setTimeout(measure, 0);
+    const t2 = setTimeout(measure, 100);
+    const t3 = setTimeout(measure, 300);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [viewportWidth]);
 
   // Activate/deactivate picker in iframe
