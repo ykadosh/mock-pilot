@@ -169,25 +169,22 @@ export function Editor() {
             htmlContent={history.currentHtml}
           />
 
-          {/* History Panel */}
-          {historyOpen && (
+          {/* Side Panel — only one at a time, history takes priority */}
+          {historyOpen ? (
             <HistoryPanel
               entries={history.entries}
               pointer={history.pointer}
               onGoTo={history.goTo}
               onClose={() => setHistoryOpen(false)}
             />
-          )}
-
-          {/* Properties Panel */}
-          {selectedElement && (
+          ) : selectedElement ? (
             <PropertiesPanel
               element={selectedElement}
               onClose={() => setSelectedElement(null)}
               onApplyModification={handleApplyModification}
               getElementHTML={() => canvasRef.current?.getElementHTML(selectedElement.mpId) ?? Promise.resolve(null)}
             />
-          )}
+          ) : null}
         </main>
       </div>
     </div>
