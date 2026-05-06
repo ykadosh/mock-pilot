@@ -10,7 +10,7 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 
 // GitHub OAuth Device Flow
 // Using a public OAuth App client ID for device flow (no secret needed)
-const GITHUB_CLIENT_ID = "Ov23liUDMFXEwgNBVRny";
+const GITHUB_CLIENT_ID = "Ov23liwdxHGMy1H6hPRx";
 
 const authFilePath = path.join(app.getPath("userData"), "github-auth.json");
 
