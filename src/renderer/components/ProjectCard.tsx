@@ -39,8 +39,13 @@ export function ProjectCard({
         setMenuOpen(false);
       }
     };
+    const handleScroll = () => setMenuOpen(false);
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
   }, [menuOpen]);
 
   const toggleMenu = (e: React.MouseEvent) => {
