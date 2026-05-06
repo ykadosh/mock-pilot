@@ -4,7 +4,7 @@ import type { SelectedElement } from "../pages/Editor";
 interface PropertiesPanelProps {
   element: SelectedElement;
   onClose: () => void;
-  onApplyModification?: (cssPath: string, newHTML: string) => void;
+  onApplyModification?: (mpId: string, newHTML: string) => void;
 }
 
 export function PropertiesPanel({ element, onClose, onApplyModification }: PropertiesPanelProps) {
@@ -27,7 +27,7 @@ export function PropertiesPanel({ element, onClose, onApplyModification }: Prope
         computedStyle: element.computedStyle,
       });
       if (result.success && result.html) {
-        onApplyModification?.(element.cssPath, result.html);
+        onApplyModification?.(element.mpId, result.html);
         setPrompt("");
       } else {
         setError(result.error || "Failed to modify element");

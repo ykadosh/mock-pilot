@@ -219,7 +219,8 @@ Rules:
 - Preserve the overall structure but apply the requested changes.
 - You may modify inline styles, classes, attributes, text content, or child elements.
 - If adding styles, use inline styles (style attribute) since you don't have access to a stylesheet.
-- Keep the same tag type unless the user explicitly asks to change it.`;
+- Keep the same tag type unless the user explicitly asks to change it.
+- IMPORTANT: Preserve any data-mp-id attribute exactly as-is. Do not remove or modify it.`;
 
       const userMessage = `Here is the selected element's HTML:
 \`\`\`html

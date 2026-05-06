@@ -68,6 +68,9 @@ const PICKER_SCRIPT = `
     e.preventDefault();
     e.stopPropagation();
     const el = e.target;
+    // Assign a unique ID for reliable element tracking across DOM mutations
+    const mpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    el.setAttribute('data-mp-id', mpId);
     const computed = window.getComputedStyle(el);
     const style = {};
     ['width','height','padding','margin','background-color','color','font-size','font-family','border-radius','display','position'].forEach(prop => {
@@ -81,7 +84,8 @@ const PICKER_SCRIPT = `
         className: (typeof el.className === 'string' ? el.className : ''),
         computedStyle: style,
         outerHTML: el.outerHTML,
-        cssPath: getUniquePath(el)
+        cssPath: getUniquePath(el),
+        mpId: mpId
       }
     }, '*');
   }
@@ -97,14 +101,24 @@ const PICKER_SCRIPT = `
       if (label) label.style.display = 'none';
       document.body.style.cursor = '';
     } else if (e.data && e.data.type === 'apply-modification') {
-      const { cssPath, html } = e.data;
+      const { mpId, html } = e.data;
       try {
-        const el = document.querySelector(cssPath);
+        const el = document.querySelector('[data-mp-id="' + mpId + '"]');
         if (el) {
-          el.outerHTML = html;
+          // Parse the new HTML and ensure the data-mp-id is preserved
+          const temp = document.createElement('div');
+          temp.innerHTML = html;
+          const newEl = temp.firstElementChild;
+          if (newEl) {
+            newEl.setAttribute('data-mp-id', mpId);
+            el.outerHTML = newEl.outerHTML;
+          } else {
+            // If the AI returned text-only or non-element content, just replace
+            el.outerHTML = html;
+          }
           window.parent.postMessage({ type: 'modification-applied', success: true }, '*');
         } else {
-          window.parent.postMessage({ type: 'modification-applied', success: false, error: 'Element not found' }, '*');
+          window.parent.postMessage({ type: 'modification-applied', success: false, error: 'Element not found by data-mp-id' }, '*');
         }
       } catch (err) {
         window.parent.postMessage({ type: 'modification-applied', success: false, error: err.message }, '*');
@@ -118,7 +132,7 @@ const PICKER_SCRIPT = `
 `;
 
 export interface CanvasPreviewHandle {
-  applyModification: (cssPath: string, newHTML: string) => void;
+  applyModification: (mpId: string, newHTML: string) => void;
 }
 
 interface CanvasPreviewProps {
@@ -134,10 +148,10 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useImperativeHandle(ref, () => ({
-    applyModification(cssPath: string, newHTML: string) {
+    applyModification(mpId: string, newHTML: string) {
       const iframe = iframeRef.current;
       if (!iframe?.contentWindow) return;
-      iframe.contentWindow.postMessage({ type: "apply-modification", cssPath, html: newHTML }, "*");
+      iframe.contentWindow.postMessage({ type: "apply-modification", mpId, html: newHTML }, "*");
     },
   }));
 

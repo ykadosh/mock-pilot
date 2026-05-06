@@ -12,6 +12,7 @@ export interface SelectedElement {
   computedStyle: Record<string, string>;
   outerHTML: string;
   cssPath: string;
+  mpId: string;
 }
 
 type DevicePreset = "desktop" | "tablet" | "phone";
@@ -41,8 +42,8 @@ export function Editor() {
     setPickerActive(false);
   };
 
-  const handleApplyModification = (cssPath: string, newHTML: string) => {
-    canvasRef.current?.applyModification(cssPath, newHTML);
+  const handleApplyModification = (mpId: string, newHTML: string) => {
+    canvasRef.current?.applyModification(mpId, newHTML);
   };
 
   const zoomIn = () => setZoom((z) => Math.min(z + 25, 200));
