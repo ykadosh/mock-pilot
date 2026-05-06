@@ -5,6 +5,7 @@ import { SideNav } from "../components/layout/SideNav";
 import { CanvasPreview, CanvasPreviewHandle } from "../components/CanvasPreview";
 import { PropertiesPanel } from "../components/PropertiesPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
+import { CodeEditor } from "../components/CodeEditor";
 import { useHistory } from "../hooks/useHistory";
 import { getCapturedHtml } from "../lib/store";
 
@@ -33,6 +34,7 @@ export function Editor() {
   const [zoom, setZoom] = useState(100);
   const [device, setDevice] = useState<DevicePreset>("desktop");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [codeEditorOpen, setCodeEditorOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const canvasRef = useRef<CanvasPreviewHandle>(null);
   const pendingLabelRef = useRef<string>("AI modification");
@@ -61,10 +63,17 @@ export function Editor() {
     if (tool === "Element Picker") {
       setPickerActive((prev) => !prev);
       setHistoryOpen(false);
+      setCodeEditorOpen(false);
     } else if (tool === "History") {
       setHistoryOpen((prev) => !prev);
       setPickerActive(false);
       setSelectedElement(null);
+      setCodeEditorOpen(false);
+    } else if (tool === "Code Editor") {
+      setCodeEditorOpen((prev) => !prev);
+      setPickerActive(false);
+      setSelectedElement(null);
+      setHistoryOpen(false);
     }
   };
 
@@ -107,6 +116,14 @@ export function Editor() {
   const zoomIn = () => setZoom((z) => Math.min(z + 25, 200));
   const zoomOut = () => setZoom((z) => Math.max(z - 25, 25));
 
+  const handleCodeUpdate = useCallback((fullHtml: string, label: string) => {
+    history.push(fullHtml, label);
+    if (projectId) {
+      window.api.updateProjectHtml(projectId, fullHtml);
+    }
+    setCodeEditorOpen(false);
+  }, [history.push, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { width: deviceWidth, height: deviceHeight } = DEVICE_SIZES[device];
 
   return (
@@ -115,7 +132,7 @@ export function Editor() {
       <div className="flex pt-12 h-screen">
         <SideNav
           activeTab="editor"
-          activeTool={pickerActive ? "Element Picker" : historyOpen ? "History" : undefined}
+          activeTool={pickerActive ? "Element Picker" : historyOpen ? "History" : codeEditorOpen ? "Code Editor" : undefined}
           onToolClick={handleToolClick}
           projectId={projectId}
           projectName={projectName}
@@ -173,16 +190,23 @@ export function Editor() {
             </div>
           </div>
 
-          {/* Canvas */}
-          <CanvasPreview
-            ref={canvasRef}
-            pickerActive={pickerActive}
-            onElementSelected={handleElementSelected}
-            zoom={zoom}
-            viewportWidth={deviceWidth}
-            projectId={projectId}
-            htmlContent={history.currentHtml}
-          />
+          {/* Canvas or Code Editor */}
+          {codeEditorOpen && history.currentHtml ? (
+            <CodeEditor
+              htmlContent={history.currentHtml}
+              onUpdate={handleCodeUpdate}
+            />
+          ) : (
+            <CanvasPreview
+              ref={canvasRef}
+              pickerActive={pickerActive}
+              onElementSelected={handleElementSelected}
+              zoom={zoom}
+              viewportWidth={deviceWidth}
+              projectId={projectId}
+              htmlContent={history.currentHtml}
+            />
+          )}
 
           {/* Side Panel — only one at a time, history takes priority */}
           {historyOpen ? (
