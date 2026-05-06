@@ -7,8 +7,6 @@ interface ProjectCardProps {
   url: string;
   imageUrl?: string;
   lastEdit: string;
-  isHero?: boolean;
-  isActive?: boolean;
   onClick?: () => void;
 }
 
@@ -17,22 +15,14 @@ export function ProjectCard({
   url,
   imageUrl,
   lastEdit,
-  isHero,
-  isActive,
   onClick,
 }: ProjectCardProps) {
   return (
     <div
       onClick={onClick}
-      className={`group relative bg-surface-container border border-outline-variant/30 overflow-hidden hover:border-primary/50 transition-all flex flex-col cursor-pointer ${
-        isHero ? "col-span-1 lg:col-span-2 row-span-1" : ""
-      }`}
+      className="group relative bg-surface-container border border-outline-variant/30 overflow-hidden hover:border-primary/50 transition-all flex flex-col cursor-pointer"
     >
-      <div
-        className={`relative overflow-hidden bg-surface-container-lowest ${
-          isHero ? "h-64" : "h-40"
-        }`}
-      >
+      <div className="relative overflow-hidden bg-surface-container-lowest h-40">
         {imageUrl ? (
           <img
             className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500"
@@ -45,14 +35,9 @@ export function ProjectCard({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-transparent to-transparent" />
-        {isActive && (
-          <div className="absolute top-md right-md bg-primary-container/80 backdrop-blur-md px-sm py-xs text-[10px] font-bold text-on-primary-container uppercase tracking-widest rounded-sm border border-primary/20">
-            Active Now
-          </div>
-        )}
       </div>
 
-      <div className={`p-md ${isHero ? "flex flex-col justify-between flex-grow" : ""}`}>
+      <div className="p-md">
         <div>
           <h3 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">
             {title}
@@ -61,32 +46,13 @@ export function ProjectCard({
             {url}
           </p>
         </div>
-        <div
-          className={`flex items-center ${
-            isHero ? "justify-between" : ""
-          } gap-sm mt-lg pt-md border-t border-outline-variant/20`}
-        >
-          <div className="flex items-center gap-sm">
-            {isHero && <div className="w-2 h-2 rounded-full bg-secondary" />}
-            {!isHero && (
-              <span className="material-symbols-outlined text-sm text-on-tertiary">
-                history
-              </span>
-            )}
-            <span className="text-ui-small text-on-surface-variant">
-              Last edit: {lastEdit}
-            </span>
-          </div>
-          {isHero && (
-            <div className="flex items-center gap-xs">
-              <span className="material-symbols-outlined text-sm text-on-surface-variant hover:text-white cursor-pointer">
-                settings
-              </span>
-              <span className="material-symbols-outlined text-sm text-on-surface-variant hover:text-white cursor-pointer">
-                open_in_new
-              </span>
-            </div>
-          )}
+        <div className="flex items-center gap-sm mt-lg pt-md border-t border-outline-variant/20">
+          <span className="material-symbols-outlined text-sm text-on-tertiary">
+            history
+          </span>
+          <span className="text-ui-small text-on-surface-variant">
+            Last edit: {lastEdit}
+          </span>
         </div>
       </div>
     </div>

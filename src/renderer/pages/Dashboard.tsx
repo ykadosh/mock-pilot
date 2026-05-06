@@ -32,6 +32,8 @@ export function Dashboard() {
           return { ...p, thumbnail: thumbnail || undefined };
         })
       );
+      // Sort by last edit time (most recent first)
+      withThumbnails.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       setSavedProjects(withThumbnails);
     }
     loadProjects();
@@ -115,15 +117,13 @@ export function Dashboard() {
 
       {/* Project Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
-        {savedProjects.map((project, i) => (
+        {savedProjects.map((project) => (
           <ProjectCard
             key={project.id}
             title={project.title}
             url={project.url}
             imageUrl={project.thumbnail}
             lastEdit={formatDate(project.updatedAt)}
-            isHero={i === 0}
-            isActive={i === 0}
             onClick={() => handleOpenProject(project)}
           />
         ))}
