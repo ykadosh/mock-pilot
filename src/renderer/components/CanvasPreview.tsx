@@ -220,8 +220,6 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     resizeScript.textContent = `
       (function() {
         function reportHeight() {
-          document.documentElement.style.height = 'auto';
-          document.body.style.height = 'auto';
           document.documentElement.style.overflow = 'visible';
           document.body.style.overflow = 'visible';
           var h = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
@@ -230,9 +228,13 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
           window.parent.postMessage({ type: 'iframe-height', height: h }, '*');
         }
         reportHeight();
-        new ResizeObserver(reportHeight).observe(document.body);
+        new ResizeObserver(function() {
+          setTimeout(reportHeight, 0);
+        }).observe(document.body);
         window.addEventListener('message', function(e) {
-          if (e.data && e.data.type === 'measure-height') reportHeight();
+          if (e.data && e.data.type === 'measure-height') {
+            setTimeout(reportHeight, 0);
+          }
         });
       })();
     `;
@@ -259,6 +261,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
+    // Temporarily shrink iframe to force content to reflow at new width
+    iframe.style.height = "1px";
     const t = setTimeout(() => {
       iframe.contentWindow?.postMessage({ type: "measure-height" }, "*");
     }, 50);
