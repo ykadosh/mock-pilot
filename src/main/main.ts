@@ -466,11 +466,29 @@ Return only the modified HTML element:`;
   });
 
   // Auth handlers
-  ipcMain.handle("auth-get-status", () => {
+  ipcMain.handle("auth-get-status", async () => {
     const auth = loadAuth();
     if (auth) {
       return { authenticated: true, login: auth.login, avatar_url: auth.avatar_url };
     }
+    // Fallback: check gh CLI
+    try {
+      const { execSync } = require("child_process");
+      const token = execSync("gh auth token", { encoding: "utf-8" }).trim();
+      if (token) {
+        // Fetch user info with this token
+        const res = await fetch("https://api.github.com/user", {
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const user = await res.json();
+          // Save it so we don't need to check CLI again
+          const authData: AuthData = { token, login: user.login, avatar_url: user.avatar_url };
+          saveAuth(authData);
+          return { authenticated: true, login: user.login, avatar_url: user.avatar_url };
+        }
+      }
+    } catch { /* gh not available */ }
     return { authenticated: false };
   });
 
