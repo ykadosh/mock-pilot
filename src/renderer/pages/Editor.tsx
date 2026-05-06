@@ -34,15 +34,18 @@ export function Editor() {
   const [device, setDevice] = useState<DevicePreset>("desktop");
   const [historyOpen, setHistoryOpen] = useState(false);
   const canvasRef = useRef<CanvasPreviewHandle>(null);
-  const history = useHistory();
+  const history = useHistory(projectId);
 
-  // Initialize history with the project HTML on load
+  // Initialize history with the project HTML on load (only if no persisted history)
   useEffect(() => {
-    const html = getCapturedHtml();
-    if (html) {
-      history.initialize(html);
+    if (!history.loaded) return;
+    if (history.entries.length === 0) {
+      const html = getCapturedHtml();
+      if (html) {
+        history.initialize(html);
+      }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [history.loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {

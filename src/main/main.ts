@@ -111,6 +111,46 @@ app.on("ready", () => {
     return { success: true };
   });
 
+  // Save project history
+  ipcMain.handle("save-project-history", (_event, id: string, data: { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] }) => {
+    try {
+      // Save metadata (labels, timestamps, pointer)
+      const metaPath = path.join(projectsDir, `${id}.history.json`);
+      fs.writeFileSync(metaPath, JSON.stringify({ entries: data.entries, pointer: data.pointer }), "utf-8");
+      // Save each HTML snapshot
+      for (let i = 0; i < data.htmlSnapshots.length; i++) {
+        fs.writeFileSync(path.join(projectsDir, `${id}.snap.${i}.html`), data.htmlSnapshots[i], "utf-8");
+      }
+      // Clean up old snapshots beyond current count
+      let idx = data.htmlSnapshots.length;
+      while (fs.existsSync(path.join(projectsDir, `${id}.snap.${idx}.html`))) {
+        fs.unlinkSync(path.join(projectsDir, `${id}.snap.${idx}.html`));
+        idx++;
+      }
+      return { success: true };
+    } catch {
+      return { success: false };
+    }
+  });
+
+  // Load project history
+  ipcMain.handle("load-project-history", (_event, id: string) => {
+    try {
+      const metaPath = path.join(projectsDir, `${id}.history.json`);
+      if (!fs.existsSync(metaPath)) return { success: false };
+      const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+      const htmlSnapshots: string[] = [];
+      for (let i = 0; i < meta.entries.length; i++) {
+        const snapPath = path.join(projectsDir, `${id}.snap.${i}.html`);
+        if (!fs.existsSync(snapPath)) return { success: false };
+        htmlSnapshots.push(fs.readFileSync(snapPath, "utf-8"));
+      }
+      return { success: true, entries: meta.entries, pointer: meta.pointer, htmlSnapshots };
+    } catch {
+      return { success: false };
+    }
+  });
+
   // Rename a project
   ipcMain.handle("rename-project", (_event, id: string, newTitle: string) => {
     const projects = getProjectsIndex();

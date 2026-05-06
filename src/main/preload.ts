@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("save-project", data),
   loadProject: (id: string) => ipcRenderer.invoke("load-project", id),
   updateProjectHtml: (id: string, html: string) => ipcRenderer.invoke("update-project-html", id, html),
+  saveProjectHistory: (id: string, data: { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] }) =>
+    ipcRenderer.invoke("save-project-history", id, data),
+  loadProjectHistory: (id: string) => ipcRenderer.invoke("load-project-history", id),
   renameProject: (id: string, newTitle: string) => ipcRenderer.invoke("rename-project", id, newTitle),
   deleteProject: (id: string) => ipcRenderer.invoke("delete-project", id),
   getProjectThumbnail: (id: string) => ipcRenderer.invoke("get-project-thumbnail", id),

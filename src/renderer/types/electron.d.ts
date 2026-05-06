@@ -25,6 +25,13 @@ declare global {
         error?: string;
       }>;
       updateProjectHtml: (id: string, html: string) => Promise<{ success: boolean }>;
+      saveProjectHistory: (id: string, data: { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] }) => Promise<{ success: boolean }>;
+      loadProjectHistory: (id: string) => Promise<{
+        success: boolean;
+        entries?: { label: string; timestamp: number }[];
+        pointer?: number;
+        htmlSnapshots?: string[];
+      }>;
       renameProject: (id: string, newTitle: string) => Promise<{ success: boolean }>;
       deleteProject: (id: string) => Promise<{ success: boolean }>;
       getProjectThumbnail: (id: string) => Promise<string | null>;
