@@ -3,6 +3,7 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Editor } from "@/pages/Editor";
 import { Assets } from "@/pages/Assets";
 import { Settings } from "@/pages/Settings";
+import { AppSettings } from "@/pages/AppSettings";
 import { AuthProvider } from "@/hooks/useAuth";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
             <Route path="/editor/:projectId" element={<Editor />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/settings/:projectId" element={<Settings />} />
+            <Route path="/app-settings" element={<AppSettings />} />
           </Routes>
         </HashRouter>
       </AuthProvider>

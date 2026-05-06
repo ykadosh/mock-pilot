@@ -100,8 +100,11 @@ export function TopNav({ children }: TopNavProps) {
         <div className="flex items-center gap-md [-webkit-app-region:no-drag]">
           {children}
           <div className="flex items-center gap-sm">
-            <button className="material-symbols-outlined text-slate-400 hover:text-white transition-colors cursor-pointer">
-              notifications
+            <button
+              onClick={() => navigate("/app-settings")}
+              className="material-symbols-outlined text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              settings
             </button>
             <div className="relative" ref={menuRef}>
               <button

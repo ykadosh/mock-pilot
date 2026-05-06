@@ -57,6 +57,10 @@ declare global {
         error?: string;
       }>;
       authLogout: () => Promise<{ success: boolean }>;
+      // App settings
+      getAppSettings: () => Promise<{ aiModel: string }>;
+      saveAppSettings: (settings: { aiModel: string }) => Promise<{ success: boolean }>;
+      getStorageInfo: () => Promise<{ totalBytes: number; projectCount: number }>;
     };
   }
 }

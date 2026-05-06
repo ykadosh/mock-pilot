@@ -61,11 +61,27 @@ function getToken(): string | null {
 
 // Projects storage
 const projectsDir = path.join(app.getPath("userData"), "projects");
+const appSettingsPath = path.join(app.getPath("userData"), "app-settings.json");
 
 function ensureProjectsDir() {
   if (!fs.existsSync(projectsDir)) {
     fs.mkdirSync(projectsDir, { recursive: true });
   }
+}
+
+function getDirSize(dirPath: string): number {
+  let total = 0;
+  if (!fs.existsSync(dirPath)) return 0;
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      total += getDirSize(fullPath);
+    } else {
+      total += fs.statSync(fullPath).size;
+    }
+  }
+  return total;
 }
 
 interface ProjectMeta {
@@ -436,6 +452,15 @@ User's requested modification: ${data.prompt}
 
 Return only the modified HTML element:`;
 
+      // Load selected model from settings
+      let aiModel = "openai/gpt-4o";
+      try {
+        if (fs.existsSync(appSettingsPath)) {
+          const settings = JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
+          if (settings.aiModel) aiModel = settings.aiModel;
+        }
+      } catch { /* use default */ }
+
       const response = await fetch("https://models.github.ai/inference/chat/completions", {
         method: "POST",
         headers: {
@@ -443,7 +468,7 @@ Return only the modified HTML element:`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "openai/gpt-4o",
+          model: aiModel,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userMessage },
@@ -583,6 +608,28 @@ Return only the modified HTML element:`;
   ipcMain.handle("auth-logout", () => {
     clearAuth();
     return { success: true };
+  });
+
+  // App settings handlers
+  ipcMain.handle("get-app-settings", () => {
+    try {
+      if (fs.existsSync(appSettingsPath)) {
+        return JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
+      }
+    } catch { /* ignore */ }
+    return { aiModel: "openai/gpt-4o" };
+  });
+
+  ipcMain.handle("save-app-settings", (_event, settings: { aiModel: string }) => {
+    fs.writeFileSync(appSettingsPath, JSON.stringify(settings, null, 2), "utf-8");
+    return { success: true };
+  });
+
+  ipcMain.handle("get-storage-info", () => {
+    ensureProjectsDir();
+    const totalBytes = getDirSize(projectsDir);
+    const projects = getProjectsIndex();
+    return { totalBytes, projectCount: projects.length };
   });
 
   createWindow();
