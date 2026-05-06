@@ -150,23 +150,23 @@ export function Editor() {
             {codeEditorOpen ? (
               <>
                 {/* Code editor tabs */}
-                <div className="flex items-center">
+                <div className="flex items-center self-stretch">
                   <button
                     onClick={() => setCodeTab("html")}
-                    className={`px-3 py-1.5 text-xs font-mono rounded-t cursor-pointer transition-colors ${
+                    className={`px-3 text-xs font-mono cursor-pointer transition-colors self-stretch flex items-center border-b-2 ${
                       codeTab === "html"
-                        ? "bg-slate-800 text-violet-400 border border-b-0 border-[#334155]"
-                        : "text-slate-500 hover:text-slate-300"
+                        ? "text-violet-400 border-violet-400 bg-slate-800"
+                        : "text-slate-500 hover:text-slate-300 border-transparent"
                     }`}
                   >
                     HTML
                   </button>
                   <button
                     onClick={() => setCodeTab("css")}
-                    className={`px-3 py-1.5 text-xs font-mono rounded-t cursor-pointer transition-colors ml-1 ${
+                    className={`px-3 text-xs font-mono cursor-pointer transition-colors self-stretch flex items-center border-b-2 ml-1 ${
                       codeTab === "css"
-                        ? "bg-slate-800 text-violet-400 border border-b-0 border-[#334155]"
-                        : "text-slate-500 hover:text-slate-300"
+                        ? "text-violet-400 border-violet-400 bg-slate-800"
+                        : "text-slate-500 hover:text-slate-300 border-transparent"
                     }`}
                   >
                     CSS
