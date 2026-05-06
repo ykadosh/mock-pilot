@@ -10,6 +10,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   startLogin: () => Promise<{ user_code: string; device_code: string } | null>;
   pollLogin: (deviceCode: string) => Promise<boolean>;
+  setAuthenticated: (login: string, avatar_url?: string) => void;
   logout: () => Promise<void>;
 }
 
@@ -57,13 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false; // Keep polling
   }, []);
 
+  const setAuthenticated = useCallback((login: string, avatar_url?: string) => {
+    setState({ authenticated: true, login, avatar_url, loading: false });
+  }, []);
+
   const logout = useCallback(async () => {
     await window.api.authLogout();
     setState({ authenticated: false, loading: false });
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, startLogin, pollLogin, logout }}>
+    <AuthContext.Provider value={{ ...state, startLogin, pollLogin, setAuthenticated, logout }}>
       {children}
     </AuthContext.Provider>
   );

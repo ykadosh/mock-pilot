@@ -51,8 +51,7 @@ export function TopNav({ children }: TopNavProps) {
     const poll = async () => {
       const result = await window.api.authPollDeviceFlow(deviceCode);
       if (result.status === "success") {
-        // Update auth state
-        auth.pollLogin(deviceCode); // This updates the context
+        auth.setAuthenticated(result.login || "User", result.avatar_url);
         setPolling(false);
         setShowLoginFlow(false);
         setUserCode("");
