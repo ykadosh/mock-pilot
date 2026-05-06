@@ -49,9 +49,11 @@ interface SideNavProps {
   activeTool?: string;
   onToolClick?: (tool: string) => void;
   projectId?: string;
+  projectName?: string;
+  revisionCount?: number;
 }
 
-export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToolClick, projectId }: SideNavProps) {
+export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToolClick, projectId, projectName, revisionCount }: SideNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const navigate = useNavigate();
 
@@ -79,9 +81,9 @@ export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToo
         {!collapsed && (
           <div className="ml-sm flex-1 min-w-0">
             <h2 className="text-xs font-mono text-slate-400 uppercase tracking-widest truncate">
-              Project Alpha
+              {projectName || "Untitled"}
             </h2>
-            <p className="text-[10px] text-slate-500">v1.0.4-stable</p>
+            <p className="text-[10px] text-slate-500">v{revisionCount ?? 0}</p>
           </div>
         )}
       </div>

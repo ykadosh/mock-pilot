@@ -33,6 +33,7 @@ export function Editor() {
   const [zoom, setZoom] = useState(100);
   const [device, setDevice] = useState<DevicePreset>("desktop");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
   const canvasRef = useRef<CanvasPreviewHandle>(null);
   const pendingLabelRef = useRef<string>("AI modification");
   const history = useHistory(projectId);
@@ -47,6 +48,14 @@ export function Editor() {
       }
     }
   }, [history.loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!projectId) return;
+    window.api.listProjects().then((projects: { id: string; title: string }[]) => {
+      const project = projects.find((p) => p.id === projectId);
+      if (project) setProjectName(project.title);
+    });
+  }, [projectId]);
 
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {
@@ -109,6 +118,8 @@ export function Editor() {
           activeTool={pickerActive ? "Element Picker" : historyOpen ? "History" : undefined}
           onToolClick={handleToolClick}
           projectId={projectId}
+          projectName={projectName}
+          revisionCount={history.entries.length}
         />
         <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
