@@ -115,7 +115,7 @@ const PICKER_SCRIPT = `
           } else {
             el.outerHTML = html;
           }
-          window.parent.postMessage({ type: 'modification-applied', success: true }, '*');
+          window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: document.documentElement.outerHTML }, '*');
         } else {
           window.parent.postMessage({ type: 'modification-applied', success: false, error: 'Element not found by data-mp-id' }, '*');
         }
@@ -153,9 +153,10 @@ interface CanvasPreviewProps {
   onElementSelected?: (element: SelectedElement) => void;
   zoom?: number;
   viewportWidth?: number;
+  projectId?: string;
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280 }, ref) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280, projectId }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -255,10 +256,15 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
       if (e.data?.type === "element-selected" && onElementSelected) {
         onElementSelected(e.data.data);
       }
+      // Persist modified HTML to disk after successful AI modification
+      if (e.data?.type === "modification-applied" && e.data.success && e.data.fullHTML && projectId) {
+        const fullDoc = "<!DOCTYPE html><html>" + e.data.fullHTML + "</html>";
+        window.api.updateProjectHtml(projectId, fullDoc);
+      }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [onElementSelected]);
+  }, [onElementSelected, projectId]);
 
   const scale = zoom / 100;
 

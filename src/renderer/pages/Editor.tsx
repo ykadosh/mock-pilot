@@ -112,6 +112,7 @@ export function Editor() {
             onElementSelected={handleElementSelected}
             zoom={zoom}
             viewportWidth={deviceWidth}
+            projectId={projectId}
           />
 
           {/* Properties Panel */}

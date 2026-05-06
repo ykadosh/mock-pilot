@@ -96,6 +96,21 @@ app.on("ready", () => {
     return { success: true, html };
   });
 
+  // Update a project's HTML (persist modifications)
+  ipcMain.handle("update-project-html", (_event, id: string, html: string) => {
+    const htmlPath = path.join(projectsDir, `${id}.html`);
+    if (!fs.existsSync(htmlPath)) return { success: false };
+    fs.writeFileSync(htmlPath, html, "utf-8");
+    // Update timestamp in index
+    const projects = getProjectsIndex();
+    const project = projects.find((p) => p.id === id);
+    if (project) {
+      project.updatedAt = new Date().toISOString();
+      saveProjectsIndex(projects);
+    }
+    return { success: true };
+  });
+
   // Rename a project
   ipcMain.handle("rename-project", (_event, id: string, newTitle: string) => {
     const projects = getProjectsIndex();
