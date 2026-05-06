@@ -101,21 +101,23 @@ const PICKER_SCRIPT = `
       if (label) label.style.display = 'none';
       document.body.style.cursor = '';
     } else if (e.data && e.data.type === 'apply-modification') {
-      const { mpId, html, label } = e.data;
+      const mpId = e.data.mpId;
+      const modHtml = e.data.html;
+      const modLabel = e.data.label;
       try {
         const el = document.querySelector('[data-mp-id="' + mpId + '"]');
         if (el) {
           // Parse the new HTML and ensure the data-mp-id is preserved
           const temp = document.createElement('div');
-          temp.innerHTML = html;
+          temp.innerHTML = modHtml;
           const newEl = temp.firstElementChild;
           if (newEl) {
             newEl.setAttribute('data-mp-id', mpId);
             el.outerHTML = newEl.outerHTML;
           } else {
-            el.outerHTML = html;
+            el.outerHTML = modHtml;
           }
-          window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: document.documentElement.outerHTML, label: label || 'AI modification' }, '*');
+          window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: document.documentElement.outerHTML, label: modLabel || 'AI modification' }, '*');
         } else {
           window.parent.postMessage({ type: 'modification-applied', success: false, error: 'Element not found by data-mp-id' }, '*');
         }
