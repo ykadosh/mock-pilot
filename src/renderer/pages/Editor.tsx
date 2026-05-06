@@ -86,6 +86,10 @@ export function Editor() {
   const handleApplyModification = useCallback((mpId: string, newHTML: string, label?: string) => {
     pendingLabelRef.current = label || "AI modification";
     canvasRef.current?.applyModification(mpId, newHTML, label);
+    // Close properties panel if element is being removed
+    if (newHTML === "__REMOVE_ELEMENT__") {
+      setSelectedElement(null);
+    }
   }, []);
 
   // Listen for successful modifications to push to history and persist

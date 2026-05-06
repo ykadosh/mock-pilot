@@ -107,15 +107,19 @@ const PICKER_SCRIPT = `
       try {
         const el = document.querySelector('[data-mp-id="' + mpId + '"]');
         if (el) {
-          // Parse the new HTML and ensure the data-mp-id is preserved
-          const temp = document.createElement('div');
-          temp.innerHTML = modHtml;
-          const newEl = temp.firstElementChild;
-          if (newEl) {
-            newEl.setAttribute('data-mp-id', mpId);
-            el.outerHTML = newEl.outerHTML;
+          if (modHtml === '__REMOVE_ELEMENT__') {
+            el.remove();
           } else {
-            el.outerHTML = modHtml;
+            // Parse the new HTML and ensure the data-mp-id is preserved
+            const temp = document.createElement('div');
+            temp.innerHTML = modHtml;
+            const newEl = temp.firstElementChild;
+            if (newEl) {
+              newEl.setAttribute('data-mp-id', mpId);
+              el.outerHTML = newEl.outerHTML;
+            } else {
+              el.outerHTML = modHtml;
+            }
           }
           window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: document.documentElement.outerHTML, label: modLabel || 'AI modification' }, '*');
         } else {

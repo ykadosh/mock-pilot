@@ -309,7 +309,8 @@ Rules:
 - You may modify inline styles, classes, attributes, text content, or child elements.
 - If adding styles, use inline styles (style attribute) since you don't have access to a stylesheet.
 - Keep the same tag type unless the user explicitly asks to change it.
-- IMPORTANT: Preserve any data-mp-id attribute exactly as-is. Do not remove or modify it.`;
+- IMPORTANT: Preserve any data-mp-id attribute exactly as-is. Do not remove or modify it.
+- If the user asks to remove/delete the element, return exactly the text: __REMOVE_ELEMENT__`;
 
       const userMessage = `Here is the selected element's HTML:
 \`\`\`html
@@ -349,6 +350,11 @@ Return only the modified HTML element:`;
 
       // Strip markdown code blocks if present
       modifiedHTML = modifiedHTML.replace(/^```(?:html)?\n?/i, "").replace(/\n?```$/i, "").trim();
+
+      // Handle element removal
+      if (modifiedHTML === "__REMOVE_ELEMENT__" || modifiedHTML === "") {
+        return { success: true, html: "__REMOVE_ELEMENT__" };
+      }
 
       return { success: true, html: modifiedHTML };
     } catch (error: unknown) {
