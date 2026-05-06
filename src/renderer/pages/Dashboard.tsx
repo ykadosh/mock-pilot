@@ -21,6 +21,8 @@ export function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
+  const [renameTarget, setRenameTarget] = useState<SavedProject | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
     async function loadProjects() {
@@ -80,6 +82,26 @@ export function Dashboard() {
     }
   };
 
+  const handleDeleteProject = async (project: SavedProject) => {
+    if (!confirm(`Delete "${project.title}"? This cannot be undone.`)) return;
+    await window.api.deleteProject(project.id);
+    setSavedProjects((prev) => prev.filter((p) => p.id !== project.id));
+  };
+
+  const handleRenameProject = (project: SavedProject) => {
+    setRenameTarget(project);
+    setRenameValue(project.title);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!renameTarget || !renameValue.trim()) return;
+    await window.api.renameProject(renameTarget.id, renameValue.trim());
+    setSavedProjects((prev) =>
+      prev.map((p) => (p.id === renameTarget.id ? { ...p, title: renameValue.trim() } : p))
+    );
+    setRenameTarget(null);
+  };
+
   const formatDate = (iso: string) => {
     const date = new Date(iso);
     const now = new Date();
@@ -126,6 +148,8 @@ export function Dashboard() {
             lastEdit={formatDate(project.updatedAt)}
             isHero={i === 0}
             onClick={() => handleOpenProject(project)}
+            onDelete={() => handleDeleteProject(project)}
+            onRename={() => handleRenameProject(project)}
           />
         ))}
         <NewProjectCard />
@@ -216,6 +240,32 @@ export function Dashboard() {
               </span>
             )}
             {loading ? "Capturing..." : "Create"}
+          </button>
+        </div>
+      </Dialog>
+
+      <Dialog open={!!renameTarget} onClose={() => setRenameTarget(null)}>
+        <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">
+          Rename Project
+        </h2>
+        <input
+          type="text"
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          placeholder="Project name"
+          className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary transition-colors mb-sm"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && renameValue.trim()) handleRenameSubmit();
+          }}
+        />
+        <div className="flex justify-end mt-md">
+          <button
+            onClick={handleRenameSubmit}
+            disabled={!renameValue.trim()}
+            className="bg-primary-container text-on-primary-container px-lg py-sm font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Rename
           </button>
         </div>
       </Dialog>

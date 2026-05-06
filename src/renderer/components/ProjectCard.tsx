@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog } from "./ui/Dialog";
 
@@ -9,6 +9,8 @@ interface ProjectCardProps {
   lastEdit: string;
   isHero?: boolean;
   onClick?: () => void;
+  onDelete?: () => void;
+  onRename?: () => void;
 }
 
 export function ProjectCard({
@@ -18,7 +20,23 @@ export function ProjectCard({
   lastEdit,
   isHero,
   onClick,
+  onDelete,
+  onRename,
 }: ProjectCardProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
   return (
     <div
       onClick={onClick}
@@ -42,13 +60,63 @@ export function ProjectCard({
       </div>
 
       <div className="p-md">
-        <div>
-          <h3 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">
-            {title}
-          </h3>
-          <p className="text-ui-small text-on-surface-variant/60 font-code-block mt-xs">
-            {url}
-          </p>
+        <div className="flex items-start justify-between">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors truncate">
+              {title}
+            </h3>
+            <p className="text-ui-small text-on-surface-variant/60 font-code-block mt-xs truncate">
+              {url}
+            </p>
+          </div>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((prev) => !prev);
+              }}
+              className="p-1 rounded hover:bg-slate-700 transition-colors text-slate-500 hover:text-slate-300 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg">more_vert</span>
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-8 z-50 w-36 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 animate-in fade-in">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onClick?.();
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">open_in_new</span>
+                  Open
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onRename?.();
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">edit</span>
+                  Rename
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onDelete?.();
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">delete</span>
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-sm mt-lg pt-md border-t border-outline-variant/20">
           <span className="material-symbols-outlined text-sm text-on-tertiary">
