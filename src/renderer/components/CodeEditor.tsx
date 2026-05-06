@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { EditorView } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { basicSetup } from "codemirror";
@@ -8,9 +8,14 @@ import { oneDark } from "@codemirror/theme-one-dark";
 
 type Tab = "html" | "css";
 
+export interface CodeEditorHandle {
+  update: () => void;
+}
+
 interface CodeEditorProps {
   htmlContent: string;
   onUpdate: (fullHtml: string, label: string) => void;
+  activeTab: Tab;
 }
 
 function extractParts(fullHtml: string) {
@@ -50,8 +55,7 @@ function reassemble(originalHtml: string, newBodyHtml: string, newCss: string): 
   return "<!DOCTYPE html><html>" + doc.documentElement.innerHTML + "</html>";
 }
 
-export function CodeEditor({ htmlContent, onUpdate }: CodeEditorProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("html");
+export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor({ htmlContent, onUpdate, activeTab }, ref) {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const htmlDocRef = useRef("");
@@ -117,46 +121,16 @@ export function CodeEditor({ htmlContent, onUpdate }: CodeEditorProps) {
     };
   }, [activeTab, createEditor]);
 
-  const handleUpdate = () => {
-    const fullHtml = reassemble(htmlContent, htmlDocRef.current, cssDocRef.current);
-    onUpdate(fullHtml, "Code edit");
-  };
+  useImperativeHandle(ref, () => ({
+    update: () => {
+      const fullHtml = reassemble(htmlContent, htmlDocRef.current, cssDocRef.current);
+      onUpdate(fullHtml, "Code edit");
+    },
+  }), [htmlContent, onUpdate]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#020617]">
-      {/* Tabs + Update button */}
-      <div className="flex items-center border-b border-[#334155] px-md h-10 shrink-0">
-        <button
-          onClick={() => setActiveTab("html")}
-          className={`px-3 py-1.5 text-xs font-mono rounded-t cursor-pointer transition-colors ${
-            activeTab === "html"
-              ? "bg-slate-800 text-violet-400 border border-b-0 border-[#334155]"
-              : "text-slate-500 hover:text-slate-300"
-          }`}
-        >
-          HTML
-        </button>
-        <button
-          onClick={() => setActiveTab("css")}
-          className={`px-3 py-1.5 text-xs font-mono rounded-t cursor-pointer transition-colors ml-1 ${
-            activeTab === "css"
-              ? "bg-slate-800 text-violet-400 border border-b-0 border-[#334155]"
-              : "text-slate-500 hover:text-slate-300"
-          }`}
-        >
-          CSS
-        </button>
-        <div className="flex-1" />
-        <button
-          onClick={handleUpdate}
-          className="px-3 py-1 text-xs font-mono bg-violet-600 hover:bg-violet-500 text-white rounded cursor-pointer transition-colors"
-        >
-          Update
-        </button>
-      </div>
-
-      {/* Editor area */}
       <div ref={editorContainerRef} className="flex-1 min-h-0 overflow-hidden" />
     </div>
   );
-}
+});

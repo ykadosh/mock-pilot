@@ -5,7 +5,7 @@ import { SideNav } from "../components/layout/SideNav";
 import { CanvasPreview, CanvasPreviewHandle } from "../components/CanvasPreview";
 import { PropertiesPanel } from "../components/PropertiesPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
-import { CodeEditor } from "../components/CodeEditor";
+import { CodeEditor, CodeEditorHandle } from "../components/CodeEditor";
 import { useHistory } from "../hooks/useHistory";
 import { getCapturedHtml } from "../lib/store";
 
@@ -35,8 +35,10 @@ export function Editor() {
   const [device, setDevice] = useState<DevicePreset>("desktop");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [codeEditorOpen, setCodeEditorOpen] = useState(false);
+  const [codeTab, setCodeTab] = useState<"html" | "css">("html");
   const [projectName, setProjectName] = useState("");
   const canvasRef = useRef<CanvasPreviewHandle>(null);
+  const codeEditorRef = useRef<CodeEditorHandle>(null);
   const pendingLabelRef = useRef<string>("AI modification");
   const history = useHistory(projectId);
 
@@ -145,60 +147,98 @@ export function Editor() {
         <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">
-            {/* Device buttons lip — absolutely positioned */}
-            <div className="absolute top-0 bottom-[-5px] left-md flex items-center bg-[#020617] rounded-b-lg px-1 border border-t-0 border-[#334155]">
-              <button
-                onClick={() => setDevice("desktop")}
-                className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
-              >
-                <span className="material-symbols-outlined text-lg leading-none">desktop_windows</span>
-              </button>
-              <button
-                onClick={() => setDevice("tablet")}
-                className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
-              >
-                <span className="material-symbols-outlined text-lg leading-none">tablet_mac</span>
-              </button>
-              <button
-                onClick={() => setDevice("phone")}
-                className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
-              >
-                <span className="material-symbols-outlined text-lg leading-none">smartphone</span>
-              </button>
-            </div>
-            <span className="text-ui-small font-body-main text-slate-400 mx-auto">
-              {deviceWidth} x {deviceHeight} ({zoom}%)
-            </span>
-            <div className="flex items-center gap-sm">
-              <button onClick={zoomIn} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
-                zoom_in
-              </button>
-              <button onClick={zoomOut} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
-                zoom_out
-              </button>
-              <div className="w-px h-4 bg-slate-700 mx-2" />
-              <button
-                onClick={history.undo}
-                disabled={!history.canUndo}
-                className={`material-symbols-outlined cursor-pointer ${history.canUndo ? "text-slate-500 hover:text-white" : "text-slate-700 cursor-not-allowed"}`}
-              >
-                undo
-              </button>
-              <button
-                onClick={history.redo}
-                disabled={!history.canRedo}
-                className={`material-symbols-outlined cursor-pointer ${history.canRedo ? "text-slate-500 hover:text-white" : "text-slate-700 cursor-not-allowed"}`}
-              >
-                redo
-              </button>
-            </div>
+            {codeEditorOpen ? (
+              <>
+                {/* Code editor tabs */}
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setCodeTab("html")}
+                    className={`px-3 py-1.5 text-xs font-mono rounded-t cursor-pointer transition-colors ${
+                      codeTab === "html"
+                        ? "bg-slate-800 text-violet-400 border border-b-0 border-[#334155]"
+                        : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    HTML
+                  </button>
+                  <button
+                    onClick={() => setCodeTab("css")}
+                    className={`px-3 py-1.5 text-xs font-mono rounded-t cursor-pointer transition-colors ml-1 ${
+                      codeTab === "css"
+                        ? "bg-slate-800 text-violet-400 border border-b-0 border-[#334155]"
+                        : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    CSS
+                  </button>
+                </div>
+                <button
+                  onClick={() => codeEditorRef.current?.update()}
+                  className="px-3 py-1 text-xs font-mono bg-violet-600 hover:bg-violet-500 text-white rounded cursor-pointer transition-colors"
+                >
+                  Update
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Device buttons lip — absolutely positioned */}
+                <div className="absolute top-0 bottom-[-5px] left-md flex items-center bg-[#020617] rounded-b-lg px-1 border border-t-0 border-[#334155]">
+                  <button
+                    onClick={() => setDevice("desktop")}
+                    className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                  >
+                    <span className="material-symbols-outlined text-lg leading-none">desktop_windows</span>
+                  </button>
+                  <button
+                    onClick={() => setDevice("tablet")}
+                    className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                  >
+                    <span className="material-symbols-outlined text-lg leading-none">tablet_mac</span>
+                  </button>
+                  <button
+                    onClick={() => setDevice("phone")}
+                    className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                  >
+                    <span className="material-symbols-outlined text-lg leading-none">smartphone</span>
+                  </button>
+                </div>
+                <span className="text-ui-small font-body-main text-slate-400 mx-auto">
+                  {deviceWidth} x {deviceHeight} ({zoom}%)
+                </span>
+                <div className="flex items-center gap-sm">
+                  <button onClick={zoomIn} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
+                    zoom_in
+                  </button>
+                  <button onClick={zoomOut} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
+                    zoom_out
+                  </button>
+                  <div className="w-px h-4 bg-slate-700 mx-2" />
+                  <button
+                    onClick={history.undo}
+                    disabled={!history.canUndo}
+                    className={`material-symbols-outlined cursor-pointer ${history.canUndo ? "text-slate-500 hover:text-white" : "text-slate-700 cursor-not-allowed"}`}
+                  >
+                    undo
+                  </button>
+                  <button
+                    onClick={history.redo}
+                    disabled={!history.canRedo}
+                    className={`material-symbols-outlined cursor-pointer ${history.canRedo ? "text-slate-500 hover:text-white" : "text-slate-700 cursor-not-allowed"}`}
+                  >
+                    redo
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Canvas or Code Editor */}
           {codeEditorOpen && history.currentHtml ? (
             <CodeEditor
+              ref={codeEditorRef}
               htmlContent={history.currentHtml}
               onUpdate={handleCodeUpdate}
+              activeTab={codeTab}
             />
           ) : (
             <CanvasPreview
