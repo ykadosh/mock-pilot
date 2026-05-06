@@ -3,19 +3,22 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Editor } from "@/pages/Editor";
 import { Assets } from "@/pages/Assets";
 import { Settings } from "@/pages/Settings";
+import { AuthProvider } from "@/hooks/useAuth";
 
 function App() {
   return (
     <div className="dark">
-      <HashRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/editor" element={<Editor />} />
-          <Route path="/editor/:projectId" element={<Editor />} />
-          <Route path="/assets" element={<Assets />} />
-          <Route path="/settings/:projectId" element={<Settings />} />
-        </Routes>
-      </HashRouter>
+      <AuthProvider>
+        <HashRouter>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/editor" element={<Editor />} />
+            <Route path="/editor/:projectId" element={<Editor />} />
+            <Route path="/assets" element={<Assets />} />
+            <Route path="/settings/:projectId" element={<Settings />} />
+          </Routes>
+        </HashRouter>
+      </AuthProvider>
     </div>
   );
 }

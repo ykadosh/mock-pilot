@@ -15,4 +15,9 @@ contextBridge.exposeInMainWorld("api", {
   getProjectThumbnail: (id: string) => ipcRenderer.invoke("get-project-thumbnail", id),
   aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) =>
     ipcRenderer.invoke("ai-modify-element", data),
+  // Auth
+  authGetStatus: () => ipcRenderer.invoke("auth-get-status"),
+  authStartDeviceFlow: () => ipcRenderer.invoke("auth-start-device-flow"),
+  authPollDeviceFlow: (deviceCode: string) => ipcRenderer.invoke("auth-poll-device-flow", deviceCode),
+  authLogout: () => ipcRenderer.invoke("auth-logout"),
 });

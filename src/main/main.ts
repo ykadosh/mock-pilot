@@ -1,13 +1,46 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "path";
 import fs from "fs";
-import { execSync } from "child_process";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { html_beautify } = require("js-beautify");
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
+
+// GitHub OAuth Device Flow
+// Using a public OAuth App client ID for device flow (no secret needed)
+const GITHUB_CLIENT_ID = "Ov23liUDMFXEwgNBVRny";
+
+const authFilePath = path.join(app.getPath("userData"), "github-auth.json");
+
+interface AuthData {
+  token: string;
+  login: string;
+  avatar_url?: string;
+}
+
+function loadAuth(): AuthData | null {
+  try {
+    if (fs.existsSync(authFilePath)) {
+      return JSON.parse(fs.readFileSync(authFilePath, "utf-8"));
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function saveAuth(data: AuthData) {
+  fs.writeFileSync(authFilePath, JSON.stringify(data), "utf-8");
+}
+
+function clearAuth() {
+  try { fs.unlinkSync(authFilePath); } catch { /* ignore */ }
+}
+
+function getToken(): string | null {
+  const auth = loadAuth();
+  return auth?.token || null;
+}
 
 // Projects storage
 const projectsDir = path.join(app.getPath("userData"), "projects");
@@ -355,12 +388,9 @@ app.on("ready", () => {
   // AI element modification
   ipcMain.handle("ai-modify-element", async (_event, data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => {
     try {
-      // Get GitHub token from gh CLI
-      let token: string;
-      try {
-        token = execSync("gh auth token", { encoding: "utf-8" }).trim();
-      } catch {
-        return { success: false, error: "Not authenticated with GitHub. Run `gh auth login` first." };
+      const token = getToken();
+      if (!token) {
+        return { success: false, error: "Not authenticated. Please sign in with GitHub first." };
       }
 
       const systemPrompt = `You are an expert front-end developer. The user has selected an HTML element and wants to modify it.
@@ -426,6 +456,83 @@ Return only the modified HTML element:`;
       const message = error instanceof Error ? error.message : "Unknown error";
       return { success: false, error: message };
     }
+  });
+
+  // Auth handlers
+  ipcMain.handle("auth-get-status", () => {
+    const auth = loadAuth();
+    if (auth) {
+      return { authenticated: true, login: auth.login, avatar_url: auth.avatar_url };
+    }
+    return { authenticated: false };
+  });
+
+  ipcMain.handle("auth-start-device-flow", async () => {
+    try {
+      const res = await fetch("https://github.com/login/device/code", {
+        method: "POST",
+        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, scope: "" }),
+      });
+      if (!res.ok) return { success: false, error: "Failed to start device flow" };
+      const data = await res.json();
+      // Open the verification URL in the user's browser
+      shell.openExternal(data.verification_uri);
+      return {
+        success: true,
+        user_code: data.user_code,
+        device_code: data.device_code,
+        interval: data.interval || 5,
+        expires_in: data.expires_in,
+      };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    }
+  });
+
+  ipcMain.handle("auth-poll-device-flow", async (_event, deviceCode: string) => {
+    try {
+      const res = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: GITHUB_CLIENT_ID,
+          device_code: deviceCode,
+          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        }),
+      });
+      if (!res.ok) return { status: "error", error: "Request failed" };
+      const data = await res.json();
+
+      if (data.error === "authorization_pending") {
+        return { status: "pending" };
+      } else if (data.error === "slow_down") {
+        return { status: "slow_down" };
+      } else if (data.error) {
+        return { status: "error", error: data.error_description || data.error };
+      } else if (data.access_token) {
+        // Get user info
+        const userRes = await fetch("https://api.github.com/user", {
+          headers: { "Authorization": `Bearer ${data.access_token}` },
+        });
+        const user = await userRes.json();
+        const authData: AuthData = {
+          token: data.access_token,
+          login: user.login || "User",
+          avatar_url: user.avatar_url,
+        };
+        saveAuth(authData);
+        return { status: "success", login: authData.login, avatar_url: authData.avatar_url };
+      }
+      return { status: "error", error: "Unexpected response" };
+    } catch (error: unknown) {
+      return { status: "error", error: error instanceof Error ? error.message : "Unknown error" };
+    }
+  });
+
+  ipcMain.handle("auth-logout", () => {
+    clearAuth();
+    return { success: true };
   });
 
   createWindow();

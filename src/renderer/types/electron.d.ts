@@ -40,6 +40,23 @@ declare global {
         html?: string;
         error?: string;
       }>;
+      // Auth
+      authGetStatus: () => Promise<{ authenticated: boolean; login?: string; avatar_url?: string }>;
+      authStartDeviceFlow: () => Promise<{
+        success: boolean;
+        user_code?: string;
+        device_code?: string;
+        interval?: number;
+        expires_in?: number;
+        error?: string;
+      }>;
+      authPollDeviceFlow: (deviceCode: string) => Promise<{
+        status: "pending" | "slow_down" | "success" | "error";
+        login?: string;
+        avatar_url?: string;
+        error?: string;
+      }>;
+      authLogout: () => Promise<{ success: boolean }>;
     };
   }
 }
