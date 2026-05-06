@@ -208,38 +208,41 @@ app.on("ready", () => {
         page.setDefaultTimeout(60000);
 
         const html = await page.evaluate(async () => {
-          // Inline external stylesheets
-          const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
-          for (const link of stylesheets) {
-            try {
-              const href = (link as HTMLLinkElement).href;
-              const res = await fetch(href);
-              const css = await res.text();
-              const style = document.createElement("style");
-              style.textContent = css;
-              link.replaceWith(style);
-            } catch {
-              // Skip failed stylesheets
-            }
-          }
-
-          // Inline @font-face font files as data URIs
-          const styles = document.querySelectorAll("style");
-          for (const style of styles) {
-            let cssText = style.textContent || "";
-            // Match font URLs (absolute and relative) within @font-face blocks
+          // Helper: resolve and inline font URLs in CSS text relative to a base URL
+          async function inlineFontUrls(cssText: string, baseUrl: string): Promise<string> {
             const fontFaceRegex = /@font-face\s*\{[^}]*\}/gi;
             const fontFaces = [...cssText.matchAll(fontFaceRegex)];
             for (const faceMatch of fontFaces) {
               let faceBlock = faceMatch[0];
-              const urlRegex = /url\(["']?([^"')]+\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\)/gi;
+              const urlRegex = /url\(["']?([^"')]+?)["']?\)\s*format\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\)/gi;
               const urlMatches = [...faceBlock.matchAll(urlRegex)];
               for (const match of urlMatches) {
                 const fontUrl = match[1];
-                // Skip data URIs already
                 if (fontUrl.startsWith("data:")) continue;
                 try {
-                  const resolvedUrl = new URL(fontUrl, document.baseURI).href;
+                  const resolvedUrl = new URL(fontUrl, baseUrl).href;
+                  const res = await fetch(resolvedUrl);
+                  if (res.ok) {
+                    const blob = await res.blob();
+                    const dataUri = await new Promise<string>((resolve) => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => resolve(reader.result as string);
+                      reader.readAsDataURL(blob);
+                    });
+                    faceBlock = faceBlock.replace(match[0], `url("${dataUri}") format("${match[2]}")`);
+                  }
+                } catch {
+                  // Skip fonts that can't be fetched
+                }
+              }
+              // Also try URLs without format() hint
+              const simpleUrlRegex = /url\(["']?([^"')]+\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\)/gi;
+              const simpleMatches = [...faceBlock.matchAll(simpleUrlRegex)];
+              for (const match of simpleMatches) {
+                const fontUrl = match[1];
+                if (fontUrl.startsWith("data:")) continue;
+                try {
+                  const resolvedUrl = new URL(fontUrl, baseUrl).href;
                   const res = await fetch(resolvedUrl);
                   if (res.ok) {
                     const blob = await res.blob();
@@ -256,7 +259,30 @@ app.on("ready", () => {
               }
               cssText = cssText.replace(faceMatch[0], faceBlock);
             }
-            style.textContent = cssText;
+            return cssText;
+          }
+
+          // Inline external stylesheets (resolve font URLs relative to stylesheet origin)
+          const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
+          for (const link of stylesheets) {
+            try {
+              const href = (link as HTMLLinkElement).href;
+              const res = await fetch(href);
+              let css = await res.text();
+              // Resolve @font-face URLs relative to the stylesheet's URL
+              css = await inlineFontUrls(css, href);
+              const style = document.createElement("style");
+              style.textContent = css;
+              link.replaceWith(style);
+            } catch {
+              // Skip failed stylesheets
+            }
+          }
+
+          // Also process any pre-existing <style> tags (resolve relative to document)
+          const inlineStyles = document.querySelectorAll("style");
+          for (const style of inlineStyles) {
+            style.textContent = await inlineFontUrls(style.textContent || "", document.baseURI);
           }
 
           // Convert images to data URIs
