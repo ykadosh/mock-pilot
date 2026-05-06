@@ -34,6 +34,7 @@ export function Editor() {
   const [device, setDevice] = useState<DevicePreset>("desktop");
   const [historyOpen, setHistoryOpen] = useState(false);
   const canvasRef = useRef<CanvasPreviewHandle>(null);
+  const pendingLabelRef = useRef<string>("AI modification");
   const history = useHistory(projectId);
 
   // Initialize history with the project HTML on load (only if no persisted history)
@@ -61,6 +62,7 @@ export function Editor() {
   };
 
   const handleApplyModification = useCallback((mpId: string, newHTML: string, label?: string) => {
+    pendingLabelRef.current = label || "AI modification";
     canvasRef.current?.applyModification(mpId, newHTML, label);
   }, []);
 
@@ -69,7 +71,9 @@ export function Editor() {
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === "modification-applied" && e.data.success && e.data.fullHTML) {
         const fullDoc = "<!DOCTYPE html><html>" + e.data.fullHTML + "</html>";
-        history.push(fullDoc, e.data.label || "AI modification");
+        const label = pendingLabelRef.current || e.data.label || "AI modification";
+        history.push(fullDoc, label);
+        pendingLabelRef.current = "AI modification";
         // Persist to disk
         if (projectId) {
           window.api.updateProjectHtml(projectId, fullDoc);
