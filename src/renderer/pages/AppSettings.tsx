@@ -11,20 +11,21 @@ interface AppSettingsData {
 }
 
 const AI_MODELS = [
-  // Anthropic
-  { id: "claude-sonnet-4.6", name: "Claude Sonnet 4.6", publisher: "Anthropic", context: "200K", tier: "Included", description: "Fast and capable. Great for everyday coding and creative tasks." },
-  { id: "claude-sonnet-4.5", name: "Claude Sonnet 4.5", publisher: "Anthropic", context: "200K", tier: "Included", description: "Balanced performance with exceptional coding and nuance." },
-  { id: "claude-opus-4.6", name: "Claude Opus 4.6", publisher: "Anthropic", context: "200K", tier: "Premium", description: "Most capable Claude. Deep reasoning and complex tasks." },
-  { id: "claude-opus-4.7", name: "Claude Opus 4.7", publisher: "Anthropic", context: "200K", tier: "Premium", description: "Latest Opus with improved reasoning capabilities." },
-  { id: "claude-haiku-4.5", name: "Claude Haiku 4.5", publisher: "Anthropic", context: "200K", tier: "Included", description: "Fastest Claude model. Low latency responses." },
-  // OpenAI
-  { id: "gpt-4.1", name: "GPT-4.1", publisher: "OpenAI", context: "1M", tier: "Included", description: "Top coding, instruction following, and long-context understanding." },
-  { id: "gpt-4o", name: "GPT-4o", publisher: "OpenAI", context: "128K", tier: "Included", description: "Advanced multimodal model for text and image tasks." },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", publisher: "OpenAI", context: "128K", tier: "Included", description: "Affordable multimodal for diverse tasks." },
-  { id: "gpt-5.4", name: "GPT-5.4", publisher: "OpenAI", context: "200K", tier: "Premium", description: "Latest GPT model with advanced reasoning." },
-  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", publisher: "OpenAI", context: "200K", tier: "Included", description: "Efficient next-gen model for most tasks." },
-  { id: "gpt-5.2", name: "GPT-5.2", publisher: "OpenAI", context: "200K", tier: "Included", description: "Strong general-purpose model with reasoning." },
-  { id: "gpt-5-mini", name: "GPT-5 Mini", publisher: "OpenAI", context: "200K", tier: "Included", description: "Lightweight reasoning model." },
+  // GitHub Models (works with any GitHub account, no Copilot needed)
+  { id: "gpt-4o", name: "GPT-4o", publisher: "OpenAI", context: "128K", tier: "Free", access: "github-models", description: "Advanced multimodal model for text and image tasks." },
+  { id: "gpt-4.1", name: "GPT-4.1", publisher: "OpenAI", context: "1M", tier: "Free", access: "github-models", description: "Top coding, instruction following, and long-context understanding." },
+  { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", publisher: "OpenAI", context: "1M", tier: "Free", access: "github-models", description: "Fast and efficient for everyday tasks." },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", publisher: "OpenAI", context: "128K", tier: "Free", access: "github-models", description: "Affordable multimodal for diverse tasks." },
+  // Copilot API (requires GitHub Copilot subscription / gh CLI auth)
+  { id: "claude-sonnet-4.6", name: "Claude Sonnet 4.6", publisher: "Anthropic", context: "200K", tier: "Copilot", access: "copilot", description: "Fast and capable. Great for everyday coding and creative tasks." },
+  { id: "claude-sonnet-4.5", name: "Claude Sonnet 4.5", publisher: "Anthropic", context: "200K", tier: "Copilot", access: "copilot", description: "Balanced performance with exceptional coding and nuance." },
+  { id: "claude-opus-4.6", name: "Claude Opus 4.6", publisher: "Anthropic", context: "200K", tier: "Premium", access: "copilot", description: "Most capable Claude. Deep reasoning and complex tasks." },
+  { id: "claude-opus-4.7", name: "Claude Opus 4.7", publisher: "Anthropic", context: "200K", tier: "Premium", access: "copilot", description: "Latest Opus with improved reasoning capabilities." },
+  { id: "claude-haiku-4.5", name: "Claude Haiku 4.5", publisher: "Anthropic", context: "200K", tier: "Copilot", access: "copilot", description: "Fastest Claude model. Low latency responses." },
+  { id: "gpt-5.4", name: "GPT-5.4", publisher: "OpenAI", context: "200K", tier: "Premium", access: "copilot", description: "Latest GPT model with advanced reasoning." },
+  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", publisher: "OpenAI", context: "200K", tier: "Copilot", access: "copilot", description: "Efficient next-gen model for most tasks." },
+  { id: "gpt-5.2", name: "GPT-5.2", publisher: "OpenAI", context: "200K", tier: "Copilot", access: "copilot", description: "Strong general-purpose model with reasoning." },
+  { id: "gpt-5-mini", name: "GPT-5 Mini", publisher: "OpenAI", context: "200K", tier: "Copilot", access: "copilot", description: "Lightweight reasoning model." },
 ];
 
 function formatBytes(bytes: number): string {
@@ -36,7 +37,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function AppSettings() {
-  const [settings, setSettings] = useState<AppSettingsData>({ aiModel: "claude-sonnet-4.6" });
+  const [settings, setSettings] = useState<AppSettingsData>({ aiModel: "gpt-4o" });
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -71,6 +72,9 @@ export function AppSettings() {
                   </span>
                 )}
               </div>
+              <p className="text-ui-small text-on-surface-variant">
+                <span className="text-green-400">Free</span> models work with any GitHub account. <span className="text-blue-400">Copilot</span> and <span className="text-violet-400">Premium</span> models require GitHub Copilot access (gh CLI).
+              </p>
               <div className="space-y-md">
                 {Object.entries(
                   AI_MODELS.reduce((groups, model) => {
@@ -105,7 +109,8 @@ export function AppSettings() {
                               <span className="text-body-main text-on-surface font-medium">{model.name}</span>
                               <span className="text-[10px] font-mono text-on-surface-variant bg-surface-container-highest px-1.5 py-0.5 rounded">{model.context}</span>
                               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                                model.tier === "Included" ? "text-green-400 bg-green-400/10" :
+                                model.tier === "Free" ? "text-green-400 bg-green-400/10" :
+                                model.tier === "Copilot" ? "text-blue-400 bg-blue-400/10" :
                                 "text-violet-400 bg-violet-400/10"
                               }`}>{model.tier}</span>
                             </div>

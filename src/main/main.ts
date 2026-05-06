@@ -435,7 +435,7 @@ app.on("ready", () => {
   // AI element modification
   ipcMain.handle("ai-modify-element", async (_event, data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => {
     try {
-      const token = getCopilotToken();
+      const token = getToken();
       if (!token) {
         return { success: false, error: "Not authenticated. Please sign in with GitHub first." };
       }
@@ -467,7 +467,7 @@ User's requested modification: ${data.prompt}
 Return only the modified HTML element:`;
 
       // Load selected model from settings
-      let aiModel = "claude-sonnet-4.6";
+      let aiModel = "gpt-4o";
       try {
         if (fs.existsSync(appSettingsPath)) {
           const settings = JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
@@ -475,22 +475,61 @@ Return only the modified HTML element:`;
         }
       } catch { /* use default */ }
 
-      const response = await fetch("https://api.githubcopilot.com/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-          "Copilot-Integration-Id": "vscode-chat",
-        },
-        body: JSON.stringify({
-          model: aiModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
-          temperature: 0.3,
-        }),
-      });
+      // Models that require Copilot API (api.githubcopilot.com)
+      const copilotModels = ["claude-sonnet-4.5", "gpt-4o", "claude-opus-4.5", "claude-opus-4.6", "claude-opus-4.7", "claude-haiku-4.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5-mini"];
+      const isCopilotModel = copilotModels.includes(aiModel);
+
+      // GitHub Models API models use publisher/model format
+      const ghModelsMap: Record<string, string> = {
+        "gpt-4o": "openai/gpt-4o",
+        "gpt-4.1": "openai/gpt-4.1",
+        "gpt-4.1-mini": "openai/gpt-4.1-mini",
+        "gpt-4o-mini": "openai/gpt-4o-mini",
+      };
+
+      let response: Response;
+
+      if (isCopilotModel) {
+        // Use Copilot API — requires gh CLI token or Copilot subscription
+        const copilotToken = getCopilotToken();
+        if (!copilotToken) {
+          return { success: false, error: `Model "${aiModel}" requires GitHub Copilot access. Install the gh CLI and run 'gh auth login', or select a different model in Settings.` };
+        }
+        response = await fetch("https://api.githubcopilot.com/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${copilotToken}`,
+            "Content-Type": "application/json",
+            "Copilot-Integration-Id": "vscode-chat",
+          },
+          body: JSON.stringify({
+            model: aiModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            temperature: 0.3,
+          }),
+        });
+      } else {
+        // Use GitHub Models API — works with any GitHub token (including OAuth device flow)
+        const modelId = ghModelsMap[aiModel] || aiModel;
+        response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: modelId,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            temperature: 0.3,
+          }),
+        });
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -632,7 +671,7 @@ Return only the modified HTML element:`;
         return JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
       }
     } catch { /* ignore */ }
-    return { aiModel: "claude-sonnet-4.6" };
+    return { aiModel: "gpt-4o" };
   });
 
   ipcMain.handle("save-app-settings", (_event, settings: { aiModel: string }) => {
