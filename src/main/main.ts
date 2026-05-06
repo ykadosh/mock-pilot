@@ -39,7 +39,14 @@ function clearAuth() {
 
 function getToken(): string | null {
   const auth = loadAuth();
-  return auth?.token || null;
+  if (auth?.token) return auth.token;
+  // Fallback: try gh CLI if available
+  try {
+    const { execSync } = require("child_process");
+    const token = execSync("gh auth token", { encoding: "utf-8" }).trim();
+    if (token) return token;
+  } catch { /* gh not available */ }
+  return null;
 }
 
 // Projects storage
