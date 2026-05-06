@@ -204,6 +204,9 @@ app.on("ready", () => {
         await page.setViewport({ width: 1280, height: 800 });
         await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
 
+        // Increase timeout for evaluate since font inlining can take time
+        page.setDefaultTimeout(60000);
+
         const html = await page.evaluate(async () => {
           // Inline external stylesheets
           const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
@@ -218,6 +221,42 @@ app.on("ready", () => {
             } catch {
               // Skip failed stylesheets
             }
+          }
+
+          // Inline @font-face font files as data URIs
+          const styles = document.querySelectorAll("style");
+          for (const style of styles) {
+            let cssText = style.textContent || "";
+            // Match font URLs (absolute and relative) within @font-face blocks
+            const fontFaceRegex = /@font-face\s*\{[^}]*\}/gi;
+            const fontFaces = [...cssText.matchAll(fontFaceRegex)];
+            for (const faceMatch of fontFaces) {
+              let faceBlock = faceMatch[0];
+              const urlRegex = /url\(["']?([^"')]+\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\)/gi;
+              const urlMatches = [...faceBlock.matchAll(urlRegex)];
+              for (const match of urlMatches) {
+                const fontUrl = match[1];
+                // Skip data URIs already
+                if (fontUrl.startsWith("data:")) continue;
+                try {
+                  const resolvedUrl = new URL(fontUrl, document.baseURI).href;
+                  const res = await fetch(resolvedUrl);
+                  if (res.ok) {
+                    const blob = await res.blob();
+                    const dataUri = await new Promise<string>((resolve) => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => resolve(reader.result as string);
+                      reader.readAsDataURL(blob);
+                    });
+                    faceBlock = faceBlock.replace(match[0], `url("${dataUri}")`);
+                  }
+                } catch {
+                  // Skip fonts that can't be fetched
+                }
+              }
+              cssText = cssText.replace(faceMatch[0], faceBlock);
+            }
+            style.textContent = cssText;
           }
 
           // Convert images to data URIs
