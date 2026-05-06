@@ -211,27 +211,32 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     if (!iframe?.contentWindow) return;
     const doc = iframe.contentWindow.document;
 
-    // Report content height to parent
-    const updateDimensions = () => {
-      doc.documentElement.style.height = "auto";
-      doc.body.style.height = "auto";
-      doc.documentElement.style.overflow = "visible";
-      doc.body.style.overflow = "visible";
-      void doc.body.offsetHeight;
-      const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
-      doc.documentElement.style.overflow = "hidden";
-      doc.body.style.overflow = "hidden";
-      setIframeHeight(h);
-    };
-
     // Disable iframe scrolling — canvas handles it
     doc.documentElement.style.overflow = "hidden";
     doc.body.style.overflow = "hidden";
-    updateDimensions();
 
-    // Observe resize changes
-    const resizeObserver = new ResizeObserver(updateDimensions);
-    resizeObserver.observe(doc.body);
+    // Inject a resize reporter that measures from inside the iframe
+    const resizeScript = doc.createElement("script");
+    resizeScript.textContent = `
+      (function() {
+        function reportHeight() {
+          document.documentElement.style.height = 'auto';
+          document.body.style.height = 'auto';
+          document.documentElement.style.overflow = 'visible';
+          document.body.style.overflow = 'visible';
+          var h = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+          document.documentElement.style.overflow = 'hidden';
+          document.body.style.overflow = 'hidden';
+          window.parent.postMessage({ type: 'iframe-height', height: h }, '*');
+        }
+        reportHeight();
+        new ResizeObserver(reportHeight).observe(document.body);
+        window.addEventListener('message', function(e) {
+          if (e.data && e.data.type === 'measure-height') reportHeight();
+        });
+      })();
+    `;
+    doc.body.appendChild(resizeScript);
 
     // Inject picker script
     const script = doc.createElement("script");
@@ -239,35 +244,25 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     doc.body.appendChild(script);
   };
 
-  // Re-measure height when viewport width changes (content reflows)
+  // Listen for height reports from the iframe
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data?.type === "iframe-height" && typeof e.data.height === "number") {
+        setIframeHeight(e.data.height);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  // Ask iframe to remeasure when viewport width changes
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
-    const doc = iframe.contentWindow.document;
-
-    const measure = () => {
-      // Reset any fixed height on body/html so content can shrink
-      doc.documentElement.style.height = "auto";
-      doc.body.style.height = "auto";
-      doc.documentElement.style.overflow = "visible";
-      doc.body.style.overflow = "visible";
-      doc.documentElement.style.width = viewportWidth + "px";
-      doc.body.style.width = viewportWidth + "px";
-
-      // Force layout recalculation
-      void doc.body.offsetHeight;
-
-      const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
-      doc.documentElement.style.overflow = "hidden";
-      doc.body.style.overflow = "hidden";
-      setIframeHeight(h);
-    };
-
-    // Measure multiple times to catch async layout
-    const t1 = setTimeout(measure, 0);
-    const t2 = setTimeout(measure, 100);
-    const t3 = setTimeout(measure, 300);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const t = setTimeout(() => {
+      iframe.contentWindow?.postMessage({ type: "measure-height" }, "*");
+    }, 50);
+    return () => clearTimeout(t);
   }, [viewportWidth]);
 
   // Activate/deactivate picker in iframe
