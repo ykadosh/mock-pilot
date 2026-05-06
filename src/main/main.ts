@@ -514,7 +514,10 @@ Return only the modified HTML element:`;
       });
       const res = await fetch("https://github.com/login/device/code", {
         method: "POST",
-        headers: { "Accept": "application/json" },
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
         body: body.toString(),
       });
       if (!res.ok) return { success: false, error: "Failed to start device flow" };
@@ -542,7 +545,10 @@ Return only the modified HTML element:`;
       });
       const res = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
-        headers: { "Accept": "application/json" },
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
         body: body.toString(),
       });
       const data = await res.json();
