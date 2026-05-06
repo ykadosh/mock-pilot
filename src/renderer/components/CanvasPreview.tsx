@@ -101,7 +101,7 @@ const PICKER_SCRIPT = `
       if (label) label.style.display = 'none';
       document.body.style.cursor = '';
     } else if (e.data && e.data.type === 'apply-modification') {
-      const { mpId, html } = e.data;
+      const { mpId, html, label } = e.data;
       try {
         const el = document.querySelector('[data-mp-id="' + mpId + '"]');
         if (el) {
@@ -115,7 +115,7 @@ const PICKER_SCRIPT = `
           } else {
             el.outerHTML = html;
           }
-          window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: document.documentElement.outerHTML }, '*');
+          window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: document.documentElement.outerHTML, label: label || 'AI modification' }, '*');
         } else {
           window.parent.postMessage({ type: 'modification-applied', success: false, error: 'Element not found by data-mp-id' }, '*');
         }
@@ -144,7 +144,7 @@ const PICKER_SCRIPT = `
 `;
 
 export interface CanvasPreviewHandle {
-  applyModification: (mpId: string, newHTML: string) => void;
+  applyModification: (mpId: string, newHTML: string, label?: string) => void;
   getElementHTML: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
 }
 
@@ -154,18 +154,28 @@ interface CanvasPreviewProps {
   zoom?: number;
   viewportWidth?: number;
   projectId?: string;
+  htmlContent?: string | null;
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280, projectId }, ref) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  // Use htmlContent prop if provided, otherwise fall back to store
+  useEffect(() => {
+    if (htmlContent !== undefined) {
+      setHtml(htmlContent);
+    } else {
+      setHtml(getCapturedHtml());
+    }
+  }, [htmlContent]);
+
   useImperativeHandle(ref, () => ({
-    applyModification(mpId: string, newHTML: string) {
+    applyModification(mpId: string, newHTML: string, label?: string) {
       const iframe = iframeRef.current;
       if (!iframe?.contentWindow) return;
-      iframe.contentWindow.postMessage({ type: "apply-modification", mpId, html: newHTML }, "*");
+      iframe.contentWindow.postMessage({ type: "apply-modification", mpId, html: newHTML, label: label || "AI modification" }, "*");
     },
     getElementHTML(mpId: string): Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null> {
       return new Promise((resolve) => {
@@ -188,10 +198,6 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
       });
     },
   }));
-
-  useEffect(() => {
-    setHtml(getCapturedHtml());
-  }, []);
 
   // Inject picker script and auto-resize logic into iframe once loaded
   const handleIframeLoad = () => {
@@ -256,15 +262,10 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
       if (e.data?.type === "element-selected" && onElementSelected) {
         onElementSelected(e.data.data);
       }
-      // Persist modified HTML to disk after successful AI modification
-      if (e.data?.type === "modification-applied" && e.data.success && e.data.fullHTML && projectId) {
-        const fullDoc = "<!DOCTYPE html><html>" + e.data.fullHTML + "</html>";
-        window.api.updateProjectHtml(projectId, fullDoc);
-      }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [onElementSelected, projectId]);
+  }, [onElementSelected]);
 
   const scale = zoom / 100;
 

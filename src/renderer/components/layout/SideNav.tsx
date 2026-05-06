@@ -103,6 +103,7 @@ export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToo
       {/* Tool items */}
       <nav className="flex-1 overflow-y-auto py-sm flex flex-col gap-1">
         <NavItem icon="ads_click" label="Element Picker" active={activeTool === "Element Picker"} collapsed={collapsed} onClick={() => onToolClick?.("Element Picker")} />
+        <NavItem icon="history" label="History" active={activeTool === "History"} collapsed={collapsed} onClick={() => onToolClick?.("History")} />
         <NavItem icon="layers" label="Layers" active={activeTool === "Layers"} collapsed={collapsed} onClick={() => onToolClick?.("Layers")} />
         <NavItem icon="code" label="Code Editor" active={activeTool === "Code Editor"} collapsed={collapsed} onClick={() => onToolClick?.("Code Editor")} />
         <NavItem icon="ios_share" label="Export" active={activeTool === "Export"} collapsed={collapsed} onClick={() => onToolClick?.("Export")} />

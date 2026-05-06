@@ -1,9 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
 import { SideNav } from "../components/layout/SideNav";
 import { CanvasPreview, CanvasPreviewHandle } from "../components/CanvasPreview";
 import { PropertiesPanel } from "../components/PropertiesPanel";
+import { HistoryPanel } from "../components/HistoryPanel";
+import { useHistory } from "../hooks/useHistory";
+import { getCapturedHtml } from "../lib/store";
 
 export interface SelectedElement {
   tagName: string;
@@ -29,11 +32,23 @@ export function Editor() {
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [zoom, setZoom] = useState(100);
   const [device, setDevice] = useState<DevicePreset>("desktop");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const canvasRef = useRef<CanvasPreviewHandle>(null);
+  const history = useHistory();
+
+  // Initialize history with the project HTML on load
+  useEffect(() => {
+    const html = getCapturedHtml();
+    if (html) {
+      history.initialize(html);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {
       setPickerActive((prev) => !prev);
+    } else if (tool === "History") {
+      setHistoryOpen((prev) => !prev);
     }
   };
 
@@ -42,9 +57,32 @@ export function Editor() {
     setPickerActive(false);
   };
 
-  const handleApplyModification = (mpId: string, newHTML: string) => {
-    canvasRef.current?.applyModification(mpId, newHTML);
-  };
+  const handleApplyModification = useCallback((mpId: string, newHTML: string, label?: string) => {
+    canvasRef.current?.applyModification(mpId, newHTML, label);
+  }, []);
+
+  // Listen for successful modifications to push to history and persist
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data?.type === "modification-applied" && e.data.success && e.data.fullHTML) {
+        const fullDoc = "<!DOCTYPE html><html>" + e.data.fullHTML + "</html>";
+        history.push(fullDoc, e.data.label || "AI modification");
+        // Persist to disk
+        if (projectId) {
+          window.api.updateProjectHtml(projectId, fullDoc);
+        }
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [history.push, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist current state when navigating history (undo/redo/goTo)
+  useEffect(() => {
+    if (projectId && history.currentHtml && history.pointer > 0) {
+      window.api.updateProjectHtml(projectId, history.currentHtml);
+    }
+  }, [history.pointer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const zoomIn = () => setZoom((z) => Math.min(z + 25, 200));
   const zoomOut = () => setZoom((z) => Math.max(z - 25, 25));
@@ -57,7 +95,7 @@ export function Editor() {
       <div className="flex pt-12 h-screen">
         <SideNav
           activeTab="editor"
-          activeTool={pickerActive ? "Element Picker" : undefined}
+          activeTool={pickerActive ? "Element Picker" : historyOpen ? "History" : undefined}
           onToolClick={handleToolClick}
           projectId={projectId}
         />
@@ -96,10 +134,18 @@ export function Editor() {
                 zoom_out
               </button>
               <div className="w-px h-4 bg-slate-700 mx-2" />
-              <button className="material-symbols-outlined text-slate-500 hover:text-white">
+              <button
+                onClick={history.undo}
+                disabled={!history.canUndo}
+                className={`material-symbols-outlined cursor-pointer ${history.canUndo ? "text-slate-500 hover:text-white" : "text-slate-700 cursor-not-allowed"}`}
+              >
                 undo
               </button>
-              <button className="material-symbols-outlined text-slate-500 hover:text-white">
+              <button
+                onClick={history.redo}
+                disabled={!history.canRedo}
+                className={`material-symbols-outlined cursor-pointer ${history.canRedo ? "text-slate-500 hover:text-white" : "text-slate-700 cursor-not-allowed"}`}
+              >
                 redo
               </button>
             </div>
@@ -113,7 +159,18 @@ export function Editor() {
             zoom={zoom}
             viewportWidth={deviceWidth}
             projectId={projectId}
+            htmlContent={history.currentHtml}
           />
+
+          {/* History Panel */}
+          {historyOpen && (
+            <HistoryPanel
+              entries={history.entries}
+              pointer={history.pointer}
+              onGoTo={history.goTo}
+              onClose={() => setHistoryOpen(false)}
+            />
+          )}
 
           {/* Properties Panel */}
           {selectedElement && (
