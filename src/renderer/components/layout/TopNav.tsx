@@ -42,19 +42,38 @@ export function TopNav({ children }: TopNavProps) {
   };
 
   // Poll for auth completion
+  const pollIntervalRef = useRef(10000);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!polling || !deviceCode) return;
-    const interval = setInterval(async () => {
-      const done = await auth.pollLogin(deviceCode);
-      if (done) {
+
+    const poll = async () => {
+      const result = await window.api.authPollDeviceFlow(deviceCode);
+      if (result.status === "success") {
+        // Update auth state
+        auth.pollLogin(deviceCode); // This updates the context
         setPolling(false);
         setShowLoginFlow(false);
         setUserCode("");
         setDeviceCode("");
+      } else if (result.status === "slow_down") {
+        pollIntervalRef.current += 5000;
+        pollTimerRef.current = setTimeout(poll, pollIntervalRef.current);
+      } else if (result.status === "error") {
+        setPolling(false);
+        setLoginError(result.error || "Authentication failed");
+      } else {
+        // pending - keep polling
+        pollTimerRef.current = setTimeout(poll, pollIntervalRef.current);
       }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [polling, deviceCode, auth.pollLogin]);
+    };
+
+    pollTimerRef.current = setTimeout(poll, pollIntervalRef.current);
+    return () => {
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    };
+  }, [polling, deviceCode]);
 
   // Close user menu on outside click
   useEffect(() => {
