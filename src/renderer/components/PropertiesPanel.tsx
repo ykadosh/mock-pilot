@@ -5,9 +5,10 @@ interface PropertiesPanelProps {
   element: SelectedElement;
   onClose: () => void;
   onApplyModification?: (mpId: string, newHTML: string) => void;
+  getElementHTML?: () => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
 }
 
-export function PropertiesPanel({ element, onClose, onApplyModification }: PropertiesPanelProps) {
+export function PropertiesPanel({ element, onClose, onApplyModification, getElementHTML }: PropertiesPanelProps) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,10 +22,15 @@ export function PropertiesPanel({ element, onClose, onApplyModification }: Prope
     setLoading(true);
     setError("");
     try {
+      // Fetch the current HTML from the iframe (reflects prior modifications)
+      const current = await getElementHTML?.();
+      const outerHTML = current?.outerHTML ?? element.outerHTML;
+      const computedStyle = current?.computedStyle ?? element.computedStyle;
+
       const result = await window.api.aiModifyElement({
         prompt: prompt.trim(),
-        outerHTML: element.outerHTML,
-        computedStyle: element.computedStyle,
+        outerHTML,
+        computedStyle,
       });
       if (result.success && result.html) {
         onApplyModification?.(element.mpId, result.html);

@@ -120,6 +120,7 @@ export function Editor() {
               element={selectedElement}
               onClose={() => setSelectedElement(null)}
               onApplyModification={handleApplyModification}
+              getElementHTML={() => canvasRef.current?.getElementHTML(selectedElement.mpId) ?? Promise.resolve(null)}
             />
           )}
         </main>

@@ -113,7 +113,6 @@ const PICKER_SCRIPT = `
             newEl.setAttribute('data-mp-id', mpId);
             el.outerHTML = newEl.outerHTML;
           } else {
-            // If the AI returned text-only or non-element content, just replace
             el.outerHTML = html;
           }
           window.parent.postMessage({ type: 'modification-applied', success: true }, '*');
@@ -123,6 +122,20 @@ const PICKER_SCRIPT = `
       } catch (err) {
         window.parent.postMessage({ type: 'modification-applied', success: false, error: err.message }, '*');
       }
+    } else if (e.data && e.data.type === 'get-element-html') {
+      const { mpId } = e.data;
+      const el = document.querySelector('[data-mp-id="' + mpId + '"]');
+      if (el) {
+        const computed = window.getComputedStyle(el);
+        const style = {};
+        ['width','height','padding','margin','background-color','color','font-size','font-family','border-radius','display','position'].forEach(prop => {
+          style[prop] = computed.getPropertyValue(prop);
+        });
+        window.parent.postMessage({ type: 'element-html-response', mpId: mpId, outerHTML: el.outerHTML, computedStyle: style }, '*');
+      } else {
+        window.parent.postMessage({ type: 'element-html-response', mpId: mpId, outerHTML: null }, '*');
+      }
+    }
     }
   });
 
@@ -133,6 +146,7 @@ const PICKER_SCRIPT = `
 
 export interface CanvasPreviewHandle {
   applyModification: (mpId: string, newHTML: string) => void;
+  getElementHTML: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
 }
 
 interface CanvasPreviewProps {
@@ -152,6 +166,26 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
       const iframe = iframeRef.current;
       if (!iframe?.contentWindow) return;
       iframe.contentWindow.postMessage({ type: "apply-modification", mpId, html: newHTML }, "*");
+    },
+    getElementHTML(mpId: string): Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null> {
+      return new Promise((resolve) => {
+        const iframe = iframeRef.current;
+        if (!iframe?.contentWindow) { resolve(null); return; }
+        const handler = (e: MessageEvent) => {
+          if (e.data?.type === "element-html-response" && e.data.mpId === mpId) {
+            window.removeEventListener("message", handler);
+            if (e.data.outerHTML) {
+              resolve({ outerHTML: e.data.outerHTML, computedStyle: e.data.computedStyle });
+            } else {
+              resolve(null);
+            }
+          }
+        };
+        window.addEventListener("message", handler);
+        iframe.contentWindow.postMessage({ type: "get-element-html", mpId }, "*");
+        // Timeout fallback
+        setTimeout(() => { window.removeEventListener("message", handler); resolve(null); }, 2000);
+      });
     },
   }));
 
