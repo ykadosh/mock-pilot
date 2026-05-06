@@ -59,17 +59,56 @@ function getToken(): string | null {
   return null;
 }
 
-// For Copilot API calls, prefer gh CLI token (has Copilot access)
-// over the OAuth device flow token (which has no scopes)
-function getCopilotToken(): string | null {
+// Copilot token cache
+let copilotTokenCache: { token: string; expiresAt: number } | null = null;
+
+// Exchange a GitHub token for a Copilot session token
+async function exchangeCopilotToken(githubToken: string): Promise<string | null> {
+  // Return cached token if still valid (with 60s buffer)
+  if (copilotTokenCache && Date.now() < copilotTokenCache.expiresAt - 60000) {
+    return copilotTokenCache.token;
+  }
+  try {
+    const response = await fetch("https://api.github.com/copilot_internal/v2/token", {
+      headers: {
+        "Authorization": `Bearer ${githubToken}`,
+        "Editor-Version": "vscode/1.100.0",
+        "Editor-Plugin-Version": "copilot/1.300.0",
+      },
+    });
+    if (!response.ok) return null;
+    const data = await response.json() as { token?: string; expires_at?: number };
+    if (data.token) {
+      copilotTokenCache = {
+        token: data.token,
+        expiresAt: (data.expires_at || 0) * 1000, // convert unix seconds to ms
+      };
+      return data.token;
+    }
+  } catch { /* exchange failed */ }
+  return null;
+}
+
+// Get a token suitable for Copilot API calls
+async function getCopilotToken(): Promise<string | null> {
+  // First try: exchange stored OAuth token for Copilot token
+  const auth = loadAuth();
+  if (auth?.token) {
+    const copilotToken = await exchangeCopilotToken(auth.token);
+    if (copilotToken) return copilotToken;
+  }
+  // Second try: use gh CLI token directly (has Copilot access built-in)
   try {
     const { execSync } = require("child_process");
-    const token = execSync("gh auth token", { encoding: "utf-8" }).trim();
-    if (token) return token;
+    const ghToken = execSync("gh auth token", { encoding: "utf-8" }).trim();
+    if (ghToken) {
+      // Try exchanging gh CLI token too
+      const copilotToken = await exchangeCopilotToken(ghToken);
+      if (copilotToken) return copilotToken;
+      // gh CLI token might work directly
+      return ghToken;
+    }
   } catch { /* gh not available */ }
-  // Fall back to stored OAuth token
-  const auth = loadAuth();
-  if (auth?.token) return auth.token;
   return null;
 }
 
@@ -475,61 +514,37 @@ Return only the modified HTML element:`;
         }
       } catch { /* use default */ }
 
-      // Models that require Copilot API (api.githubcopilot.com)
-      const copilotModels = ["claude-sonnet-4.5", "gpt-4o", "claude-opus-4.5", "claude-opus-4.6", "claude-opus-4.7", "claude-haiku-4.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5-mini"];
-      const isCopilotModel = copilotModels.includes(aiModel);
+      // Models that require gh CLI token (need full Copilot Pro/Business subscription)
+      const premiumModels = ["claude-sonnet-4.5", "claude-sonnet-4.6", "claude-opus-4.5", "claude-opus-4.6", "claude-opus-4.7", "claude-haiku-4.5", "gpt-4.1", "gpt-4.1-mini", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5-mini"];
+      const isPremiumModel = premiumModels.includes(aiModel);
 
-      // GitHub Models API models use publisher/model format
-      const ghModelsMap: Record<string, string> = {
-        "gpt-4o": "openai/gpt-4o",
-        "gpt-4.1": "openai/gpt-4.1",
-        "gpt-4.1-mini": "openai/gpt-4.1-mini",
-        "gpt-4o-mini": "openai/gpt-4o-mini",
-      };
-
-      let response: Response;
-
-      if (isCopilotModel) {
-        // Use Copilot API — requires gh CLI token or Copilot subscription
-        const copilotToken = getCopilotToken();
+      // For premium models, we need the gh CLI token which has full Copilot access
+      let apiToken = token;
+      if (isPremiumModel) {
+        const copilotToken = await getCopilotToken();
         if (!copilotToken) {
-          return { success: false, error: `Model "${aiModel}" requires GitHub Copilot access. Install the gh CLI and run 'gh auth login', or select a different model in Settings.` };
+          return { success: false, error: `Model "${aiModel}" requires GitHub Copilot Pro/Business. Make sure your GitHub account has Copilot access, or select a Free model in Settings.` };
         }
-        response = await fetch("https://api.githubcopilot.com/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${copilotToken}`,
-            "Content-Type": "application/json",
-            "Copilot-Integration-Id": "vscode-chat",
-          },
-          body: JSON.stringify({
-            model: aiModel,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userMessage },
-            ],
-            temperature: 0.3,
-          }),
-        });
-      } else {
-        // Use GitHub Models API — works with any GitHub token (including OAuth device flow)
-        const modelId = ghModelsMap[aiModel] || aiModel;
-        response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: modelId,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userMessage },
-            ],
-            temperature: 0.3,
-          }),
-        });
+        apiToken = copilotToken;
       }
+
+      // All models use the Copilot API with copilot-4-cli integration
+      const response = await fetch("https://api.githubcopilot.com/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+          "Copilot-Integration-Id": "copilot-4-cli",
+        },
+        body: JSON.stringify({
+          model: aiModel,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          temperature: 0.3,
+        }),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
