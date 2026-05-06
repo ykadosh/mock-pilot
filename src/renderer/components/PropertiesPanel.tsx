@@ -78,7 +78,10 @@ export function PropertiesPanel({ element, onClose, onApplyModification }: Prope
             className="w-full bg-[#020617] border border-[#334155] rounded p-sm text-ui-small font-body-main text-on-surface focus:outline-none focus:border-primary-container h-24 resize-none placeholder-slate-600 mb-sm disabled:opacity-50"
             placeholder="Describe changes to the selected element..."
             onKeyDown={(e) => {
-              if (e.key === "Enter" && e.metaKey && prompt.trim() && !loading) handleApply();
+              if (e.key === "Enter" && !e.shiftKey && prompt.trim() && !loading) {
+                e.preventDefault();
+                handleApply();
+              }
             }}
           />
           {error && (
