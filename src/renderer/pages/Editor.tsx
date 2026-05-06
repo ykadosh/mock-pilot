@@ -51,14 +51,18 @@ export function Editor() {
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {
       setPickerActive((prev) => !prev);
+      setHistoryOpen(false);
     } else if (tool === "History") {
       setHistoryOpen((prev) => !prev);
+      setPickerActive(false);
+      setSelectedElement(null);
     }
   };
 
   const handleElementSelected = (element: SelectedElement) => {
     setSelectedElement(element);
     setPickerActive(false);
+    setHistoryOpen(false);
   };
 
   const handleApplyModification = useCallback((mpId: string, newHTML: string, label?: string) => {
