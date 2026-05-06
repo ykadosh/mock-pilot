@@ -476,10 +476,14 @@ Return only the modified HTML element:`;
 
   ipcMain.handle("auth-start-device-flow", async () => {
     try {
+      const body = new URLSearchParams({
+        client_id: GITHUB_CLIENT_ID,
+        scope: "",
+      });
       const res = await fetch("https://github.com/login/device/code", {
         method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, scope: "" }),
+        headers: { "Accept": "application/json" },
+        body: body.toString(),
       });
       if (!res.ok) return { success: false, error: "Failed to start device flow" };
       const data = await res.json();
@@ -499,17 +503,18 @@ Return only the modified HTML element:`;
 
   ipcMain.handle("auth-poll-device-flow", async (_event, deviceCode: string) => {
     try {
+      const body = new URLSearchParams({
+        client_id: GITHUB_CLIENT_ID,
+        device_code: deviceCode,
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+      });
       const res = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: GITHUB_CLIENT_ID,
-          device_code: deviceCode,
-          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        }),
+        headers: { "Accept": "application/json" },
+        body: body.toString(),
       });
-      if (!res.ok) return { status: "error", error: "Request failed" };
       const data = await res.json();
+      console.log("Poll response:", JSON.stringify(data));
 
       if (data.error === "authorization_pending") {
         return { status: "pending" };
