@@ -17,7 +17,7 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
 
   useEffect(() => {
     textareaRef.current?.focus();
-  }, []);
+  }, [element]);
 
   const selector = element.tagName +
     (element.id ? `#${element.id}` : "") +
