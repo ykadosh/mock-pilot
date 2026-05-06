@@ -14,6 +14,7 @@ export function TopNav({ children }: TopNavProps) {
   const [deviceCode, setDeviceCode] = useState("");
   const [polling, setPolling] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [loginError, setLoginError] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleLoginClick = async () => {
@@ -21,12 +22,22 @@ export function TopNav({ children }: TopNavProps) {
       setShowUserMenu((prev) => !prev);
       return;
     }
-    const result = await auth.startLogin();
-    if (result) {
-      setUserCode(result.user_code);
-      setDeviceCode(result.device_code);
+    if (showLoginFlow) return; // Already showing login
+    setLoginError("");
+    try {
+      const result = await auth.startLogin();
+      if (result) {
+        setUserCode(result.user_code);
+        setDeviceCode(result.device_code);
+        setShowLoginFlow(true);
+        setPolling(true);
+      } else {
+        setLoginError("Failed to start login flow. Please try again.");
+        setShowLoginFlow(true);
+      }
+    } catch {
+      setLoginError("Failed to connect to GitHub. Please try again.");
       setShowLoginFlow(true);
-      setPolling(true);
     }
   };
 
@@ -127,30 +138,47 @@ export function TopNav({ children }: TopNavProps) {
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 w-80 text-center shadow-2xl">
             <span className="material-symbols-outlined text-4xl text-violet-400 mb-3 block">key</span>
             <h3 className="text-lg font-bold text-white mb-2">Sign in with GitHub</h3>
-            <p className="text-sm text-slate-400 mb-4">
-              Enter this code on GitHub:
-            </p>
-            <div className="bg-slate-900 rounded-lg px-4 py-3 mb-4">
-              <code className="text-2xl font-mono font-bold text-violet-300 tracking-widest select-all">
-                {userCode}
-              </code>
-            </div>
-            <p className="text-xs text-slate-500 mb-4">
-              A browser window has been opened. Paste the code above to complete sign-in.
-            </p>
-            <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
-              <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-              Waiting for authorization...
-            </div>
-            <button
-              onClick={() => {
-                setShowLoginFlow(false);
-                setPolling(false);
-              }}
-              className="mt-4 text-xs text-slate-500 hover:text-slate-300 cursor-pointer"
-            >
-              Cancel
-            </button>
+            {loginError ? (
+              <>
+                <p className="text-sm text-red-400 mb-4">{loginError}</p>
+                <button
+                  onClick={() => {
+                    setShowLoginFlow(false);
+                    setLoginError("");
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-300 cursor-pointer"
+                >
+                  Close
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-slate-400 mb-4">
+                  Enter this code on GitHub:
+                </p>
+                <div className="bg-slate-900 rounded-lg px-4 py-3 mb-4">
+                  <code className="text-2xl font-mono font-bold text-violet-300 tracking-widest select-all">
+                    {userCode}
+                  </code>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">
+                  A browser window has been opened. Paste the code above to complete sign-in.
+                </p>
+                <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
+                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                  Waiting for authorization...
+                </div>
+                <button
+                  onClick={() => {
+                    setShowLoginFlow(false);
+                    setPolling(false);
+                  }}
+                  className="mt-4 text-xs text-slate-500 hover:text-slate-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -13,6 +13,7 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 const GITHUB_CLIENT_ID = "Ov23liwdxHGMy1H6hPRx";
 
 const authFilePath = path.join(app.getPath("userData"), "github-auth.json");
+const loggedOutMarker = path.join(app.getPath("userData"), "github-logged-out");
 
 interface AuthData {
   token: string;
@@ -31,15 +32,24 @@ function loadAuth(): AuthData | null {
 
 function saveAuth(data: AuthData) {
   fs.writeFileSync(authFilePath, JSON.stringify(data), "utf-8");
+  // Clear logged-out marker when explicitly saving auth
+  try { fs.unlinkSync(loggedOutMarker); } catch { /* ignore */ }
 }
 
 function clearAuth() {
   try { fs.unlinkSync(authFilePath); } catch { /* ignore */ }
+  // Set logged-out marker so we don't re-import from gh CLI
+  fs.writeFileSync(loggedOutMarker, "", "utf-8");
+}
+
+function isExplicitlyLoggedOut(): boolean {
+  return fs.existsSync(loggedOutMarker);
 }
 
 function getToken(): string | null {
   const auth = loadAuth();
   if (auth?.token) return auth.token;
+  if (isExplicitlyLoggedOut()) return null;
   // Fallback: try gh CLI if available
   try {
     const { execSync } = require("child_process");
@@ -470,6 +480,10 @@ Return only the modified HTML element:`;
     const auth = loadAuth();
     if (auth) {
       return { authenticated: true, login: auth.login, avatar_url: auth.avatar_url };
+    }
+    // Don't fall back to gh CLI if user explicitly logged out
+    if (isExplicitlyLoggedOut()) {
+      return { authenticated: false };
     }
     // Fallback: check gh CLI
     try {
