@@ -136,7 +136,6 @@ const PICKER_SCRIPT = `
         window.parent.postMessage({ type: 'element-html-response', mpId: mpId, outerHTML: null }, '*');
       }
     }
-    }
   });
 
   document.addEventListener('mousemove', handleMouseMove, true);
