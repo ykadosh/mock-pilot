@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { SelectedElement } from "../pages/Editor";
 import { SidePanel } from "./ui/SidePanel";
 
@@ -13,6 +13,11 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
 
   const selector = element.tagName +
     (element.id ? `#${element.id}` : "") +
@@ -66,10 +71,11 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
           AI MODIFIER
         </h3>
         <textarea
+          ref={textareaRef}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           disabled={loading}
-          className="w-full bg-[#020617] border border-[#334155] rounded p-sm text-ui-small font-body-main text-on-surface focus:outline-none focus:border-primary-container h-24 resize-none placeholder-slate-600 mb-sm disabled:opacity-50"
+          className="w-full bg-[#020617] border border-[#334155] rounded p-sm text-ui-small font-body-main text-on-surface focus:outline-none focus:border-primary-container h-32 resize-none placeholder-slate-600 mb-sm disabled:opacity-50"
           placeholder="Describe changes to the selected element..."
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && prompt.trim() && !loading) {
