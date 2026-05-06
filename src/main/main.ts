@@ -59,6 +59,20 @@ function getToken(): string | null {
   return null;
 }
 
+// For Copilot API calls, prefer gh CLI token (has Copilot access)
+// over the OAuth device flow token (which has no scopes)
+function getCopilotToken(): string | null {
+  try {
+    const { execSync } = require("child_process");
+    const token = execSync("gh auth token", { encoding: "utf-8" }).trim();
+    if (token) return token;
+  } catch { /* gh not available */ }
+  // Fall back to stored OAuth token
+  const auth = loadAuth();
+  if (auth?.token) return auth.token;
+  return null;
+}
+
 // Projects storage
 const projectsDir = path.join(app.getPath("userData"), "projects");
 const appSettingsPath = path.join(app.getPath("userData"), "app-settings.json");
@@ -421,7 +435,7 @@ app.on("ready", () => {
   // AI element modification
   ipcMain.handle("ai-modify-element", async (_event, data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => {
     try {
-      const token = getToken();
+      const token = getCopilotToken();
       if (!token) {
         return { success: false, error: "Not authenticated. Please sign in with GitHub first." };
       }
