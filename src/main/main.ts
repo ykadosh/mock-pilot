@@ -453,7 +453,7 @@ User's requested modification: ${data.prompt}
 Return only the modified HTML element:`;
 
       // Load selected model from settings
-      let aiModel = "openai/gpt-4o";
+      let aiModel = "claude-sonnet-4.6";
       try {
         if (fs.existsSync(appSettingsPath)) {
           const settings = JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
@@ -461,11 +461,12 @@ Return only the modified HTML element:`;
         }
       } catch { /* use default */ }
 
-      const response = await fetch("https://models.github.ai/inference/chat/completions", {
+      const response = await fetch("https://api.githubcopilot.com/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
+          "Copilot-Integration-Id": "vscode-chat",
         },
         body: JSON.stringify({
           model: aiModel,
@@ -617,7 +618,7 @@ Return only the modified HTML element:`;
         return JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
       }
     } catch { /* ignore */ }
-    return { aiModel: "openai/gpt-4o" };
+    return { aiModel: "claude-sonnet-4.6" };
   });
 
   ipcMain.handle("save-app-settings", (_event, settings: { aiModel: string }) => {

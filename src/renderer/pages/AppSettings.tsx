@@ -11,36 +11,20 @@ interface AppSettingsData {
 }
 
 const AI_MODELS = [
+  // Anthropic
+  { id: "claude-sonnet-4.6", name: "Claude Sonnet 4.6", publisher: "Anthropic", context: "200K", tier: "Included", description: "Fast and capable. Great for everyday coding and creative tasks." },
+  { id: "claude-sonnet-4.5", name: "Claude Sonnet 4.5", publisher: "Anthropic", context: "200K", tier: "Included", description: "Balanced performance with exceptional coding and nuance." },
+  { id: "claude-opus-4.6", name: "Claude Opus 4.6", publisher: "Anthropic", context: "200K", tier: "Premium", description: "Most capable Claude. Deep reasoning and complex tasks." },
+  { id: "claude-opus-4.7", name: "Claude Opus 4.7", publisher: "Anthropic", context: "200K", tier: "Premium", description: "Latest Opus with improved reasoning capabilities." },
+  { id: "claude-haiku-4.5", name: "Claude Haiku 4.5", publisher: "Anthropic", context: "200K", tier: "Included", description: "Fastest Claude model. Low latency responses." },
   // OpenAI
-  { id: "openai/gpt-4.1", name: "GPT-4.1", publisher: "OpenAI", context: "1M", tier: "High", description: "Top coding, instruction following, and long-context understanding." },
-  { id: "openai/gpt-4.1-mini", name: "GPT-4.1 Mini", publisher: "OpenAI", context: "1M", tier: "Low", description: "Efficient variant with strong coding and long-context handling." },
-  { id: "openai/gpt-4.1-nano", name: "GPT-4.1 Nano", publisher: "OpenAI", context: "1M", tier: "Low", description: "Lower latency and cost with solid performance." },
-  { id: "openai/gpt-4o", name: "GPT-4o", publisher: "OpenAI", context: "128K", tier: "High", description: "Advanced multimodal model for text and image tasks." },
-  { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", publisher: "OpenAI", context: "128K", tier: "Low", description: "Affordable multimodal for diverse tasks." },
-  { id: "openai/o4-mini", name: "o4-mini", publisher: "OpenAI", context: "200K", tier: "Custom", description: "Improved reasoning with tool calling support." },
-  { id: "openai/o3", name: "o3", publisher: "OpenAI", context: "200K", tier: "Custom", description: "Advanced reasoning with streaming and tool use." },
-  { id: "openai/o3-mini", name: "o3-mini", publisher: "OpenAI", context: "200K", tier: "Custom", description: "Cost-efficient reasoning model." },
-  // Meta
-  { id: "meta/llama-4-maverick-17b-128e-instruct-fp8", name: "Llama 4 Maverick", publisher: "Meta", context: "1M", tier: "High", description: "17B×128 experts. Image understanding and creative writing." },
-  { id: "meta/llama-4-scout-17b-16e-instruct", name: "Llama 4 Scout", publisher: "Meta", context: "10M", tier: "High", description: "17B×16 experts. Multi-doc summarization and codebase reasoning." },
-  { id: "meta/llama-3.3-70b-instruct", name: "Llama 3.3 70B", publisher: "Meta", context: "128K", tier: "High", description: "70B params. Enhanced reasoning comparable to 405B." },
-  // DeepSeek
-  { id: "deepseek/deepseek-r1-0528", name: "DeepSeek R1", publisher: "DeepSeek", context: "128K", tier: "Custom", description: "Reduced hallucination, function calling, great for vibe coding." },
-  { id: "deepseek/deepseek-v3-0324", name: "DeepSeek V3", publisher: "DeepSeek", context: "128K", tier: "High", description: "Enhanced reasoning, function calling, and code generation." },
-  // Mistral AI
-  { id: "mistral-ai/mistral-medium-2505", name: "Mistral Medium 3", publisher: "Mistral AI", context: "128K", tier: "Low", description: "Advanced reasoning, knowledge, coding and vision." },
-  { id: "mistral-ai/mistral-small-2503", name: "Mistral Small 3.1", publisher: "Mistral AI", context: "128K", tier: "Low", description: "Multimodal with 128k context length." },
-  { id: "mistral-ai/codestral-2501", name: "Codestral", publisher: "Mistral AI", context: "256K", tier: "Low", description: "Code generation optimized, supports 80+ languages." },
-  // xAI
-  { id: "xai/grok-3", name: "Grok 3", publisher: "xAI", context: "131K", tier: "Custom", description: "Excels in specialized domains like finance and healthcare." },
-  { id: "xai/grok-3-mini", name: "Grok 3 Mini", publisher: "xAI", context: "131K", tier: "Custom", description: "Lightweight reasoning model for logic-based tasks." },
-  // Microsoft
-  { id: "microsoft/phi-4-reasoning", name: "Phi-4 Reasoning", publisher: "Microsoft", context: "32K", tier: "Low", description: "State-of-the-art open-weight reasoning model." },
-  { id: "microsoft/phi-4", name: "Phi-4", publisher: "Microsoft", context: "16K", tier: "Low", description: "14B params. Low latency scenarios." },
-  // Cohere
-  { id: "cohere/cohere-command-a", name: "Command A", publisher: "Cohere", context: "128K", tier: "Low", description: "Efficient model for agentic and multilingual use cases." },
-  // AI21
-  { id: "ai21-labs/ai21-jamba-1.5-large", name: "Jamba 1.5 Large", publisher: "AI21", context: "256K", tier: "High", description: "398B params. Multilingual with long context and grounded generation." },
+  { id: "gpt-4.1", name: "GPT-4.1", publisher: "OpenAI", context: "1M", tier: "Included", description: "Top coding, instruction following, and long-context understanding." },
+  { id: "gpt-4o", name: "GPT-4o", publisher: "OpenAI", context: "128K", tier: "Included", description: "Advanced multimodal model for text and image tasks." },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", publisher: "OpenAI", context: "128K", tier: "Included", description: "Affordable multimodal for diverse tasks." },
+  { id: "gpt-5.4", name: "GPT-5.4", publisher: "OpenAI", context: "200K", tier: "Premium", description: "Latest GPT model with advanced reasoning." },
+  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", publisher: "OpenAI", context: "200K", tier: "Included", description: "Efficient next-gen model for most tasks." },
+  { id: "gpt-5.2", name: "GPT-5.2", publisher: "OpenAI", context: "200K", tier: "Included", description: "Strong general-purpose model with reasoning." },
+  { id: "gpt-5-mini", name: "GPT-5 Mini", publisher: "OpenAI", context: "200K", tier: "Included", description: "Lightweight reasoning model." },
 ];
 
 function formatBytes(bytes: number): string {
@@ -52,7 +36,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function AppSettings() {
-  const [settings, setSettings] = useState<AppSettingsData>({ aiModel: "openai/gpt-4o" });
+  const [settings, setSettings] = useState<AppSettingsData>({ aiModel: "claude-sonnet-4.6" });
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -121,10 +105,9 @@ export function AppSettings() {
                               <span className="text-body-main text-on-surface font-medium">{model.name}</span>
                               <span className="text-[10px] font-mono text-on-surface-variant bg-surface-container-highest px-1.5 py-0.5 rounded">{model.context}</span>
                               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                                model.tier === "Low" ? "text-green-400 bg-green-400/10" :
-                                model.tier === "High" ? "text-yellow-400 bg-yellow-400/10" :
+                                model.tier === "Included" ? "text-green-400 bg-green-400/10" :
                                 "text-violet-400 bg-violet-400/10"
-                              }`}>{model.tier === "Low" ? "Free" : model.tier === "High" ? "Free (limited)" : "Rate limited"}</span>
+                              }`}>{model.tier}</span>
                             </div>
                             <div className="text-ui-small text-on-surface-variant truncate">{model.description}</div>
                           </div>
@@ -134,9 +117,6 @@ export function AppSettings() {
                   </div>
                 ))}
               </div>
-              <p className="text-ui-small text-on-surface-variant/70 italic">
-                Note: Anthropic (Claude) and Google (Gemini) models are not available through the GitHub Models inference API. They are only accessible via GitHub Copilot or their own APIs.
-              </p>
             </section>
             <section className="space-y-md">
               <div className="flex items-center justify-between border-b border-outline-variant pb-xs">
