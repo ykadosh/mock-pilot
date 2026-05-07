@@ -42,6 +42,15 @@ export function AppSettings() {
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [saved, setSaved] = useState(false);
   const [ghCliStatus, setGhCliStatus] = useState<{ connected: boolean; login?: string } | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<{
+    checking: boolean;
+    updateAvailable?: boolean;
+    currentVersion?: string;
+    latestVersion?: string;
+    downloadUrl?: string;
+    error?: string;
+  }>({ checking: false });
+  const [appVersion, setAppVersion] = useState<string>("");
   const auth = useAuth();
 
   useEffect(() => {
@@ -50,6 +59,7 @@ export function AppSettings() {
     });
     window.api.getStorageInfo().then(setStorage);
     window.api.authCheckGhCli().then(setGhCliStatus);
+    window.api.getAppVersion().then(setAppVersion);
   }, []);
 
   const handleModelChange = async (modelId: string) => {
@@ -58,6 +68,18 @@ export function AppSettings() {
     await window.api.saveAppSettings(updated);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleCheckForUpdates = async () => {
+    setUpdateStatus({ checking: true });
+    const result = await window.api.checkForUpdates();
+    setUpdateStatus({ checking: false, ...result });
+  };
+
+  const handleDownloadUpdate = () => {
+    if (updateStatus.downloadUrl) {
+      window.api.openExternal(updateStatus.downloadUrl);
+    }
   };
 
   return (
@@ -202,6 +224,51 @@ export function AppSettings() {
                     </p>
                   </>
                 )}
+              </div>
+            </section>
+
+            {/* Updates */}
+            <section className="space-y-md">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-xs">
+                <h2 className="font-headline-md text-headline-md text-on-surface">Updates</h2>
+                {appVersion && (
+                  <span className="text-ui-small text-on-surface-variant font-mono">v{appVersion}</span>
+                )}
+              </div>
+              <div className="border border-outline-variant bg-surface-container p-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-body-main text-on-surface">
+                      {updateStatus.checking
+                        ? "Checking for updates..."
+                        : updateStatus.updateAvailable
+                          ? `A new version (v${updateStatus.latestVersion}) is available!`
+                          : updateStatus.latestVersion
+                            ? "You're on the latest version."
+                            : "Check if a newer version is available."}
+                    </p>
+                    {updateStatus.error && (
+                      <p className="text-ui-small text-error mt-xs">{updateStatus.error}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-sm">
+                    {updateStatus.updateAvailable && (
+                      <button
+                        onClick={handleDownloadUpdate}
+                        className="bg-primary text-on-primary font-semibold text-ui-small px-md py-sm rounded hover:brightness-110 transition-all"
+                      >
+                        Download Update
+                      </button>
+                    )}
+                    <button
+                      onClick={handleCheckForUpdates}
+                      disabled={updateStatus.checking}
+                      className="border border-outline text-on-surface text-ui-small font-semibold px-md py-sm rounded hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                    >
+                      {updateStatus.checking ? "Checking..." : "Check for Updates"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
           </div>

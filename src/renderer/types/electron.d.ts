@@ -62,6 +62,17 @@ declare global {
       getAppSettings: () => Promise<{ aiModel: string }>;
       saveAppSettings: (settings: { aiModel: string }) => Promise<{ success: boolean }>;
       getStorageInfo: () => Promise<{ totalBytes: number; projectCount: number }>;
+      // Updates
+      checkForUpdates: () => Promise<{
+        updateAvailable: boolean;
+        currentVersion?: string;
+        latestVersion?: string;
+        releaseUrl?: string;
+        downloadUrl?: string;
+        error?: string;
+      }>;
+      openExternal: (url: string) => Promise<void>;
+      getAppVersion: () => Promise<string>;
     };
   }
 }

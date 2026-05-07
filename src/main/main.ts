@@ -721,8 +721,57 @@ Return only the modified HTML element:`;
     return { totalBytes, projectCount: projects.length };
   });
 
+  // Auto-update: check for newer release on GitHub
+  ipcMain.handle("check-for-updates", async () => {
+    try {
+      const currentVersion = app.getVersion();
+      const response = await fetch("https://api.github.com/repos/ykadosh/mock-pilot/releases/latest", {
+        headers: { "Accept": "application/vnd.github+json" },
+      });
+      if (!response.ok) return { updateAvailable: false, error: "Failed to check for updates" };
+      const release = await response.json() as { tag_name: string; html_url: string; assets: { name: string; browser_download_url: string }[] };
+      const latestVersion = release.tag_name.replace(/^v/, "");
+      if (compareVersions(latestVersion, currentVersion) > 0) {
+        // Find the right asset for this platform
+        const platform = process.platform === "darwin" ? ".zip" : ".exe";
+        const asset = release.assets.find((a: { name: string }) => a.name.endsWith(platform));
+        return {
+          updateAvailable: true,
+          currentVersion,
+          latestVersion,
+          releaseUrl: release.html_url,
+          downloadUrl: asset?.browser_download_url || release.html_url,
+        };
+      }
+      return { updateAvailable: false, currentVersion, latestVersion };
+    } catch {
+      return { updateAvailable: false, error: "Failed to check for updates" };
+    }
+  });
+
+  // Open a URL in the default browser
+  ipcMain.handle("open-external", (_event, url: string) => {
+    shell.openExternal(url);
+  });
+
+  // Get current app version
+  ipcMain.handle("get-app-version", () => {
+    return app.getVersion();
+  });
+
   createWindow();
 });
+
+// Compare semver strings: returns >0 if a > b, <0 if a < b, 0 if equal
+function compareVersions(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
