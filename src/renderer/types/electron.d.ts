@@ -22,6 +22,7 @@ declare global {
         html?: string;
         error?: string;
       }>;
+      getWebviewPreloadPath: () => Promise<string>;
       listProjects: () => Promise<ProjectMeta[]>;
       saveProject: (data: { url: string; title: string; html: string; thumbnail?: string }) => Promise<ProjectMeta>;
       loadProject: (id: string) => Promise<{

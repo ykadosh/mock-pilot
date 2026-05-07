@@ -14,6 +14,12 @@ export function CaptureBrowser() {
   const [canGoForward, setCanGoForward] = useState(false);
   const [isSecure, setIsSecure] = useState(false);
   const [hasNavigated, setHasNavigated] = useState(false);
+  const [webviewPreloadPath, setWebviewPreloadPath] = useState("");
+
+  // Fetch the webview preload path on mount
+  useEffect(() => {
+    window.api.getWebviewPreloadPath().then(setWebviewPreloadPath);
+  }, []);
 
   // Sync webview navigation state
   const updateNavState = useCallback(() => {
@@ -35,13 +41,6 @@ export function CaptureBrowser() {
     const onStopLoading = () => {
       setIsLoading(false);
       updateNavState();
-      // Suppress window blur/visibility events inside the webview so that
-      // clicking outside (e.g. Capture State) doesn't close menus/dropdowns.
-      wv.executeJavaScript(`
-        window.addEventListener('blur', (e) => e.stopImmediatePropagation(), true);
-        window.addEventListener('visibilitychange', (e) => e.stopImmediatePropagation(), true);
-        document.hasFocus = () => true;
-      `).catch(() => {});
     };
     const onNavigate = (e: Electron.DidNavigateEvent) => {
       setCurrentUrl(e.url);
@@ -358,13 +357,14 @@ export function CaptureBrowser() {
       {/* Main Content */}
       <main onMouseDown={preventFocusSteal} className="flex-1 relative bg-background overflow-hidden p-md">
         <div className="w-full h-full bg-surface rounded-lg border border-outline-variant shadow-2xl relative overflow-hidden flex flex-col">
-          {hasNavigated ? (
+          {hasNavigated && webviewPreloadPath ? (
             <>
               {/* Webview */}
               <div className="flex-1 relative">
                 <webview
                   ref={webviewRef as React.LegacyRef<Electron.WebviewTag>}
                   src={pendingUrl}
+                  preload={`file://${webviewPreloadPath}`}
                   className="w-full h-full"
                   allowpopups={"true" as unknown as boolean}
                 />
