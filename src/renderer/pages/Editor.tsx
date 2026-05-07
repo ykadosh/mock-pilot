@@ -246,6 +246,7 @@ export function Editor() {
               pickerActive={pickerActive}
               selectedMpId={selectedElement?.mpId || null}
               onElementSelected={handleElementSelected}
+              onElementDeselected={() => setSelectedElement(null)}
               zoom={zoom}
               viewportWidth={deviceWidth}
               projectId={projectId}

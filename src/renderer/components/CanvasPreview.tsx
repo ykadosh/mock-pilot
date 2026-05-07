@@ -10,13 +10,27 @@ const PICKER_SCRIPT = `
 
   let overlay = null;
   let label = null;
+  let closeBtn = null;
   let active = false;
 
   function createOverlay() {
     overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;pointer-events:none;border:2px solid #7c3aed;background:rgba(124,58,237,0.08);z-index:99999;display:none;transition:all 0.05s ease-out;';
     label = document.createElement('div');
-    label.style.cssText = 'position:fixed;pointer-events:none;background:#7c3aed;color:white;font-size:11px;font-family:monospace;padding:2px 6px;border-radius:2px;z-index:100000;display:none;white-space:nowrap;';
+    label.style.cssText = 'position:fixed;pointer-events:none;background:#7c3aed;color:white;font-size:11px;font-family:monospace;padding:2px 6px;border-radius:2px;z-index:100000;display:none;white-space:nowrap;align-items:center;gap:4px;';
+    const textNode = document.createTextNode('');
+    label.appendChild(textNode);
+    closeBtn = document.createElement('span');
+    closeBtn.textContent = '\\u00d7';
+    closeBtn.style.cssText = 'pointer-events:auto;cursor:pointer;font-size:14px;line-height:1;margin-left:6px;opacity:0.8;display:none;';
+    closeBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      overlay.style.display = 'none';
+      label.style.display = 'none';
+      closeBtn.style.display = 'none';
+      window.parent.postMessage({ type: 'element-deselected' }, '*');
+    });
+    label.appendChild(closeBtn);
     document.body.appendChild(overlay);
     document.body.appendChild(label);
   }
@@ -34,17 +48,18 @@ const PICKER_SCRIPT = `
   function handleMouseMove(e) {
     if (!active) return;
     const el = e.target;
-    if (el === overlay || el === label) return;
+    if (el === overlay || el === label || el === closeBtn) return;
     const rect = el.getBoundingClientRect();
     overlay.style.display = 'block';
     overlay.style.top = rect.top + 'px';
     overlay.style.left = rect.left + 'px';
     overlay.style.width = rect.width + 'px';
     overlay.style.height = rect.height + 'px';
-    label.style.display = 'block';
+    label.style.display = 'flex';
     label.style.top = Math.max(0, rect.top - 22) + 'px';
     label.style.left = rect.left + 'px';
-    label.textContent = getSelector(el);
+    label.childNodes[0].textContent = getSelector(el);
+    closeBtn.style.display = 'none';
   }
 
   function getUniquePath(el) {
@@ -99,6 +114,7 @@ const PICKER_SCRIPT = `
       active = false;
       if (overlay) overlay.style.display = 'none';
       if (label) label.style.display = 'none';
+      if (closeBtn) closeBtn.style.display = 'none';
       document.body.style.cursor = '';
     } else if (e.data && e.data.type === 'picker-highlight') {
       // Show overlay on a specific element without activating mousemove tracking
@@ -114,10 +130,11 @@ const PICKER_SCRIPT = `
         overlay.style.left = rect.left + 'px';
         overlay.style.width = rect.width + 'px';
         overlay.style.height = rect.height + 'px';
-        label.style.display = 'block';
+        label.style.display = 'flex';
         label.style.top = Math.max(0, rect.top - 22) + 'px';
         label.style.left = rect.left + 'px';
-        label.textContent = getSelector(el);
+        label.childNodes[0].textContent = getSelector(el);
+        closeBtn.style.display = 'inline';
       }
     } else if (e.data && e.data.type === 'apply-modification') {
       const mpId = e.data.mpId;
@@ -177,13 +194,14 @@ interface CanvasPreviewProps {
   pickerActive?: boolean;
   selectedMpId?: string | null;
   onElementSelected?: (element: SelectedElement) => void;
+  onElementDeselected?: () => void;
   zoom?: number;
   viewportWidth?: number;
   projectId?: string;
   htmlContent?: string | null;
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, onElementSelected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -321,11 +339,13 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === "element-selected" && onElementSelected) {
         onElementSelected(e.data.data);
+      } else if (e.data?.type === "element-deselected" && onElementDeselected) {
+        onElementDeselected();
       }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [onElementSelected]);
+  }, [onElementSelected, onElementDeselected]);
 
   const scale = zoom / 100;
 
