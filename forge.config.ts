@@ -37,8 +37,8 @@ const config: ForgeConfig = {
         },
         {
           entry: "src/main/webviewPreload.ts",
-          config: "vite.preload.config.ts",
-          target: "webview_preload",
+          config: "vite.webview-preload.config.ts",
+          target: "preload",
         },
       ],
       renderer: [

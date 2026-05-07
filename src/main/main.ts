@@ -481,7 +481,7 @@ app.on("ready", () => {
 
   // Format raw HTML with js-beautify (used by capture browser)
   ipcMain.handle("get-webview-preload-path", () => {
-    return path.join(__dirname, "webview_preload.js");
+    return path.join(__dirname, "webviewPreload.js");
   });
 
   ipcMain.handle("format-html", (_event, rawHtml: string) => {
