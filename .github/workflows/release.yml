@@ -49,6 +49,30 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Find the previous tag
+          PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            # First release — list all commits
+            LOG=$(git log --pretty=format:"- %s" ${{ github.ref_name }})
+          else
+            LOG=$(git log --pretty=format:"- %s" ${PREV_TAG}..${{ github.ref_name }})
+          fi
+          # Write to file to handle multiline
+          echo "$LOG" > changelog.txt
+          {
+            echo "body<<EOF"
+            echo "## What's Changed"
+            echo ""
+            cat changelog.txt
+            echo ""
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -58,7 +82,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body: ${{ steps.changelog.outputs.body }}
           generate_release_notes: true
+          append_body: true
           files: |
             artifacts/**/*.exe
             artifacts/**/*.zip
