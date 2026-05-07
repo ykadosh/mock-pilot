@@ -100,6 +100,25 @@ const PICKER_SCRIPT = `
       if (overlay) overlay.style.display = 'none';
       if (label) label.style.display = 'none';
       document.body.style.cursor = '';
+    } else if (e.data && e.data.type === 'picker-highlight') {
+      // Show overlay on a specific element without activating mousemove tracking
+      active = false;
+      document.body.style.cursor = '';
+      if (!overlay) createOverlay();
+      const mpId = e.data.mpId;
+      const el = document.querySelector('[data-mp-id="' + mpId + '"]');
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        overlay.style.display = 'block';
+        overlay.style.top = rect.top + 'px';
+        overlay.style.left = rect.left + 'px';
+        overlay.style.width = rect.width + 'px';
+        overlay.style.height = rect.height + 'px';
+        label.style.display = 'block';
+        label.style.top = Math.max(0, rect.top - 22) + 'px';
+        label.style.left = rect.left + 'px';
+        label.textContent = getSelector(el);
+      }
     } else if (e.data && e.data.type === 'apply-modification') {
       const mpId = e.data.mpId;
       const modHtml = e.data.html;
@@ -156,6 +175,7 @@ export interface CanvasPreviewHandle {
 
 interface CanvasPreviewProps {
   pickerActive?: boolean;
+  selectedMpId?: string | null;
   onElementSelected?: (element: SelectedElement) => void;
   zoom?: number;
   viewportWidth?: number;
@@ -163,7 +183,7 @@ interface CanvasPreviewProps {
   htmlContent?: string | null;
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, onElementSelected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, onElementSelected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -278,6 +298,23 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
       "*"
     );
   }, [pickerActive]);
+
+  // Highlight selected element in iframe
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow) return;
+    if (selectedMpId) {
+      iframe.contentWindow.postMessage(
+        { type: "picker-highlight", mpId: selectedMpId },
+        "*"
+      );
+    } else if (!pickerActive) {
+      iframe.contentWindow.postMessage(
+        { type: "picker-deactivate" },
+        "*"
+      );
+    }
+  }, [selectedMpId, pickerActive]);
 
   // Listen for element selection from iframe
   useEffect(() => {

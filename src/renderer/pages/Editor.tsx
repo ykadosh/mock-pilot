@@ -244,6 +244,7 @@ export function Editor() {
             <CanvasPreview
               ref={canvasRef}
               pickerActive={pickerActive}
+              selectedMpId={selectedElement?.mpId || null}
               onElementSelected={handleElementSelected}
               zoom={zoom}
               viewportWidth={deviceWidth}

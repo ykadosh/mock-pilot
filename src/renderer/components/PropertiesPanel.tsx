@@ -59,9 +59,16 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
           <span className="material-symbols-outlined text-sm text-violet-400">
             ads_click
           </span>
-          <span className="text-[11px] font-mono text-violet-300 truncate">
+          <span className="text-[11px] font-mono text-violet-300 truncate flex-1">
             {selector}
           </span>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+            title="Deselect element"
+          >
+            <span className="material-symbols-outlined text-[16px]">close</span>
+          </button>
         </div>
       </div>
 
