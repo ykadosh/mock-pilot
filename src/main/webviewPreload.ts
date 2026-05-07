@@ -4,37 +4,39 @@
 // which would otherwise close menus/dropdowns when the user clicks
 // outside the webview (e.g. on the Capture State button).
 
-const blockEvent = (e: Event) => {
-  e.stopImmediatePropagation();
-};
+// Because contextIsolation is on (default), this preload runs in an
+// isolated world — NOT the page's JS context.  We must use
+// webFrame.executeJavaScript() to inject into the main world (world 0)
+// where the page's scripts and event listeners live.
 
-// Capture-phase listeners run first and block propagation
-window.addEventListener("blur", blockEvent, true);
-window.addEventListener("focusout", blockEvent, true);
-window.addEventListener("visibilitychange", blockEvent, true);
+const { webFrame } = require("electron");
 
-// Override property-based handlers so pages can't set them
-Object.defineProperty(window, "onblur", {
-  get: () => null,
-  set: () => {},
-  configurable: true,
-});
+webFrame.executeJavaScript(`
+  (function() {
+    var block = function(e) { e.stopImmediatePropagation(); };
 
-Object.defineProperty(document, "onvisibilitychange", {
-  get: () => null,
-  set: () => {},
-  configurable: true,
-});
+    window.addEventListener('blur', block, true);
+    window.addEventListener('focusout', block, true);
+    window.addEventListener('visibilitychange', block, true);
 
-// Always report as visible/focused
-Object.defineProperty(document, "hidden", {
-  get: () => false,
-  configurable: true,
-});
-
-Object.defineProperty(document, "visibilityState", {
-  get: () => "visible" as DocumentVisibilityState,
-  configurable: true,
-});
-
-document.hasFocus = () => true;
+    Object.defineProperty(window, 'onblur', {
+      get: function() { return null; },
+      set: function() {},
+      configurable: true
+    });
+    Object.defineProperty(document, 'onvisibilitychange', {
+      get: function() { return null; },
+      set: function() {},
+      configurable: true
+    });
+    Object.defineProperty(document, 'hidden', {
+      get: function() { return false; },
+      configurable: true
+    });
+    Object.defineProperty(document, 'visibilityState', {
+      get: function() { return 'visible'; },
+      configurable: true
+    });
+    document.hasFocus = function() { return true; };
+  })();
+`);
