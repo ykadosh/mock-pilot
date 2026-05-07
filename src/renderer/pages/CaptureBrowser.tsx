@@ -35,6 +35,13 @@ export function CaptureBrowser() {
     const onStopLoading = () => {
       setIsLoading(false);
       updateNavState();
+      // Suppress window blur/visibility events inside the webview so that
+      // clicking outside (e.g. Capture State) doesn't close menus/dropdowns.
+      wv.executeJavaScript(`
+        window.addEventListener('blur', (e) => e.stopImmediatePropagation(), true);
+        window.addEventListener('visibilitychange', (e) => e.stopImmediatePropagation(), true);
+        document.hasFocus = () => true;
+      `).catch(() => {});
     };
     const onNavigate = (e: Electron.DidNavigateEvent) => {
       setCurrentUrl(e.url);
