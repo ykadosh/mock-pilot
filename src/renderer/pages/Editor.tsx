@@ -248,7 +248,7 @@ export function Editor() {
               pickerActive={pickerActive}
               selectedMpId={selectedElement?.mpId || null}
               onElementSelected={handleElementSelected}
-              onElementDeselected={() => setSelectedElement(null)}
+              onElementDeselected={() => { setSelectedElement(null); setPickerActive(true); }}
               zoom={zoom}
               viewportWidth={deviceWidth}
               projectId={projectId}
@@ -267,7 +267,7 @@ export function Editor() {
           ) : selectedElement ? (
             <PropertiesPanel
               element={selectedElement}
-              onClose={() => setSelectedElement(null)}
+              onClose={() => { setSelectedElement(null); setPickerActive(true); }}
               onApplyModification={handleApplyModification}
               getElementHTML={() => canvasRef.current?.getElementHTML(selectedElement.mpId) ?? Promise.resolve(null)}
             />

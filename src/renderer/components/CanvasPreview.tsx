@@ -14,8 +14,10 @@ const PICKER_SCRIPT = `
 
   function createOverlay() {
     overlay = document.createElement('div');
+    overlay.setAttribute('data-mp-injected', 'true');
     overlay.style.cssText = 'position:fixed;pointer-events:none;border:2px solid #7c3aed;background:rgba(124,58,237,0.08);z-index:99999;display:none;transition:all 0.05s ease-out;';
     label = document.createElement('div');
+    label.setAttribute('data-mp-injected', 'true');
     label.style.cssText = 'position:fixed;pointer-events:none;background:#7c3aed;color:white;font-size:11px;font-family:monospace;padding:2px 6px;border-radius:2px;z-index:100000;display:none;white-space:nowrap;';
     document.body.appendChild(overlay);
     document.body.appendChild(label);
@@ -61,6 +63,22 @@ const PICKER_SCRIPT = `
       el = parent;
     }
     return 'body > ' + path.join(' > ');
+  }
+
+  function getCleanHTML() {
+    var injected = document.querySelectorAll('[data-mp-injected]');
+    var saved = [];
+    for (var i = 0; i < injected.length; i++) {
+      saved.push({ el: injected[i], parent: injected[i].parentNode, next: injected[i].nextSibling });
+      injected[i].parentNode.removeChild(injected[i]);
+    }
+    var html = document.documentElement.outerHTML;
+    for (var i = 0; i < saved.length; i++) {
+      var s = saved[i];
+      if (s.next && s.next.parentNode === s.parent) s.parent.insertBefore(s.el, s.next);
+      else if (s.parent) s.parent.appendChild(s.el);
+    }
+    return html;
   }
 
   function handleClick(e) {
@@ -154,7 +172,7 @@ const PICKER_SCRIPT = `
               el.outerHTML = modHtml;
             }
           }
-          window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: document.documentElement.outerHTML, label: modLabel || 'AI modification' }, '*');
+          window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: modLabel || 'AI modification' }, '*');
         } else {
           window.parent.postMessage({ type: 'modification-applied', success: false, error: 'Element not found by data-mp-id' }, '*');
         }
@@ -198,6 +216,34 @@ interface CanvasPreviewProps {
   htmlContent?: string | null;
 }
 
+// Strip picker artifacts (overlays, labels, scripts) from HTML that may have been
+// persisted from a previous session to prevent stale highlights on reload.
+function cleanHtml(html: string | null): string | null {
+  if (!html) return html;
+  if (!html.includes('data-mp-injected') && !html.includes('__pickerInitialized') && !html.includes('z-index:99999') && !html.includes('z-index: 99999')) {
+    return html;
+  }
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    doc.querySelectorAll('[data-mp-injected]').forEach(el => el.remove());
+    doc.querySelectorAll('div').forEach(el => {
+      const z = (el as HTMLElement).style.zIndex;
+      if ((z === '99999' || z === '100000') && (el as HTMLElement).style.position === 'fixed' && (el as HTMLElement).style.pointerEvents === 'none') {
+        el.remove();
+      }
+    });
+    doc.querySelectorAll('script').forEach(s => {
+      if (s.textContent?.includes('__pickerInitialized') || s.textContent?.includes('reportHeight')) {
+        s.remove();
+      }
+    });
+    return doc.documentElement.outerHTML;
+  } catch {
+    return html;
+  }
+}
+
 export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
@@ -207,9 +253,9 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   // Use htmlContent prop if provided, otherwise fall back to store
   useEffect(() => {
     if (htmlContent !== undefined) {
-      setHtml(htmlContent);
+      setHtml(cleanHtml(htmlContent));
     } else {
-      setHtml(getCapturedHtml());
+      setHtml(cleanHtml(getCapturedHtml()));
     }
   }, [htmlContent]);
 
@@ -253,6 +299,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
     // Inject a resize reporter that measures from inside the iframe
     const resizeScript = doc.createElement("script");
+    resizeScript.setAttribute('data-mp-injected', 'true');
     resizeScript.textContent = `
       (function() {
         function reportHeight() {
@@ -278,6 +325,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
     // Inject picker script
     const script = doc.createElement("script");
+    script.setAttribute('data-mp-injected', 'true');
     script.textContent = PICKER_SCRIPT;
     doc.body.appendChild(script);
   };
