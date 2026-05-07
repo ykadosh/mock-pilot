@@ -8,10 +8,15 @@ import { VitePlugin } from "@electron-forge/plugin-vite";
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    name: "MockPilot",
+    executableName: "mock-pilot",
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      name: "MockPilot",
+      setupExe: "MockPilot-Setup.exe",
+    }),
     new MakerZIP({}, ["darwin"]),
     new MakerDeb({}),
     new MakerRpm({}),
