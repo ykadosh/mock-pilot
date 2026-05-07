@@ -154,56 +154,6 @@ export function Dashboard() {
         ))}
         <NewProjectCard />
       </div>
-
-      {/* Bottom Section */}
-      <div className="mt-xl grid grid-cols-1 lg:grid-cols-3 gap-md">
-        {/* Activity Feed */}
-        <div className="lg:col-span-1 bg-surface-container-low border border-outline-variant/20 p-md">
-          <h4 className="font-label-caps text-label-caps text-secondary mb-md border-b border-outline-variant/20 pb-sm">
-            Recent Activity
-          </h4>
-          <div className="space-y-md">
-            {savedProjects.slice(0, 3).map((project) => (
-              <div key={project.id} className="flex gap-sm">
-                <span className="material-symbols-outlined text-xs text-on-primary">
-                  check_circle
-                </span>
-                <div className="space-y-unit">
-                  <p className="text-ui-small text-on-surface">
-                    Created{" "}
-                    <span className="text-primary">{project.title}</span>
-                  </p>
-                  <p className="text-[10px] text-on-surface-variant opacity-50">
-                    {formatDate(project.createdAt)}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {savedProjects.length === 0 && (
-              <p className="text-ui-small text-on-surface-variant opacity-50">No activity yet</p>
-            )}
-          </div>
-        </div>
-
-        {/* Workspace Usage */}
-        <div className="lg:col-span-2 bg-surface-container-low border border-outline-variant/20 p-md flex items-center justify-between">
-          <div>
-            <h4 className="font-label-caps text-label-caps text-secondary mb-md border-b border-outline-variant/20 pb-sm">
-              Workspace Usage
-            </h4>
-            <div className="flex items-end gap-xl">
-              <div className="space-y-xs">
-                <span className="text-headline-lg font-headline-lg text-on-surface">
-                  {savedProjects.length}
-                </span>
-                <p className="text-ui-small text-on-surface-variant">
-                  Projects Saved
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </main>
 
       <Dialog open={dialogOpen} onClose={() => !loading && setDialogOpen(false)}>

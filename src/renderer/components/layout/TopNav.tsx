@@ -147,9 +147,6 @@ export function TopNav({ children }: TopNavProps) {
               )}
             </div>
           </div>
-          <button className="bg-primary-container text-on-primary-container px-md py-1.5 font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all">
-            Deploy Changes
-          </button>
         </div>
       </header>
 
