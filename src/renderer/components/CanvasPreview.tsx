@@ -10,27 +10,13 @@ const PICKER_SCRIPT = `
 
   let overlay = null;
   let label = null;
-  let closeBtn = null;
   let active = false;
 
   function createOverlay() {
     overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;pointer-events:none;border:2px solid #7c3aed;background:rgba(124,58,237,0.08);z-index:99999;display:none;transition:all 0.05s ease-out;';
     label = document.createElement('div');
-    label.style.cssText = 'position:fixed;pointer-events:none;background:#7c3aed;color:white;font-size:11px;font-family:monospace;padding:2px 6px;border-radius:2px;z-index:100000;display:none;white-space:nowrap;align-items:center;gap:4px;';
-    const textNode = document.createTextNode('');
-    label.appendChild(textNode);
-    closeBtn = document.createElement('span');
-    closeBtn.textContent = '\\u00d7';
-    closeBtn.style.cssText = 'pointer-events:auto;cursor:pointer;font-size:14px;line-height:1;margin-left:6px;opacity:0.8;display:none;';
-    closeBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      overlay.style.display = 'none';
-      label.style.display = 'none';
-      closeBtn.style.display = 'none';
-      window.parent.postMessage({ type: 'element-deselected' }, '*');
-    });
-    label.appendChild(closeBtn);
+    label.style.cssText = 'position:fixed;pointer-events:none;background:#7c3aed;color:white;font-size:11px;font-family:monospace;padding:2px 6px;border-radius:2px;z-index:100000;display:none;white-space:nowrap;';
     document.body.appendChild(overlay);
     document.body.appendChild(label);
   }
@@ -48,18 +34,17 @@ const PICKER_SCRIPT = `
   function handleMouseMove(e) {
     if (!active) return;
     const el = e.target;
-    if (el === overlay || el === label || el === closeBtn) return;
+    if (el === overlay || el === label) return;
     const rect = el.getBoundingClientRect();
     overlay.style.display = 'block';
     overlay.style.top = rect.top + 'px';
     overlay.style.left = rect.left + 'px';
     overlay.style.width = rect.width + 'px';
     overlay.style.height = rect.height + 'px';
-    label.style.display = 'flex';
+    label.style.display = 'block';
     label.style.top = Math.max(0, rect.top - 22) + 'px';
     label.style.left = rect.left + 'px';
-    label.childNodes[0].textContent = getSelector(el);
-    closeBtn.style.display = 'none';
+    label.textContent = getSelector(el);
   }
 
   function getUniquePath(el) {
@@ -88,18 +73,17 @@ const PICKER_SCRIPT = `
     // Assign a unique ID for reliable element tracking across DOM mutations
     const mpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     el.setAttribute('data-mp-id', mpId);
-    // Keep overlay visible on the clicked element immediately
+    // Keep overlay visible on the clicked element
     const rect = el.getBoundingClientRect();
     overlay.style.display = 'block';
     overlay.style.top = rect.top + 'px';
     overlay.style.left = rect.left + 'px';
     overlay.style.width = rect.width + 'px';
     overlay.style.height = rect.height + 'px';
-    label.style.display = 'flex';
+    label.style.display = 'block';
     label.style.top = Math.max(0, rect.top - 22) + 'px';
     label.style.left = rect.left + 'px';
-    label.childNodes[0].textContent = getSelector(el);
-    closeBtn.style.display = 'inline';
+    label.textContent = getSelector(el);
     const computed = window.getComputedStyle(el);
     const style = {};
     ['width','height','padding','margin','background-color','color','font-size','font-family','border-radius','display','position'].forEach(prop => {
@@ -114,7 +98,8 @@ const PICKER_SCRIPT = `
         computedStyle: style,
         outerHTML: el.outerHTML,
         cssPath: getUniquePath(el),
-        mpId: mpId
+        mpId: mpId,
+        rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
       }
     }, '*');
   }
@@ -128,7 +113,6 @@ const PICKER_SCRIPT = `
       active = false;
       if (overlay) overlay.style.display = 'none';
       if (label) label.style.display = 'none';
-      if (closeBtn) closeBtn.style.display = 'none';
       document.body.style.cursor = '';
     } else if (e.data && e.data.type === 'picker-highlight') {
       // Show overlay on a specific element without activating mousemove tracking
@@ -144,11 +128,10 @@ const PICKER_SCRIPT = `
         overlay.style.left = rect.left + 'px';
         overlay.style.width = rect.width + 'px';
         overlay.style.height = rect.height + 'px';
-        label.style.display = 'flex';
+        label.style.display = 'block';
         label.style.top = Math.max(0, rect.top - 22) + 'px';
         label.style.left = rect.left + 'px';
-        label.childNodes[0].textContent = getSelector(el);
-        closeBtn.style.display = 'inline';
+        label.textContent = getSelector(el);
       }
     } else if (e.data && e.data.type === 'apply-modification') {
       const mpId = e.data.mpId;
@@ -218,6 +201,7 @@ interface CanvasPreviewProps {
 export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
+  const [selectedRect, setSelectedRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Use htmlContent prop if provided, otherwise fall back to store
@@ -350,14 +334,23 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === "element-selected" && onElementSelected) {
+        if (e.data.data.rect) {
+          setSelectedRect(e.data.data.rect);
+        }
         onElementSelected(e.data.data);
       } else if (e.data?.type === "element-deselected" && onElementDeselected) {
+        setSelectedRect(null);
         onElementDeselected();
       }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, [onElementSelected, onElementDeselected]);
+
+  // Clear rect when element is deselected externally
+  useEffect(() => {
+    if (!selectedMpId) setSelectedRect(null);
+  }, [selectedMpId]);
 
   const scale = zoom / 100;
 
@@ -385,9 +378,23 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
               title="Website Preview"
               onLoad={handleIframeLoad}
             />
-            {/* Block interaction when picker is not active and no element selected */}
-            {!pickerActive && !selectedMpId && (
+            {/* Block interaction when picker is not active */}
+            {!pickerActive && (
               <div className="absolute inset-0 cursor-default" />
+            )}
+            {/* Close button for selected element — rendered outside iframe */}
+            {selectedMpId && selectedRect && (
+              <button
+                onClick={onElementDeselected}
+                className="absolute z-10 flex items-center justify-center w-5 h-5 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs cursor-pointer transition-colors shadow-md"
+                style={{
+                  top: `${Math.max(0, selectedRect.top * scale)}px`,
+                  left: `${Math.min((selectedRect.left + selectedRect.width) * scale - 10, viewportWidth * scale - 20)}px`,
+                }}
+                title="Deselect element"
+              >
+                ×
+              </button>
             )}
           </>
         ) : (

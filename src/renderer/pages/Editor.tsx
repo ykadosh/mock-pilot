@@ -17,6 +17,7 @@ export interface SelectedElement {
   outerHTML: string;
   cssPath: string;
   mpId: string;
+  rect?: { top: number; left: number; width: number; height: number };
 }
 
 type DevicePreset = "desktop" | "tablet" | "phone";
