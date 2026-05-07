@@ -113,6 +113,9 @@ export function CaptureBrowser() {
     const wv = webviewRef.current;
     if (!wv || !currentUrl) return;
 
+    // Refocus the webview immediately so the page doesn't see a blur
+    wv.focus();
+
     setIsCapturing(true);
     try {
       // Extract the full HTML from the webview's current state
@@ -266,7 +269,30 @@ export function CaptureBrowser() {
 
   // Prevent clicks outside the webview from stealing focus,
   // which would close menus/dropdowns inside the browsed website.
-  const preventFocusSteal = (e: React.MouseEvent) => e.preventDefault();
+  // We exclude the address bar input so the user can still type in it.
+  const preventFocusSteal = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === "INPUT") return;
+    e.preventDefault();
+  };
+
+  // When any element outside the webview receives focus, immediately
+  // push focus back to the webview. This minimizes the blur window
+  // so menus/dropdowns inside the page don't have time to close.
+  useEffect(() => {
+    if (!hasNavigated) return;
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      // Allow the address bar to receive focus
+      if (target.tagName === "INPUT") return;
+      const wv = webviewRef.current;
+      if (wv && document.contains(wv)) {
+        wv.focus();
+      }
+    };
+    window.addEventListener("focusin", onFocusIn);
+    return () => window.removeEventListener("focusin", onFocusIn);
+  }, [hasNavigated]);
 
   return (
     <div className="bg-background text-on-surface font-body-main antialiased overflow-hidden h-screen flex flex-col">
