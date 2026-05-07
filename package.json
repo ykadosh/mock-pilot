@@ -2,6 +2,7 @@
   "name": "mock-pilot",
   "version": "0.1.1",
   "description": "MockPilot - Electron app",
+  "author": "Yoav Kadosh",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
