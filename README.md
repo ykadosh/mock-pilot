@@ -43,3 +43,20 @@ npm run release:major
 ```
 
 These scripts bump the version in `package.json`, commit the change, create a git tag, and push everything — triggering the release workflow automatically.
+
+## Installation
+
+### macOS
+
+1. Download the `.zip` file from the latest [release](https://github.com/ykadosh/mock-pilot/releases)
+2. Unzip and move `MockPilot.app` to your Applications folder
+3. Since the app is not yet code-signed, macOS will block it on first launch. Run:
+   ```bash
+   xattr -cr /Applications/MockPilot.app
+   ```
+4. Open the app normally
+
+### Windows
+
+1. Download the `.exe` installer from the latest [release](https://github.com/ykadosh/mock-pilot/releases)
+2. Run the installer
