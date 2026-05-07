@@ -686,13 +686,15 @@ Return only the modified HTML element:`;
     return { success: true };
   });
 
-  ipcMain.handle("auth-check-gh-cli", () => {
+  ipcMain.handle("auth-check-gh-cli", async () => {
+    const { execFile } = require("child_process");
+    const { promisify } = require("util");
+    const execFileAsync = promisify(execFile);
     try {
-      const { execSync } = require("child_process");
-      const token = execSync("gh auth token", { encoding: "utf-8", env: shellEnv }).trim();
-      if (token) {
-        const userJson = execSync("gh api user", { encoding: "utf-8", env: shellEnv }).trim();
-        const user = JSON.parse(userJson);
+      const { stdout: token } = await execFileAsync("gh", ["auth", "token"], { encoding: "utf-8", env: shellEnv });
+      if (token.trim()) {
+        const { stdout: userJson } = await execFileAsync("gh", ["api", "user"], { encoding: "utf-8", env: shellEnv });
+        const user = JSON.parse(userJson.trim());
         return { connected: true, login: user.login };
       }
     } catch { /* gh not available or not authenticated */ }
