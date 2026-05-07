@@ -115,7 +115,8 @@ export function TopNav({ children }: TopNavProps) {
                   <img
                     src={auth.avatar_url}
                     alt={auth.login}
-                    className="w-7 h-7 rounded-full border-2 border-green-500"
+                    className="w-6 h-6 border-2 border-green-500"
+                    style={{ borderRadius: "50%" }}
                   />
                 ) : auth.authenticated ? (
                   <span className="material-symbols-outlined text-green-400">account_circle</span>

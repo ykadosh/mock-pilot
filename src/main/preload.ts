@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("api", {
   captureWebsite: (url: string) => ipcRenderer.invoke("capture-website", url),
+  formatHtml: (rawHtml: string) => ipcRenderer.invoke("format-html", rawHtml),
   listProjects: () => ipcRenderer.invoke("list-projects"),
   saveProject: (data: { url: string; title: string; html: string; thumbnail?: string }) =>
     ipcRenderer.invoke("save-project", data),

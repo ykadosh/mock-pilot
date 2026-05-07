@@ -101,7 +101,7 @@ export function Editor() {
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === "modification-applied" && e.data.success && e.data.fullHTML) {
         const fullDoc = "<!DOCTYPE html><html>" + e.data.fullHTML + "</html>";
-        const label = pendingLabelRef.current || e.data.label || "AI modification";
+        const label = e.data.label || pendingLabelRef.current || "AI modification";
         history.push(fullDoc, label);
         pendingLabelRef.current = "AI modification";
         // Persist to disk
@@ -247,6 +247,7 @@ export function Editor() {
               ref={canvasRef}
               pickerActive={pickerActive}
               selectedMpId={selectedElement?.mpId || null}
+              selectedSelector={selectedElement ? (selectedElement.tagName + (selectedElement.id ? '#' + selectedElement.id : selectedElement.className ? '.' + selectedElement.className.trim().split(/\s+/).slice(0, 2).join('.') : '')) : undefined}
               onElementSelected={handleElementSelected}
               onElementDeselected={() => { setSelectedElement(null); setPickerActive(false); }}
               zoom={zoom}

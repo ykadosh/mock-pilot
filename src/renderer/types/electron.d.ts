@@ -17,6 +17,11 @@ declare global {
         thumbnail?: string;
         error?: string;
       }>;
+      formatHtml: (rawHtml: string) => Promise<{
+        success: boolean;
+        html?: string;
+        error?: string;
+      }>;
       listProjects: () => Promise<ProjectMeta[]>;
       saveProject: (data: { url: string; title: string; html: string; thumbnail?: string }) => Promise<ProjectMeta>;
       loadProject: (id: string) => Promise<{

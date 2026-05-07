@@ -15,7 +15,7 @@ const PICKER_SCRIPT = `
   function createOverlay() {
     overlay = document.createElement('div');
     overlay.setAttribute('data-mp-injected', 'true');
-    overlay.style.cssText = 'position:fixed;pointer-events:none;border:2px solid #7c3aed;background:rgba(124,58,237,0.08);z-index:99999;display:none;transition:all 0.05s ease-out;';
+    overlay.style.cssText = 'position:fixed;pointer-events:none;border:2px solid #7c3aed;background:rgba(124,58,237,0.08);border-radius:6px;z-index:99999;display:none;transition:all 0.05s ease-out;';
     label = document.createElement('div');
     label.setAttribute('data-mp-injected', 'true');
     label.style.cssText = 'position:fixed;pointer-events:none;background:#7c3aed;color:white;font-size:11px;font-family:monospace;padding:2px 6px;border-radius:2px;z-index:100000;display:none;white-space:nowrap;';
@@ -148,10 +148,47 @@ const PICKER_SCRIPT = `
         overlay.style.left = rect.left + 'px';
         overlay.style.width = rect.width + 'px';
         overlay.style.height = rect.height + 'px';
-        label.style.display = 'block';
-        label.style.top = Math.max(0, rect.top - 22) + 'px';
-        label.style.left = rect.left + 'px';
-        label.textContent = getSelector(el);
+        // Hide in-iframe label — external toolbar shows selector info
+        label.style.display = 'none';
+      }
+    } else if (e.data && e.data.type === 'picker-action-duplicate') {
+      const mpId = e.data.mpId;
+      const el = document.querySelector('[data-mp-id="' + mpId + '"]');
+      if (el) {
+        const clone = el.cloneNode(true);
+        const newMpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+        clone.setAttribute('data-mp-id', newMpId);
+        el.parentNode.insertBefore(clone, el.nextSibling);
+        window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: 'Duplicate element' }, '*');
+      }
+    } else if (e.data && e.data.type === 'picker-action-delete') {
+      const mpId = e.data.mpId;
+      const el = document.querySelector('[data-mp-id="' + mpId + '"]');
+      if (el) {
+        el.remove();
+        if (overlay) overlay.style.display = 'none';
+        if (label) label.style.display = 'none';
+        window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: 'Delete element' }, '*');
+      }
+    } else if (e.data && e.data.type === 'picker-action-move-up') {
+      const mpId = e.data.mpId;
+      const el = document.querySelector('[data-mp-id="' + mpId + '"]');
+      if (el && el.previousElementSibling) {
+        el.parentNode.insertBefore(el, el.previousElementSibling);
+        const rect = el.getBoundingClientRect();
+        if (overlay) { overlay.style.top = rect.top + 'px'; overlay.style.left = rect.left + 'px'; overlay.style.width = rect.width + 'px'; overlay.style.height = rect.height + 'px'; }
+        window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: 'Move element up' }, '*');
+        window.parent.postMessage({ type: 'element-rect-update', rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height } }, '*');
+      }
+    } else if (e.data && e.data.type === 'picker-action-move-down') {
+      const mpId = e.data.mpId;
+      const el = document.querySelector('[data-mp-id="' + mpId + '"]');
+      if (el && el.nextElementSibling) {
+        el.parentNode.insertBefore(el.nextElementSibling, el);
+        const rect = el.getBoundingClientRect();
+        if (overlay) { overlay.style.top = rect.top + 'px'; overlay.style.left = rect.left + 'px'; overlay.style.width = rect.width + 'px'; overlay.style.height = rect.height + 'px'; }
+        window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: 'Move element down' }, '*');
+        window.parent.postMessage({ type: 'element-rect-update', rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height } }, '*');
       }
     } else if (e.data && e.data.type === 'apply-modification') {
       const mpId = e.data.mpId;
@@ -212,6 +249,7 @@ export interface CanvasPreviewHandle {
 interface CanvasPreviewProps {
   pickerActive?: boolean;
   selectedMpId?: string | null;
+  selectedSelector?: string;
   onElementSelected?: (element: SelectedElement) => void;
   onElementDeselected?: () => void;
   zoom?: number;
@@ -248,7 +286,7 @@ function cleanHtml(html: string | null): string | null {
   }
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, selectedSelector, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const [selectedRect, setSelectedRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -404,6 +442,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
       } else if (e.data?.type === "element-deselected" && onElementDeselected) {
         setSelectedRect(null);
         onElementDeselected();
+      } else if (e.data?.type === "element-rect-update" && e.data.rect) {
+        setSelectedRect(e.data.rect);
       }
     };
     window.addEventListener("message", handleMessage);
@@ -417,60 +457,80 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
   const scale = zoom / 100;
 
+  const sendPickerAction = (action: string) => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow || !selectedMpId) return;
+    iframe.contentWindow.postMessage({ type: action, mpId: selectedMpId }, "*");
+  };
+
+  const handleToolbarDelete = () => {
+    sendPickerAction("picker-action-delete");
+    onElementDeselected?.();
+  };
+
   return (
     <div className="flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
-      <div
-        className="bg-white shadow-2xl overflow-hidden rounded-lg relative mx-auto"
-        style={{
-          width: `${viewportWidth * scale}px`,
-          height: `${iframeHeight * scale}px`,
-        }}
-      >
-        {html ? (
-          <>
-            <iframe
-              ref={iframeRef}
-              srcDoc={html}
-              className="border-none origin-top-left"
-              style={{
-                width: `${viewportWidth}px`,
-                height: `${iframeHeight}px`,
-                transform: `scale(${scale})`,
-              }}
-              sandbox="allow-same-origin allow-scripts"
-              title="Website Preview"
-              onLoad={handleIframeLoad}
-            />
-            {/* Block interaction when picker is not active */}
-            {!pickerActive && (
-              <div className="absolute inset-0 cursor-default" />
-            )}
-            {/* Close button for selected element — rendered outside iframe */}
-            {selectedMpId && selectedRect && (
-              <button
-                onClick={onElementDeselected}
-                className="absolute z-10 flex items-center justify-center w-5 h-5 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs cursor-pointer transition-colors shadow-md"
-                style={{
-                  top: `${Math.max(0, selectedRect.top * scale)}px`,
-                  left: `${Math.min((selectedRect.left + selectedRect.width) * scale - 10, viewportWidth * scale - 20)}px`,
-                }}
-                title="Deselect element"
-              >
-                ×
-              </button>
-            )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
-            <span className="material-symbols-outlined text-4xl mb-md">
-              web
-            </span>
-            <p className="text-sm">No website captured yet</p>
-            <p className="text-xs text-slate-500 mt-xs">
-              Create a new project to capture a website
-            </p>
+      <div className="relative mx-auto" style={{ width: `${viewportWidth * scale}px` }}>
+        {/* Floating toolbar for selected element */}
+        {selectedMpId && selectedRect && (
+          <div
+            className="absolute z-20 flex items-center bg-[#7c3aed] text-white text-[10px] font-mono px-2 py-1 rounded shadow-lg whitespace-nowrap"
+            style={{
+              top: `${Math.max(0, selectedRect.top * scale - 28)}px`,
+              left: `${selectedRect.left * scale}px`,
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>ads_click</span>
+            <span className="ml-1">{selectedSelector || "Element"}</span>
+            <div className="flex items-center gap-0.5 ml-2 pl-2 border-l border-white/30">
+              <button onClick={() => sendPickerAction("picker-action-duplicate")} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Duplicate">content_copy</button>
+              <button onClick={handleToolbarDelete} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Delete">delete</button>
+              <button onClick={() => sendPickerAction("picker-action-move-up")} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Move up">arrow_upward</button>
+              <button onClick={() => sendPickerAction("picker-action-move-down")} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Move down">arrow_downward</button>
+              <button onClick={() => onElementDeselected?.()} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Deselect">close</button>
+            </div>
           </div>
         )}
+        {/* Canvas container */}
+        <div
+          className="bg-white shadow-2xl overflow-hidden rounded-lg relative"
+          style={{
+            width: `${viewportWidth * scale}px`,
+            height: `${iframeHeight * scale}px`,
+          }}
+        >
+          {html ? (
+            <>
+              <iframe
+                ref={iframeRef}
+                srcDoc={html}
+                className="border-none origin-top-left"
+                style={{
+                  width: `${viewportWidth}px`,
+                  height: `${iframeHeight}px`,
+                  transform: `scale(${scale})`,
+                }}
+                sandbox="allow-same-origin allow-scripts"
+                title="Website Preview"
+                onLoad={handleIframeLoad}
+              />
+              {/* Block interaction when picker is not active */}
+              {!pickerActive && (
+                <div className="absolute inset-0 cursor-default" />
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
+              <span className="material-symbols-outlined text-4xl mb-md">
+                web
+              </span>
+              <p className="text-sm">No website captured yet</p>
+              <p className="text-xs text-slate-500 mt-xs">
+                Create a new project to capture a website
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

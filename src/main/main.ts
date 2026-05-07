@@ -174,6 +174,7 @@ const createWindow = () => {
     trafficLightPosition: { x: 12, y: 18 },
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      webviewTag: true,
     },
   });
 
@@ -472,6 +473,26 @@ app.on("ready", () => {
       } finally {
         await browser.close();
       }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: message };
+    }
+  });
+
+  // Format raw HTML with js-beautify (used by capture browser)
+  ipcMain.handle("format-html", (_event, rawHtml: string) => {
+    try {
+      const formattedHtml = html_beautify(rawHtml, {
+        indent_size: 2,
+        indent_char: " ",
+        max_preserve_newlines: 1,
+        preserve_newlines: true,
+        wrap_line_length: 0,
+        end_with_newline: true,
+        indent_inner_html: true,
+        css_indent_size: 2,
+      });
+      return { success: true, html: `<!DOCTYPE html>\n${formattedHtml}` };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       return { success: false, error: message };
