@@ -384,8 +384,8 @@ export function CaptureBrowser() {
             </>
           ) : (
             /* Empty state - no URL entered yet */
-            <div className="flex-1 flex items-center justify-center text-center">
-              <div className="flex flex-col items-center gap-6 px-8 max-w-lg">
+            <div className="flex-1 flex items-center justify-center text-center w-full min-w-0">
+              <div className="flex flex-col items-center gap-6 px-8" style={{ width: '100%', maxWidth: '480px' }}>
                 <span className="material-symbols-outlined text-[64px] text-outline-variant/60">language</span>
                 <div className="space-y-2">
                   <h2 className="font-headline-md text-headline-md text-on-surface">
