@@ -1,8 +1,8 @@
 {
   "name": "mock-pilot",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MockPilot - Electron app",
-  "author": "Yoav Kadosh",
+  "author": "",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
@@ -20,7 +20,6 @@
     "url": "git+https://github.com/ykadosh/mock-pilot.git"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/ykadosh/mock-pilot/issues"
