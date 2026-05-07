@@ -249,11 +249,19 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   const [iframeHeight, setIframeHeight] = useState(800);
   const [selectedRect, setSelectedRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeLoadId, setIframeLoadId] = useState(0);
 
-  // Use htmlContent prop if provided, otherwise fall back to store
+  // Use htmlContent prop if provided, otherwise fall back to store.
+  // cleanHtml only on first load to strip artifacts from previously persisted HTML.
+  const initialCleanDone = useRef(false);
   useEffect(() => {
     if (htmlContent !== undefined) {
-      setHtml(cleanHtml(htmlContent));
+      if (!initialCleanDone.current) {
+        initialCleanDone.current = true;
+        setHtml(cleanHtml(htmlContent));
+      } else {
+        setHtml(htmlContent);
+      }
     } else {
       setHtml(cleanHtml(getCapturedHtml()));
     }
@@ -328,6 +336,9 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     script.setAttribute('data-mp-injected', 'true');
     script.textContent = PICKER_SCRIPT;
     doc.body.appendChild(script);
+
+    // Bump load id so the picker/highlight useEffect re-fires
+    setIframeLoadId(prev => prev + 1);
   };
 
   // Listen for height reports from the iframe
@@ -376,7 +387,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         "*"
       );
     }
-  }, [selectedMpId, pickerActive]);
+  }, [selectedMpId, pickerActive, iframeLoadId]);
 
   // Listen for element selection from iframe
   useEffect(() => {
