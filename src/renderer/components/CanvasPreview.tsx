@@ -82,6 +82,8 @@ const PICKER_SCRIPT = `
     if (!active) return;
     e.preventDefault();
     e.stopPropagation();
+    active = false;
+    document.body.style.cursor = '';
     const el = e.target;
     // Assign a unique ID for reliable element tracking across DOM mutations
     const mpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
@@ -373,8 +375,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
               title="Website Preview"
               onLoad={handleIframeLoad}
             />
-            {/* Block interaction when picker is not active */}
-            {!pickerActive && (
+            {/* Block interaction when picker is not active and no element selected */}
+            {!pickerActive && !selectedMpId && (
               <div className="absolute inset-0 cursor-default" />
             )}
           </>
