@@ -65,6 +65,7 @@ export function Editor() {
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {
       setPickerActive((prev) => !prev);
+      setSelectedElement(null);
       setHistoryOpen(false);
       setCodeEditorOpen(false);
     } else if (tool === "History") {
