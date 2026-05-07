@@ -15,6 +15,13 @@ const GITHUB_CLIENT_ID = "Ov23liwdxHGMy1H6hPRx";
 const authFilePath = path.join(app.getPath("userData"), "github-auth.json");
 const loggedOutMarker = path.join(app.getPath("userData"), "github-logged-out");
 
+// Packaged Electron apps don't inherit the user's shell PATH,
+// so we augment it with common install locations for CLI tools like `gh`.
+const shellEnv = {
+  ...process.env,
+  PATH: `${process.env.PATH || ""}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:${process.env.HOME || ""}/.local/bin`,
+};
+
 interface AuthData {
   token: string;
   login: string;
@@ -53,7 +60,7 @@ function getToken(): string | null {
   // Fallback: try gh CLI if available
   try {
     const { execSync } = require("child_process");
-    const token = execSync("gh auth token", { encoding: "utf-8" }).trim();
+    const token = execSync("gh auth token", { encoding: "utf-8", env: shellEnv }).trim();
     if (token) return token;
   } catch { /* gh not available */ }
   return null;
@@ -100,7 +107,7 @@ async function getCopilotToken(): Promise<string | null> {
   // Second try: use gh CLI token directly (has Copilot access built-in)
   try {
     const { execSync } = require("child_process");
-    const ghToken = execSync("gh auth token", { encoding: "utf-8" }).trim();
+    const ghToken = execSync("gh auth token", { encoding: "utf-8", env: shellEnv }).trim();
     if (ghToken) {
       // Try exchanging gh CLI token too
       const copilotToken = await exchangeCopilotToken(ghToken);
@@ -582,7 +589,7 @@ Return only the modified HTML element:`;
     // Fallback: check gh CLI
     try {
       const { execSync } = require("child_process");
-      const token = execSync("gh auth token", { encoding: "utf-8" }).trim();
+      const token = execSync("gh auth token", { encoding: "utf-8", env: shellEnv }).trim();
       if (token) {
         // Fetch user info with this token
         const res = await fetch("https://api.github.com/user", {
@@ -682,9 +689,9 @@ Return only the modified HTML element:`;
   ipcMain.handle("auth-check-gh-cli", () => {
     try {
       const { execSync } = require("child_process");
-      const token = execSync("gh auth token", { encoding: "utf-8" }).trim();
+      const token = execSync("gh auth token", { encoding: "utf-8", env: shellEnv }).trim();
       if (token) {
-        const userJson = execSync("gh api user", { encoding: "utf-8" }).trim();
+        const userJson = execSync("gh api user", { encoding: "utf-8", env: shellEnv }).trim();
         const user = JSON.parse(userJson);
         return { connected: true, login: user.login };
       }
