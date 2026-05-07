@@ -61,9 +61,9 @@ export function AppSettings() {
   };
 
   return (
-    <div className="h-screen overflow-hidden">
+    <div className="h-full overflow-hidden">
       <TopNav />
-      <main className="h-[calc(100vh-48px)] mt-12 bg-surface-container-lowest overflow-y-auto p-lg">
+      <main className="absolute top-12 bottom-0 left-0 right-0 bg-surface-container-lowest overflow-y-auto p-lg">
         <div className="max-w-4xl mx-auto space-y-lg">
             {/* Connectivity Status */}
             <section className="space-y-md">

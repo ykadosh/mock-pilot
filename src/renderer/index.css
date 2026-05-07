@@ -105,6 +105,11 @@
 }
 
 @layer base {
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     background-color: #020617;
     margin: 0;
