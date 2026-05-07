@@ -88,6 +88,18 @@ const PICKER_SCRIPT = `
     // Assign a unique ID for reliable element tracking across DOM mutations
     const mpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     el.setAttribute('data-mp-id', mpId);
+    // Keep overlay visible on the clicked element immediately
+    const rect = el.getBoundingClientRect();
+    overlay.style.display = 'block';
+    overlay.style.top = rect.top + 'px';
+    overlay.style.left = rect.left + 'px';
+    overlay.style.width = rect.width + 'px';
+    overlay.style.height = rect.height + 'px';
+    label.style.display = 'flex';
+    label.style.top = Math.max(0, rect.top - 22) + 'px';
+    label.style.left = rect.left + 'px';
+    label.childNodes[0].textContent = getSelector(el);
+    closeBtn.style.display = 'inline';
     const computed = window.getComputedStyle(el);
     const style = {};
     ['width','height','padding','margin','background-color','color','font-size','font-family','border-radius','display','position'].forEach(prop => {
@@ -309,26 +321,24 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     return () => clearTimeout(t);
   }, [viewportWidth]);
 
-  // Activate/deactivate picker in iframe
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe?.contentWindow) return;
-    iframe.contentWindow.postMessage(
-      { type: pickerActive ? "picker-activate" : "picker-deactivate" },
-      "*"
-    );
-  }, [pickerActive]);
-
-  // Highlight selected element in iframe
+  // Activate/deactivate picker or highlight selected element in iframe
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
     if (selectedMpId) {
+      // Element is selected — show persistent highlight
       iframe.contentWindow.postMessage(
         { type: "picker-highlight", mpId: selectedMpId },
         "*"
       );
-    } else if (!pickerActive) {
+    } else if (pickerActive) {
+      // Picker is active — enable crosshair and hover highlight
+      iframe.contentWindow.postMessage(
+        { type: "picker-activate" },
+        "*"
+      );
+    } else {
+      // Neither selected nor picking — deactivate everything
       iframe.contentWindow.postMessage(
         { type: "picker-deactivate" },
         "*"
