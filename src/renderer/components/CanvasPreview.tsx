@@ -104,9 +104,11 @@ const PICKER_SCRIPT = `
     label.textContent = getSelector(el);
     const computed = window.getComputedStyle(el);
     const style = {};
-    ['width','height','padding','margin','background-color','color','font-size','font-family','border-radius','display','position'].forEach(prop => {
+    for (let i = 0; i < computed.length; i++) {
+      const prop = computed[i];
+      if (prop.startsWith('-webkit-') || prop.startsWith('-moz-') || prop.startsWith('-ms-')) continue;
       style[prop] = computed.getPropertyValue(prop);
-    });
+    }
     window.parent.postMessage({
       type: 'element-selected',
       data: {
@@ -185,9 +187,11 @@ const PICKER_SCRIPT = `
       if (el) {
         const computed = window.getComputedStyle(el);
         const style = {};
-        ['width','height','padding','margin','background-color','color','font-size','font-family','border-radius','display','position'].forEach(prop => {
+        for (let i = 0; i < computed.length; i++) {
+          const prop = computed[i];
+          if (prop.startsWith('-webkit-') || prop.startsWith('-moz-') || prop.startsWith('-ms-')) continue;
           style[prop] = computed.getPropertyValue(prop);
-        });
+        }
         window.parent.postMessage({ type: 'element-html-response', mpId: mpId, outerHTML: el.outerHTML, computedStyle: style }, '*');
       } else {
         window.parent.postMessage({ type: 'element-html-response', mpId: mpId, outerHTML: null }, '*');
