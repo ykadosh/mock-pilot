@@ -57,6 +57,7 @@ declare global {
         error?: string;
       }>;
       authLogout: () => Promise<{ success: boolean }>;
+      authCheckGhCli: () => Promise<{ connected: boolean; login?: string }>;
       // App settings
       getAppSettings: () => Promise<{ aiModel: string }>;
       saveAppSettings: (settings: { aiModel: string }) => Promise<{ success: boolean }>;

@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("api", {
   authStartDeviceFlow: () => ipcRenderer.invoke("auth-start-device-flow"),
   authPollDeviceFlow: (deviceCode: string) => ipcRenderer.invoke("auth-poll-device-flow", deviceCode),
   authLogout: () => ipcRenderer.invoke("auth-logout"),
+  authCheckGhCli: () => ipcRenderer.invoke("auth-check-gh-cli"),
   // App settings
   getAppSettings: () => ipcRenderer.invoke("get-app-settings"),
   saveAppSettings: (settings: { aiModel: string }) => ipcRenderer.invoke("save-app-settings", settings),

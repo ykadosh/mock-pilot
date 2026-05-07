@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "../components/layout/TopNav";
+import { useAuth } from "../hooks/useAuth";
 
 interface StorageInfo {
   totalBytes: number;
@@ -40,12 +41,15 @@ export function AppSettings() {
   const [settings, setSettings] = useState<AppSettingsData>({ aiModel: "gpt-4o" });
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [saved, setSaved] = useState(false);
+  const [ghCliStatus, setGhCliStatus] = useState<{ connected: boolean; login?: string } | null>(null);
+  const auth = useAuth();
 
   useEffect(() => {
     window.api.getAppSettings().then((s) => {
       if (s) setSettings(s);
     });
     window.api.getStorageInfo().then(setStorage);
+    window.api.authCheckGhCli().then(setGhCliStatus);
   }, []);
 
   const handleModelChange = async (modelId: string) => {
@@ -62,6 +66,56 @@ export function AppSettings() {
       <div className="flex pt-12 h-screen">
         <main className="flex-1 min-w-0 bg-surface-container-lowest overflow-y-auto p-lg">
           <div className="max-w-4xl mx-auto space-y-lg">
+            {/* Connectivity Status */}
+            <section className="space-y-md">
+              <div className="border-b border-outline-variant pb-xs">
+                <h2 className="font-headline-md text-headline-md text-on-surface">Connectivity</h2>
+              </div>
+              <div className="border border-outline-variant bg-surface-container divide-y divide-outline-variant/50 rounded">
+                {/* GitHub OAuth status */}
+                <div className="flex items-center gap-md px-md py-sm">
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${auth.authenticated ? "bg-green-400" : "bg-slate-500"}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-sm">
+                      <span className="text-body-main text-on-surface font-medium">GitHub Account</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded text-green-400 bg-green-400/10`}>Free models</span>
+                      <div className="relative group">
+                        <span className="material-symbols-outlined text-sm text-on-surface-variant cursor-help">help</span>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-surface-container-highest text-on-surface text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                          Sign in via the user icon in the top bar. Gives access to Free tier models (GPT-4o).
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-ui-small text-on-surface-variant">
+                      {auth.authenticated ? `Connected as ${auth.login}` : "Not connected"}
+                    </div>
+                  </div>
+                </div>
+                {/* gh CLI status */}
+                <div className="flex items-center gap-md px-md py-sm">
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${ghCliStatus?.connected ? "bg-green-400" : "bg-slate-500"}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-sm">
+                      <span className="text-body-main text-on-surface font-medium">GitHub Copilot (gh CLI)</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded text-violet-400 bg-violet-400/10`}>Pro models</span>
+                      <div className="relative group">
+                        <span className="material-symbols-outlined text-sm text-on-surface-variant cursor-help">help</span>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-surface-container-highest text-on-surface text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity w-72 z-50">
+                          {ghCliStatus?.connected
+                            ? "Connected via gh CLI. You have access to Pro models (Claude, GPT-4.1, GPT-5)."
+                            : "Install the GitHub CLI (gh) and run \"gh auth login\" in your terminal to unlock Pro models like Claude and GPT-5."
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-ui-small text-on-surface-variant">
+                      {ghCliStatus === null ? "Checking..." : ghCliStatus.connected ? `Connected as ${ghCliStatus.login}` : "Not connected"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             {/* AI Model Selection */}
             <section className="space-y-md">
               <div className="flex items-center justify-between border-b border-outline-variant pb-xs">

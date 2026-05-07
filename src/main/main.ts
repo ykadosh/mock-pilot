@@ -679,6 +679,19 @@ Return only the modified HTML element:`;
     return { success: true };
   });
 
+  ipcMain.handle("auth-check-gh-cli", () => {
+    try {
+      const { execSync } = require("child_process");
+      const token = execSync("gh auth token", { encoding: "utf-8" }).trim();
+      if (token) {
+        const userJson = execSync("gh api user", { encoding: "utf-8" }).trim();
+        const user = JSON.parse(userJson);
+        return { connected: true, login: user.login };
+      }
+    } catch { /* gh not available or not authenticated */ }
+    return { connected: false };
+  });
+
   // App settings handlers
   ipcMain.handle("get-app-settings", () => {
     try {
