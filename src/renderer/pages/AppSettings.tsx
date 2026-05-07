@@ -61,11 +61,10 @@ export function AppSettings() {
   };
 
   return (
-    <div className="overflow-hidden">
+    <div className="h-screen overflow-hidden">
       <TopNav />
-      <div className="flex pt-12 h-screen">
-        <main className="flex-1 min-w-0 bg-surface-container-lowest overflow-y-auto p-lg">
-          <div className="max-w-4xl mx-auto space-y-lg">
+      <main className="h-[calc(100vh-48px)] mt-12 bg-surface-container-lowest overflow-y-auto p-lg">
+        <div className="max-w-4xl mx-auto space-y-lg">
             {/* Connectivity Status */}
             <section className="space-y-md">
               <div className="border-b border-outline-variant pb-xs">
@@ -208,6 +207,5 @@ export function AppSettings() {
           </div>
         </main>
       </div>
-    </div>
   );
 }
