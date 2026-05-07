@@ -16,6 +16,7 @@ const config: ForgeConfig = {
     new MakerSquirrel({
       name: "MockPilot",
       setupExe: "MockPilot-Setup.exe",
+      authors: "Yoav Kadosh",
     }),
     new MakerZIP({}, ["darwin"]),
     new MakerDeb({}),
