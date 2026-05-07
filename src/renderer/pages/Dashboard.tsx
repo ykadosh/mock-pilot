@@ -117,7 +117,7 @@ export function Dashboard() {
   return (
     <>
       <TopNav />
-      <main className="mt-12 p-lg min-h-[calc(100vh-48px)] bg-[#020617]">
+      <main className="mt-12 overflow-y-auto h-[calc(100vh-48px)] p-lg bg-[#020617]">
       {/* Dashboard Header */}
       <section className="flex justify-between items-end mb-xl">
         <div className="space-y-xs">
