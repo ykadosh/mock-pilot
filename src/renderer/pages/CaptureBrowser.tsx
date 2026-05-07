@@ -363,11 +363,7 @@ export function CaptureBrowser() {
                     <div className="h-full bg-primary animate-pulse w-1/2" />
                   </div>
                 )}
-                {/* Interactive Mode badge */}
-                <div className="absolute top-4 left-4 bg-primary-container/90 backdrop-blur-md text-on-primary-container px-3 py-1.5 rounded flex items-center gap-2 shadow-lg border border-white/10 pointer-events-none">
-                  <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>ads_click</span>
-                  <span className="font-label-caps text-xs">Interactive Mode Active</span>
-                </div>
+
               </div>
 
               {/* Frame Status Footer */}
