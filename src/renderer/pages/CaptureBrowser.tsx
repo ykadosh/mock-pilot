@@ -258,10 +258,14 @@ export function CaptureBrowser() {
     }
   };
 
+  // Prevent clicks outside the webview from stealing focus,
+  // which would close menus/dropdowns inside the browsed website.
+  const preventFocusSteal = (e: React.MouseEvent) => e.preventDefault();
+
   return (
     <div className="bg-background text-on-surface font-body-main antialiased overflow-hidden h-screen flex flex-col">
       {/* Top Nav Bar */}
-      <header className="bg-slate-900 border-b border-slate-700 flex justify-between items-center pl-20 pr-4 h-12 w-full z-50 [-webkit-app-region:drag]">
+      <header onMouseDown={preventFocusSteal} className="bg-slate-900 border-b border-slate-700 flex justify-between items-center pl-20 pr-4 h-12 w-full z-50 [-webkit-app-region:drag]">
         <div className="flex items-center gap-md [-webkit-app-region:no-drag]">
           <span
             onClick={() => navigate("/")}
@@ -284,7 +288,7 @@ export function CaptureBrowser() {
       </header>
 
       {/* Browser Controls Bar */}
-      <section className="h-14 bg-surface-container-low flex items-center px-4 gap-md border-b border-outline-variant shrink-0">
+      <section onMouseDown={preventFocusSteal} className="h-14 bg-surface-container-low flex items-center px-4 gap-md border-b border-outline-variant shrink-0">
         {/* Navigation buttons */}
         <div className="flex items-center gap-xs">
           <button
@@ -345,7 +349,7 @@ export function CaptureBrowser() {
       </section>
 
       {/* Main Content */}
-      <main className="flex-1 relative bg-background overflow-hidden p-md">
+      <main onMouseDown={preventFocusSteal} className="flex-1 relative bg-background overflow-hidden p-md">
         <div className="w-full h-full bg-surface rounded-lg border border-outline-variant shadow-2xl relative overflow-hidden flex flex-col">
           {hasNavigated ? (
             <>
