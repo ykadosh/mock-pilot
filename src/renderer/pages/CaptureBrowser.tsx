@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { setCapturedHtml } from "../lib/store";
 
+type HeightMode = "convert-vh" | "remove" | "keep-as-is";
+
 export function CaptureBrowser() {
   const navigate = useNavigate();
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
@@ -15,6 +17,10 @@ export function CaptureBrowser() {
   const [isSecure, setIsSecure] = useState(false);
   const [hasNavigated, setHasNavigated] = useState(false);
   const [webviewPreloadPath, setWebviewPreloadPath] = useState("");
+  const [captureSettingsOpen, setCaptureSettingsOpen] = useState(false);
+  const [heightMode, setHeightMode] = useState<HeightMode>("convert-vh");
+  const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const settingsPopoverRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch the webview preload path on mount
   useEffect(() => {
@@ -113,18 +119,76 @@ export function CaptureBrowser() {
     const wv = webviewRef.current;
     if (!wv || !currentUrl) return;
 
+    const log = (...args: unknown[]) => window.api.captureLog(...args);
+
     // Refocus the webview immediately so the page doesn't see a blur
     wv.focus();
 
+    // Forward webview console.log to the terminal during capture
+    const onConsoleMessage = (e: Electron.ConsoleMessageEvent) => {
+      if (e.message.startsWith("[Capture]")) {
+        log(e.message.slice(10));
+      }
+    };
+    wv.addEventListener("console-message", onConsoleMessage);
+
     setIsCapturing(true);
     try {
+      log("Starting capture for", currentUrl);
+
       // Extract the full HTML from the webview's current state
+      log("Injecting capture script into webview...");
       const rawHtml = await wv.executeJavaScript(`
         (async () => {
+          var _heightMode = ${JSON.stringify(heightMode)};
+
+          // Shadow fetch with a timeout-aware version to avoid hanging on unresponsive resources
+          var _origFetch = window.fetch.bind(window);
+          var fetch = function(url, opts) {
+            var timeout = 10000;
+            var controller = new AbortController();
+            var id = setTimeout(function() { controller.abort(); }, timeout);
+            var merged = Object.assign({}, opts || {}, { signal: controller.signal });
+            return _origFetch(url, merged).finally(function() { clearTimeout(id); });
+          };
+
+          var _log = function() {
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift("[Capture]");
+            console.log.apply(console, args);
+          };
+
+          _log("Capture script running inside webview");
+
+          // Cache for already-fetched font URLs to avoid duplicate requests
+          var _fontCache = {};
+
+          async function _fetchFontAsDataUri(resolvedUrl) {
+            if (_fontCache[resolvedUrl] !== undefined) return _fontCache[resolvedUrl];
+            try {
+              var res = await fetch(resolvedUrl);
+              if (res.ok) {
+                var blob = await res.blob();
+                var dataUri = await new Promise(function(resolve) {
+                  var reader = new FileReader();
+                  reader.onloadend = function() { resolve(reader.result); };
+                  reader.readAsDataURL(blob);
+                });
+                _fontCache[resolvedUrl] = dataUri;
+                return dataUri;
+              }
+            } catch (e) {
+              _log("  Font fetch failed: " + resolvedUrl + " - " + (e && e.message || e));
+            }
+            _fontCache[resolvedUrl] = null;
+            return null;
+          }
+
           // Helper: resolve and inline font URLs in CSS text relative to a base URL
           async function inlineFontUrls(cssText, baseUrl) {
             const fontFaceRegex = /@font-face\\s*\\{[^}]*\\}/gi;
             const fontFaces = [...cssText.matchAll(fontFaceRegex)];
+            _log("  Found " + fontFaces.length + " @font-face block(s) in CSS (" + cssText.length + " chars)");
             for (const faceMatch of fontFaces) {
               let faceBlock = faceMatch[0];
               const urlRegex = /url\\(["']?([^"')]+?)["']?\\)\\s*format\\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\\)/gi;
@@ -132,38 +196,22 @@ export function CaptureBrowser() {
               for (const match of urlMatches) {
                 const fontUrl = match[1];
                 if (fontUrl.startsWith("data:")) continue;
-                try {
-                  const resolvedUrl = new URL(fontUrl, baseUrl).href;
-                  const res = await fetch(resolvedUrl);
-                  if (res.ok) {
-                    const blob = await res.blob();
-                    const dataUri = await new Promise((resolve) => {
-                      const reader = new FileReader();
-                      reader.onloadend = () => resolve(reader.result);
-                      reader.readAsDataURL(blob);
-                    });
-                    faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '") format("' + match[2] + '")');
-                  }
-                } catch {}
+                const resolvedUrl = new URL(fontUrl, baseUrl).href;
+                const dataUri = await _fetchFontAsDataUri(resolvedUrl);
+                if (dataUri) {
+                  faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '") format("' + match[2] + '")');
+                }
               }
               const simpleUrlRegex = /url\\(["']?([^"')]+\\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\\)/gi;
               const simpleMatches = [...faceBlock.matchAll(simpleUrlRegex)];
               for (const match of simpleMatches) {
                 const fontUrl = match[1];
                 if (fontUrl.startsWith("data:")) continue;
-                try {
-                  const resolvedUrl = new URL(fontUrl, baseUrl).href;
-                  const res = await fetch(resolvedUrl);
-                  if (res.ok) {
-                    const blob = await res.blob();
-                    const dataUri = await new Promise((resolve) => {
-                      const reader = new FileReader();
-                      reader.onloadend = () => resolve(reader.result);
-                      reader.readAsDataURL(blob);
-                    });
-                    faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '")');
-                  }
-                } catch {}
+                const resolvedUrl = new URL(fontUrl, baseUrl).href;
+                const dataUri = await _fetchFontAsDataUri(resolvedUrl);
+                if (dataUri) {
+                  faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '")');
+                }
               }
               cssText = cssText.replace(faceMatch[0], faceBlock);
             }
@@ -172,26 +220,26 @@ export function CaptureBrowser() {
 
           // Inline external stylesheets
           const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
+          _log("Inlining " + stylesheets.length + " external stylesheet(s)...");
           for (const link of stylesheets) {
             try {
               const href = link.href;
+              _log("  Fetching stylesheet: " + href);
               const res = await fetch(href);
+              _log("  Fetched stylesheet (" + res.status + "): " + href);
               let css = await res.text();
+              _log("  Inlining fonts for stylesheet: " + href);
               css = await inlineFontUrls(css, href);
+              _log("  Done inlining fonts for: " + href);
               const style = document.createElement("style");
               style.textContent = css;
               link.replaceWith(style);
-            } catch {}
+            } catch (e) { _log("  FAILED stylesheet: " + link.href + " - " + (e && e.message || e)); }
           }
 
-          // Process existing style tags
-          const inlineStyles = document.querySelectorAll("style");
-          for (const style of inlineStyles) {
-            style.textContent = await inlineFontUrls(style.textContent || "", document.baseURI);
-          }
-
-          // Convert images to data URIs
+          // Convert images to data URIs (before removing scripts, as some images may need JS)
           const images = document.querySelectorAll("img");
+          _log("Converting " + images.length + " image(s) to data URIs...");
           for (const img of images) {
             try {
               const canvas = document.createElement("canvas");
@@ -204,20 +252,158 @@ export function CaptureBrowser() {
               }
             } catch {}
           }
+          _log("Done converting images");
 
-          // Remove scripts
+          // Remove scripts BEFORE CSSOM serialization.
+          // This kills MutationObservers (e.g. Griffel) that would react to
+          // textContent changes and re-insert rules via insertRule(), causing
+          // the serialized CSS to be lost.
+          _log("Removing scripts...");
           document.querySelectorAll("script").forEach((s) => s.remove());
 
+          // Serialize CSSOM rules into style tag textContent.
+          // Frameworks like Fluent UI / Griffel inject CSS via insertRule(),
+          // which doesn't appear in outerHTML. We replace textContent with
+          // the full set of CSSOM rules for every style tag that has a sheet.
+          _log("Serializing CSSOM rules...");
+          var cssomCount = 0;
+          document.querySelectorAll("style").forEach(function(style) {
+            try {
+              var sheet = style.sheet;
+              if (sheet && sheet.cssRules && sheet.cssRules.length > 0) {
+                var rules = [];
+                for (var i = 0; i < sheet.cssRules.length; i++) {
+                  rules.push(sheet.cssRules[i].cssText);
+                }
+                var serialized = rules.join("\\n");
+                if (serialized !== (style.textContent || "").trim()) {
+                  style.textContent = serialized;
+                  cssomCount++;
+                }
+              }
+            } catch (e) { /* cross-origin stylesheet, skip */ }
+          });
+          _log("Serialized CSSOM rules from " + cssomCount + " style tag(s)");
+
+          // Serialize document.adoptedStyleSheets into <style> tags.
+          // Frameworks like Griffel v9 create CSSStyleSheet objects programmatically
+          // and add them to document.adoptedStyleSheets. These have no <style> element
+          // in the DOM, so outerHTML misses them entirely.
+          if (document.adoptedStyleSheets && document.adoptedStyleSheets.length > 0) {
+            _log("Serializing " + document.adoptedStyleSheets.length + " adopted stylesheet(s)...");
+            var adoptedCount = 0;
+            for (var asi = 0; asi < document.adoptedStyleSheets.length; asi++) {
+              try {
+                var adoptedSheet = document.adoptedStyleSheets[asi];
+                if (adoptedSheet.cssRules && adoptedSheet.cssRules.length > 0) {
+                  var adoptedRules = [];
+                  for (var ari = 0; ari < adoptedSheet.cssRules.length; ari++) {
+                    adoptedRules.push(adoptedSheet.cssRules[ari].cssText);
+                  }
+                  var adoptedStyle = document.createElement("style");
+                  adoptedStyle.setAttribute("data-adopted-stylesheet", "true");
+                  adoptedStyle.textContent = adoptedRules.join("\\n");
+                  document.head.appendChild(adoptedStyle);
+                  adoptedCount++;
+                }
+              } catch (e) { _log("Error serializing adopted stylesheet: " + e); }
+            }
+            _log("Serialized " + adoptedCount + " adopted stylesheet(s) into <style> tags");
+          }
+
+          // Process existing style tags (only those containing @font-face, in parallel)
+          const inlineStyles = [...document.querySelectorAll("style")];
+          const fontStyles = inlineStyles.filter(function(s) { return (s.textContent || "").indexOf("@font-face") !== -1; });
+          _log("Processing " + fontStyles.length + " of " + inlineStyles.length + " inline style tag(s) that contain @font-face...");
+          await Promise.all(fontStyles.map(async function(style) {
+            style.textContent = await inlineFontUrls(style.textContent || "", document.baseURI);
+          }));
+          _log("Done processing inline style tags");
+
+          // Bake computed dimensions for elements that depend on viewport sizing.
+          // Elements using position:absolute with top+bottom derive their height
+          // from the viewport, which is lost in a static capture.
+          _log("Baking viewport-dependent dimensions...");
+          var bakeCount = 0;
+          document.querySelectorAll('*').forEach(function(el) {
+            var cs = getComputedStyle(el);
+            if (el.style.height && el.style.height.endsWith('px')) return;
+            var needsBake = false;
+            // Absolutely/fixed positioned with both top and bottom set
+            if ((cs.position === 'absolute' || cs.position === 'fixed') &&
+                cs.top !== 'auto' && cs.bottom !== 'auto') {
+              needsBake = true;
+            }
+            if (needsBake) {
+              var rect = el.getBoundingClientRect();
+              if (rect.height > 0) {
+                el.style.height = rect.height + 'px';
+                bakeCount++;
+              }
+            }
+          });
+          _log("Baked " + bakeCount + " viewport-dependent dimensions");
+
+          // Handle viewport-derived inline heights set by JavaScript.
+          // Sites that poll window.resize and set element.style.height = innerHeight - N
+          // freeze at the capture-time viewport size. Detect and fix these.
+          if (_heightMode !== 'keep-as-is') {
+            _log("Processing viewport-derived heights (mode: " + _heightMode + ")...");
+            var vpHeight = window.innerHeight;
+            var heightFixCount = 0;
+            document.querySelectorAll('*').forEach(function(el) {
+              if (!el.style.height || !el.style.height.endsWith('px')) return;
+              var h = parseFloat(el.style.height);
+              if (isNaN(h) || h <= 0) return;
+              // Check if this height + the element's top position ≈ viewport height,
+              // meaning the element stretches to near the bottom of the viewport
+              var rect = el.getBoundingClientRect();
+              var bottomGap = Math.abs((rect.top + h) - vpHeight);
+              if (bottomGap < 30 && h > vpHeight * 0.3) {
+                var offset = Math.round(rect.top);
+                if (_heightMode === 'convert-vh') {
+                  el.style.height = offset > 0 ? 'calc(100vh - ' + offset + 'px)' : '100vh';
+                } else {
+                  el.style.removeProperty('height');
+                }
+                heightFixCount++;
+              }
+            });
+            _log("Fixed " + heightFixCount + " viewport-derived height(s)");
+          }
+
+          // Expand scrollable containers so their full content is visible
+          // in the static capture. Find elements with overflow-y: auto/scroll
+          // that have hidden overflow content, then expand them.
+          _log("Expanding scrollable containers...");
+          var expandCount = 0;
+          document.querySelectorAll('*').forEach(function(el) {
+            var cs = getComputedStyle(el);
+            if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') {
+              var extra = el.scrollHeight - el.clientHeight;
+              if (extra > 10) {
+                el.style.height = el.scrollHeight + 'px';
+                el.style.maxHeight = 'none';
+                el.style.overflowY = 'visible';
+                expandCount++;
+              }
+            }
+          });
+          _log("Expanded " + expandCount + " scrollable container(s)");
+
           // Remove HTML comments
+          _log("Removing HTML comments...");
           const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
           const comments = [];
           while (walker.nextNode()) comments.push(walker.currentNode);
           comments.forEach((c) => c.remove());
 
           // Remove hidden elements
+          _log("Removing hidden elements...");
           document.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach((el) => el.remove());
 
           // Collapse whitespace-only text nodes
+          _log("Collapsing whitespace...");
           const textWalker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT);
           const textNodes = [];
           while (textWalker.nextNode()) textNodes.push(textWalker.currentNode);
@@ -227,19 +413,49 @@ export function CaptureBrowser() {
             }
           });
 
+          // Flatten nested interactive elements to prevent HTML parser reparenting.
+          // The browser's outerHTML can serialize nested <button> elements (created
+          // by JS), but re-parsing triggers the parser's "in scope" rules which pop
+          // intervening elements, corrupting the DOM hierarchy.
+          _log("Flattening nested interactive elements...");
+          var flattenCount = 0;
+          document.querySelectorAll('button button, a a').forEach(function(inner) {
+            var replacement = document.createElement('span');
+            replacement.setAttribute('data-mp-tag', inner.tagName.toLowerCase());
+            Array.from(inner.attributes).forEach(function(attr) {
+              replacement.setAttribute(attr.name, attr.value);
+            });
+            while (inner.firstChild) replacement.appendChild(inner.firstChild);
+            inner.parentNode.replaceChild(replacement, inner);
+            flattenCount++;
+          });
+          if (flattenCount) _log("Flattened " + flattenCount + " nested interactive element(s)");
+
+          // Embed the viewport dimensions so the preview iframe can size itself correctly
+          var vpMeta = document.createElement('meta');
+          vpMeta.name = 'mp-viewport-height';
+          vpMeta.content = String(window.innerHeight);
+          document.head.appendChild(vpMeta);
+
+          _log("Capture script complete, returning HTML (" + document.documentElement.outerHTML.length + " chars)");
           return document.documentElement.outerHTML;
         })()
       `);
 
+      log("Webview script finished, got", rawHtml.length, "chars of HTML");
+
       // Take a screenshot from the webview
+      log("Taking screenshot...");
       const nativeImage = await wv.capturePage();
       const thumbnailDataUrl = nativeImage.toDataURL();
 
       // Format the HTML via main process
+      log("Formatting HTML...");
       const formatResult = await window.api.formatHtml(rawHtml);
       if (!formatResult.success || !formatResult.html) {
         throw new Error(formatResult.error || "Failed to format HTML");
       }
+      log("HTML formatted successfully");
 
       // Derive a project title from the URL
       let title: string;
@@ -250,19 +466,23 @@ export function CaptureBrowser() {
       }
 
       // Save the project
+      log("Saving project...");
       const project = await window.api.saveProject({
         url: currentUrl,
         title,
         html: formatResult.html,
         thumbnail: thumbnailDataUrl,
       });
+      log("Project saved:", project.id);
 
       setCapturedHtml(formatResult.html);
       navigate(`/editor/${project.id}`);
     } catch (err: unknown) {
+      log("Capture FAILED:", err instanceof Error ? err.message : String(err));
       console.error("Capture failed:", err);
       alert(err instanceof Error ? err.message : "Failed to capture website state");
     } finally {
+      wv.removeEventListener("console-message", onConsoleMessage);
       setIsCapturing(false);
     }
   };
@@ -293,6 +513,28 @@ export function CaptureBrowser() {
     window.addEventListener("focusin", onFocusIn);
     return () => window.removeEventListener("focusin", onFocusIn);
   }, [hasNavigated]);
+
+  // Close capture settings popover on outside click or Escape
+  useEffect(() => {
+    if (!captureSettingsOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        settingsPopoverRef.current && !settingsPopoverRef.current.contains(e.target as Node) &&
+        settingsButtonRef.current && !settingsButtonRef.current.contains(e.target as Node)
+      ) {
+        setCaptureSettingsOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCaptureSettingsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [captureSettingsOpen]);
 
   return (
     <div className="bg-background text-on-surface font-body-main antialiased overflow-hidden h-screen flex flex-col">
@@ -365,19 +607,77 @@ export function CaptureBrowser() {
           />
         </div>
 
-        {/* Capture button */}
-        <button
-          onClick={handleCapture}
-          disabled={!hasNavigated || isCapturing || isLoading}
-          className="bg-primary-container text-on-primary-container px-4 h-9 flex items-center gap-sm font-ui-small font-semibold rounded hover:brightness-110 active:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {isCapturing ? (
-            <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
-          ) : (
-            <span className="material-symbols-outlined text-[18px]">screenshot_region</span>
+        {/* Capture settings + button */}
+        <div className="relative flex items-center gap-xs">
+          <button
+            ref={settingsButtonRef}
+            onClick={() => setCaptureSettingsOpen(prev => !prev)}
+            className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded cursor-pointer"
+            title="Capture settings"
+          >
+            <span className="material-symbols-outlined text-[18px]">tune</span>
+          </button>
+
+          {/* Settings popover */}
+          {captureSettingsOpen && (
+            <div
+              ref={settingsPopoverRef}
+              className="absolute right-0 top-full mt-1 z-50 bg-surface-container border border-outline-variant/40 rounded-lg shadow-2xl p-md w-72"
+            >
+              <h3 className="font-ui-small text-on-surface-variant uppercase font-bold tracking-wider mb-sm">
+                Height Handling
+              </h3>
+              <p className="text-[11px] text-on-surface-variant/70 mb-md">
+                How to handle JS-set pixel heights that track the viewport.
+              </p>
+              <div className="space-y-sm">
+                {([
+                  { value: "convert-vh" as HeightMode, label: "Convert to viewport-relative", desc: "Replace frozen heights with dynamic calc(100vh − …)" },
+                  { value: "remove" as HeightMode, label: "Remove hardcoded heights", desc: "Strip matching heights, let CSS rules take over" },
+                  { value: "keep-as-is" as HeightMode, label: "Keep original heights", desc: "Preserve pixel values as captured" },
+                ]).map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-start gap-sm p-sm rounded-md cursor-pointer transition-colors ${
+                      heightMode === opt.value ? "bg-primary-container/20" : "hover:bg-surface-container-high"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="heightMode"
+                      value={opt.value}
+                      checked={heightMode === opt.value}
+                      onChange={() => setHeightMode(opt.value)}
+                      className="mt-0.5 appearance-none w-4 h-4 rounded-full border-2 border-primary bg-transparent checked:border-[5px] cursor-pointer shrink-0"
+                    />
+                    <div>
+                      <span className="text-ui-small text-on-surface font-medium">
+                        {opt.label}
+                        {opt.value === "convert-vh" && (
+                          <span className="ml-1 text-[10px] text-primary font-bold uppercase">Recommended</span>
+                        )}
+                      </span>
+                      <p className="text-[11px] text-on-surface-variant/70 mt-0.5">{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
           )}
-          {isCapturing ? "Capturing..." : "Capture State"}
-        </button>
+
+          <button
+            onClick={handleCapture}
+            disabled={!hasNavigated || isCapturing || isLoading}
+            className="bg-primary-container text-on-primary-container px-4 h-9 flex items-center gap-sm font-ui-small font-semibold rounded hover:brightness-110 active:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {isCapturing ? (
+              <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+            ) : (
+              <span className="material-symbols-outlined text-[18px]">screenshot_region</span>
+            )}
+            {isCapturing ? "Capturing..." : "Capture State"}
+          </button>
+        </div>
       </section>
 
       {/* Main Content */}

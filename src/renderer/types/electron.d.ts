@@ -11,6 +11,7 @@ interface ProjectMeta {
 declare global {
   interface Window {
     api: {
+      captureLog: (...args: unknown[]) => Promise<void>;
       captureWebsite: (url: string) => Promise<{
         success: boolean;
         html?: string;

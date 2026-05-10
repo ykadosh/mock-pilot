@@ -484,6 +484,10 @@ app.on("ready", () => {
     return path.join(__dirname, "webviewPreload.js");
   });
 
+  ipcMain.handle("capture-log", (_event, ...args: unknown[]) => {
+    console.log("[Capture]", ...args);
+  });
+
   ipcMain.handle("format-html", (_event, rawHtml: string) => {
     try {
       const formattedHtml = html_beautify(rawHtml, {

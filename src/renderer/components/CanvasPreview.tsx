@@ -262,28 +262,14 @@ interface CanvasPreviewProps {
 // persisted from a previous session to prevent stale highlights on reload.
 function cleanHtml(html: string | null): string | null {
   if (!html) return html;
-  if (!html.includes('data-mp-injected') && !html.includes('__pickerInitialized') && !html.includes('z-index:99999') && !html.includes('z-index: 99999')) {
-    return html;
-  }
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    doc.querySelectorAll('[data-mp-injected]').forEach(el => el.remove());
-    doc.querySelectorAll('div').forEach(el => {
-      const z = (el as HTMLElement).style.zIndex;
-      if ((z === '99999' || z === '100000') && (el as HTMLElement).style.position === 'fixed' && (el as HTMLElement).style.pointerEvents === 'none') {
-        el.remove();
-      }
-    });
-    doc.querySelectorAll('script').forEach(s => {
-      if (s.textContent?.includes('__pickerInitialized') || s.textContent?.includes('reportHeight')) {
-        s.remove();
-      }
-    });
-    return doc.documentElement.outerHTML;
-  } catch {
-    return html;
-  }
+  // Remove elements with data-mp-injected attribute (picker overlays)
+  html = html.replace(/<[^>]+data-mp-injected[^>]*>[\s\S]*?<\/[^>]+>/g, '');
+  // Remove fixed overlay divs with z-index 99999 or 100000 (picker highlight divs)
+  html = html.replace(/<div[^>]*style="[^"]*z-index:\s*(?:99999|100000)\b[^"]*position:\s*fixed[^"]*pointer-events:\s*none[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
+  html = html.replace(/<div[^>]*style="[^"]*position:\s*fixed[^"]*z-index:\s*(?:99999|100000)\b[^"]*pointer-events:\s*none[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
+  // Remove injected scripts (picker initialization, height reporting)
+  html = html.replace(/<script[^>]*>[\s\S]*?(?:__pickerInitialized|reportHeight)[\s\S]*?<\/script>/g, '');
+  return html;
 }
 
 export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, selectedSelector, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
@@ -353,17 +339,51 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     resizeScript.textContent = `
       (function() {
         function reportHeight() {
-          document.documentElement.style.overflow = 'visible';
-          document.body.style.overflow = 'visible';
-          var h = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-          document.documentElement.style.overflow = 'hidden';
-          document.body.style.overflow = 'hidden';
+          // Break circular height chains (e.g. height:100%, min-height:100vh)
+          // by temporarily forcing auto height on html/body before measuring
+          var htmlEl = document.documentElement;
+          var bodyEl = document.body;
+          var savedH = [htmlEl.style.height, bodyEl.style.height];
+          var savedMinH = [htmlEl.style.minHeight, bodyEl.style.minHeight];
+          htmlEl.style.height = 'auto';
+          bodyEl.style.height = 'auto';
+          htmlEl.style.minHeight = '0';
+          bodyEl.style.minHeight = '0';
+          htmlEl.style.overflow = 'visible';
+          bodyEl.style.overflow = 'visible';
+
+          var h = Math.max(htmlEl.scrollHeight, bodyEl.scrollHeight);
+
+          // Also measure absolutely positioned children that don't contribute to scrollHeight
+          var children = bodyEl.children;
+          for (var i = 0; i < children.length; i++) {
+            var cs = getComputedStyle(children[i]);
+            if (cs.position === 'absolute' || cs.position === 'fixed') {
+              var rect = children[i].getBoundingClientRect();
+              h = Math.max(h, rect.bottom);
+            }
+          }
+          // Use captured viewport height as minimum (NOT window.innerHeight which
+          // equals the iframe height and creates a feedback loop)
+          var vpMeta = document.querySelector('meta[name="mp-viewport-height"]');
+          var capturedHeight = vpMeta ? parseInt(vpMeta.content, 10) : 0;
+          if (capturedHeight > 0) h = Math.max(h, capturedHeight);
+
+          // Restore styles
+          htmlEl.style.height = savedH[0];
+          bodyEl.style.height = savedH[1];
+          htmlEl.style.minHeight = savedMinH[0];
+          bodyEl.style.minHeight = savedMinH[1];
+          htmlEl.style.overflow = 'hidden';
+          bodyEl.style.overflow = 'hidden';
+
           window.parent.postMessage({ type: 'iframe-height', height: h }, '*');
         }
         reportHeight();
-        new ResizeObserver(function() {
-          setTimeout(reportHeight, 0);
-        }).observe(document.body);
+        // No ResizeObserver — captured pages are static, and observing body
+        // size creates a feedback loop (parent resizes iframe → observer fires
+        // → re-measure → parent resizes again → ...).
+        // Remeasurement is triggered on demand via the 'measure-height' message.
         window.addEventListener('message', function(e) {
           if (e.data && e.data.type === 'measure-height') {
             setTimeout(reportHeight, 0);

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("api", {
+  captureLog: (...args: unknown[]) => ipcRenderer.invoke("capture-log", ...args),
   captureWebsite: (url: string) => ipcRenderer.invoke("capture-website", url),
   formatHtml: (rawHtml: string) => ipcRenderer.invoke("format-html", rawHtml),
   getWebviewPreloadPath: () => ipcRenderer.invoke("get-webview-preload-path") as Promise<string>,
