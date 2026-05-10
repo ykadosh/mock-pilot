@@ -1,8 +1,22 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { setCapturedHtml } from "../lib/store";
+import { CaptureProgressModal, CaptureStep } from "../components/CaptureProgressModal";
 
 type HeightMode = "convert-vh" | "remove" | "keep-as-is";
+
+const CAPTURE_STEPS: { key: string; label: string }[] = [
+  { key: "stylesheets", label: "Fetching style sheets" },
+  { key: "images", label: "Downloading images" },
+  { key: "scripts", label: "Cleaning up the page" },
+  { key: "cssom", label: "Processing styles" },
+  { key: "fonts", label: "Converting fonts" },
+  { key: "layout", label: "Adjusting layout" },
+  { key: "cleanup", label: "Tidying up the HTML" },
+  { key: "screenshot", label: "Creating preview" },
+  { key: "format", label: "Formatting the code" },
+  { key: "save", label: "Saving your project" },
+];
 
 export function CaptureBrowser() {
   const navigate = useNavigate();
@@ -21,6 +35,9 @@ export function CaptureBrowser() {
   const [heightMode, setHeightMode] = useState<HeightMode>("convert-vh");
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
   const settingsPopoverRef = useRef<HTMLDivElement | null>(null);
+  const [captureSteps, setCaptureSteps] = useState<CaptureStep[]>([]);
+  const [capturePercent, setCapturePercent] = useState(0);
+  const abortCaptureRef = useRef(false);
 
   // Fetch the webview preload path on mount
   useEffect(() => {
@@ -124,10 +141,37 @@ export function CaptureBrowser() {
     // Refocus the webview immediately so the page doesn't see a blur
     wv.focus();
 
+    // Initialize progress state
+    abortCaptureRef.current = false;
+    const initialSteps = CAPTURE_STEPS.map(s => ({ label: s.label, status: "waiting" as const }));
+    setCaptureSteps(initialSteps);
+    setCapturePercent(0);
+
+    const advanceStep = (stepKey: string) => {
+      setCaptureSteps(prev => {
+        const stepIndex = CAPTURE_STEPS.findIndex(s => s.key === stepKey);
+        if (stepIndex === -1) return prev;
+        return prev.map((s, i) => ({
+          ...s,
+          status: i < stepIndex ? "done" : i === stepIndex ? "in-progress" : s.status === "done" ? "done" : "waiting",
+        }));
+      });
+      const stepIndex = CAPTURE_STEPS.findIndex(s => s.key === stepKey);
+      if (stepIndex >= 0) {
+        setCapturePercent(Math.round((stepIndex / CAPTURE_STEPS.length) * 100));
+      }
+    };
+
     // Forward webview console.log to the terminal during capture
     const onConsoleMessage = (e: Electron.ConsoleMessageEvent) => {
       if (e.message.startsWith("[Capture]")) {
-        log(e.message.slice(10));
+        const msg = e.message.slice(10);
+        log(msg);
+        // Parse step markers
+        const stepMatch = msg.match(/\[step:(\w+)\]/);
+        if (stepMatch) {
+          advanceStep(stepMatch[1]);
+        }
       }
     };
     wv.addEventListener("console-message", onConsoleMessage);
@@ -220,7 +264,7 @@ export function CaptureBrowser() {
 
           // Inline external stylesheets
           const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
-          _log("Inlining " + stylesheets.length + " external stylesheet(s)...");
+          _log("[step:stylesheets] Inlining " + stylesheets.length + " external stylesheet(s)...");
           for (const link of stylesheets) {
             try {
               const href = link.href;
@@ -239,7 +283,7 @@ export function CaptureBrowser() {
 
           // Convert images to data URIs (before removing scripts, as some images may need JS)
           const images = document.querySelectorAll("img");
-          _log("Converting " + images.length + " image(s) to data URIs...");
+          _log("[step:images] Converting " + images.length + " image(s) to data URIs...");
           for (const img of images) {
             try {
               const canvas = document.createElement("canvas");
@@ -258,14 +302,14 @@ export function CaptureBrowser() {
           // This kills MutationObservers (e.g. Griffel) that would react to
           // textContent changes and re-insert rules via insertRule(), causing
           // the serialized CSS to be lost.
-          _log("Removing scripts...");
+          _log("[step:scripts] Removing scripts...");
           document.querySelectorAll("script").forEach((s) => s.remove());
 
           // Serialize CSSOM rules into style tag textContent.
           // Frameworks like Fluent UI / Griffel inject CSS via insertRule(),
           // which doesn't appear in outerHTML. We replace textContent with
           // the full set of CSSOM rules for every style tag that has a sheet.
-          _log("Serializing CSSOM rules...");
+          _log("[step:cssom] Serializing CSSOM rules...");
           var cssomCount = 0;
           document.querySelectorAll("style").forEach(function(style) {
             try {
@@ -314,7 +358,7 @@ export function CaptureBrowser() {
           // Process existing style tags (only those containing @font-face, in parallel)
           const inlineStyles = [...document.querySelectorAll("style")];
           const fontStyles = inlineStyles.filter(function(s) { return (s.textContent || "").indexOf("@font-face") !== -1; });
-          _log("Processing " + fontStyles.length + " of " + inlineStyles.length + " inline style tag(s) that contain @font-face...");
+          _log("[step:fonts] Processing " + fontStyles.length + " of " + inlineStyles.length + " inline style tag(s) that contain @font-face...");
           await Promise.all(fontStyles.map(async function(style) {
             style.textContent = await inlineFontUrls(style.textContent || "", document.baseURI);
           }));
@@ -323,7 +367,7 @@ export function CaptureBrowser() {
           // Bake computed dimensions for elements that depend on viewport sizing.
           // Elements using position:absolute with top+bottom derive their height
           // from the viewport, which is lost in a static capture.
-          _log("Baking viewport-dependent dimensions...");
+          _log("[step:layout] Baking viewport-dependent dimensions...");
           var bakeCount = 0;
           document.querySelectorAll('*').forEach(function(el) {
             var cs = getComputedStyle(el);
@@ -392,7 +436,7 @@ export function CaptureBrowser() {
           _log("Expanded " + expandCount + " scrollable container(s)");
 
           // Remove HTML comments
-          _log("Removing HTML comments...");
+          _log("[step:cleanup] Removing HTML comments...");
           const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
           const comments = [];
           while (walker.nextNode()) comments.push(walker.currentNode);
@@ -444,18 +488,26 @@ export function CaptureBrowser() {
 
       log("Webview script finished, got", rawHtml.length, "chars of HTML");
 
+      if (abortCaptureRef.current) throw new Error("Capture cancelled");
+
       // Take a screenshot from the webview
+      advanceStep("screenshot");
       log("Taking screenshot...");
       const nativeImage = await wv.capturePage();
       const thumbnailDataUrl = nativeImage.toDataURL();
 
+      if (abortCaptureRef.current) throw new Error("Capture cancelled");
+
       // Format the HTML via main process
+      advanceStep("format");
       log("Formatting HTML...");
       const formatResult = await window.api.formatHtml(rawHtml);
       if (!formatResult.success || !formatResult.html) {
         throw new Error(formatResult.error || "Failed to format HTML");
       }
       log("HTML formatted successfully");
+
+      if (abortCaptureRef.current) throw new Error("Capture cancelled");
 
       // Derive a project title from the URL
       let title: string;
@@ -466,6 +518,7 @@ export function CaptureBrowser() {
       }
 
       // Save the project
+      advanceStep("save");
       log("Saving project...");
       const project = await window.api.saveProject({
         url: currentUrl,
@@ -475,12 +528,21 @@ export function CaptureBrowser() {
       });
       log("Project saved:", project.id);
 
+      // Mark all steps done
+      setCaptureSteps(prev => prev.map(s => ({ ...s, status: "done" as const })));
+      setCapturePercent(100);
+
       setCapturedHtml(formatResult.html);
       navigate(`/editor/${project.id}`);
     } catch (err: unknown) {
-      log("Capture FAILED:", err instanceof Error ? err.message : String(err));
-      console.error("Capture failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to capture website state");
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "Capture cancelled") {
+        log("Capture cancelled by user");
+      } else {
+        log("Capture FAILED:", msg);
+        console.error("Capture failed:", err);
+        alert(msg || "Failed to capture website state");
+      }
     } finally {
       wv.removeEventListener("console-message", onConsoleMessage);
       setIsCapturing(false);
@@ -741,6 +803,18 @@ export function CaptureBrowser() {
           </div>
         )}
       </main>
+
+      {/* Capture progress modal */}
+      {isCapturing && (
+        <CaptureProgressModal
+          steps={captureSteps}
+          percentage={capturePercent}
+          url={currentUrl}
+          onCancel={() => {
+            abortCaptureRef.current = true;
+          }}
+        />
+      )}
     </div>
   );
 }
