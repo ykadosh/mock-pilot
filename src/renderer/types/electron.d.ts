@@ -69,6 +69,7 @@ declare global {
       getAppSettings: () => Promise<{ aiModel: string }>;
       saveAppSettings: (settings: { aiModel: string }) => Promise<{ success: boolean }>;
       getStorageInfo: () => Promise<{ totalBytes: number; projectCount: number }>;
+      getProjectSize: (id: string) => Promise<{ totalBytes: number }>;
       // Updates
       checkForUpdates: () => Promise<{
         updateAvailable: boolean;

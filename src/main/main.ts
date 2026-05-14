@@ -752,6 +752,21 @@ Return only the modified HTML element:`;
     return { totalBytes, projectCount: projects.length };
   });
 
+  ipcMain.handle("get-project-size", (_event, id: string) => {
+    ensureProjectsDir();
+    let totalBytes = 0;
+    // Sum sizes of all files belonging to this project (html, png, history, snapshots)
+    const entries = fs.readdirSync(projectsDir);
+    for (const entry of entries) {
+      if (entry.startsWith(`${id}.`) || entry === id) {
+        const fullPath = path.join(projectsDir, entry);
+        const stat = fs.statSync(fullPath);
+        if (stat.isFile()) totalBytes += stat.size;
+      }
+    }
+    return { totalBytes };
+  });
+
   // Auto-update: check for newer release on GitHub
   ipcMain.handle("check-for-updates", async () => {
     try {

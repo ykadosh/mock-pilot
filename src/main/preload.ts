@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld("api", {
   getAppSettings: () => ipcRenderer.invoke("get-app-settings"),
   saveAppSettings: (settings: { aiModel: string }) => ipcRenderer.invoke("save-app-settings", settings),
   getStorageInfo: () => ipcRenderer.invoke("get-storage-info"),
+  getProjectSize: (id: string) => ipcRenderer.invoke("get-project-size", id),
   // Updates
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
