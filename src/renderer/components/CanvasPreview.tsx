@@ -248,6 +248,7 @@ export interface CanvasPreviewHandle {
 
 interface CanvasPreviewProps {
   pickerActive?: boolean;
+  panActive?: boolean;
   selectedMpId?: string | null;
   selectedSelector?: string;
   onElementSelected?: (element: SelectedElement) => void;
@@ -272,12 +273,16 @@ function cleanHtml(html: string | null): string | null {
   return html;
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, selectedMpId, selectedSelector, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, panActive, selectedMpId, selectedSelector, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const [selectedRect, setSelectedRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeLoadId, setIframeLoadId] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isPanningRef = useRef(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
 
   // Use htmlContent prop if provided, otherwise fall back to store.
   // cleanHtml only on first load to strip artifacts from previously persisted HTML.
@@ -478,6 +483,47 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     if (!selectedMpId) setSelectedRect(null);
   }, [selectedMpId]);
 
+  // Pan tool: drag to scroll the canvas container
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !panActive) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      isPanningRef.current = true;
+      setIsPanning(true);
+      panStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: container.scrollLeft,
+        scrollTop: container.scrollTop,
+      };
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isPanningRef.current) return;
+      e.preventDefault();
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      container.scrollLeft = panStartRef.current.scrollLeft - dx;
+      container.scrollTop = panStartRef.current.scrollTop - dy;
+    };
+
+    const handleMouseUp = () => {
+      isPanningRef.current = false;
+      setIsPanning(false);
+    };
+
+    container.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      container.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      isPanningRef.current = false;
+    };
+  }, [panActive]);
+
   const scale = zoom / 100;
 
   const sendPickerAction = (action: string) => {
@@ -492,7 +538,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   };
 
   return (
-    <div className="flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
+    <div ref={scrollContainerRef} className={`flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]${panActive ? (isPanning ? " cursor-grabbing" : " cursor-grab") : ""}`}>
       <div className="relative mx-auto" style={{ width: `${viewportWidth * scale}px` }}>
         {/* Floating toolbar for selected element */}
         {selectedMpId && selectedRect && (
@@ -539,7 +585,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
               />
               {/* Block interaction when picker is not active */}
               {!pickerActive && (
-                <div className="absolute inset-0 cursor-default" />
+                <div className={`absolute inset-0 ${panActive ? (isPanning ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}`} />
               )}
             </>
           ) : (
