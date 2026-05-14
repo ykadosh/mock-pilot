@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "path";
 import fs from "fs";
 
@@ -788,6 +788,292 @@ Return only the modified HTML element:`;
   // Get current app version
   ipcMain.handle("get-app-version", () => {
     return app.getVersion();
+  });
+
+  // --- Export handlers ---
+
+  /**
+   * Clean captured HTML for export:
+   * - Strip <script> and <noscript> tags (external scripts won't work offline)
+   * - Resolve relative URLs to absolute using the original page URL
+   */
+  function cleanHtmlForExport(html: string, baseUrl?: string): string {
+    let cleaned = html;
+
+    // Strip all <script> tags — external scripts won't work offline
+    cleaned = cleaned.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+    // Strip <noscript> wrappers
+    cleaned = cleaned.replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, "");
+
+    // Resolve relative URLs to absolute using the original page URL
+    if (baseUrl) {
+      try {
+        const base = new URL(baseUrl);
+        const origin = base.origin;
+        // Convert protocol-relative URLs (//example.com/...) to absolute
+        cleaned = cleaned.replace(/((?:src|href|action|poster|data)\s*=\s*["'])\/\//gi, `$1https://`);
+        // Convert root-relative URLs (/path/...) to absolute
+        cleaned = cleaned.replace(/((?:src|href|action|poster|data)\s*=\s*["'])\/(?!\/)/gi, `$1${origin}/`);
+        // Convert relative URLs in CSS url() references
+        cleaned = cleaned.replace(/(url\(\s*['"]?)\/\//gi, `$1https://`);
+        cleaned = cleaned.replace(/(url\(\s*['"]?)\/(?!\/)/gi, `$1${origin}/`);
+      } catch {
+        // If baseUrl is invalid, skip URL resolution
+      }
+    }
+
+    return cleaned;
+  }
+
+  // Export as files: extract HTML + CSS to a user-chosen folder
+  ipcMain.handle("export-save-files", async (_event, data: { projectId: string; html: string; baseUrl?: string }) => {
+    try {
+      const win = BrowserWindow.getFocusedWindow();
+      if (!win) return { success: false, error: "No window available" };
+
+      const result = await dialog.showOpenDialog(win, {
+        title: "Choose export folder",
+        buttonLabel: "Save",
+        properties: ["openDirectory", "createDirectory"],
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, error: "cancelled" };
+      }
+
+      const destDir = result.filePaths[0];
+      const fullHtml = cleanHtmlForExport(data.html, data.baseUrl);
+
+      // Extract <style> blocks into a separate CSS file
+      const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+      let cssContent = "";
+      let match: RegExpExecArray | null;
+      const styleTags: string[] = [];
+
+      while ((match = styleRegex.exec(fullHtml)) !== null) {
+        cssContent += match[1].trim() + "\n\n";
+        styleTags.push(match[0]);
+      }
+
+      let htmlForFile = fullHtml;
+      if (cssContent.trim()) {
+        // Remove all <style> blocks from HTML
+        for (const tag of styleTags) {
+          htmlForFile = htmlForFile.replace(tag, "");
+        }
+        // Add link to external stylesheet in <head>
+        htmlForFile = htmlForFile.replace(
+          /<\/head>/i,
+          '  <link rel="stylesheet" href="styles.css">\n</head>'
+        );
+        // Write CSS file
+        fs.writeFileSync(path.join(destDir, "styles.css"), cssContent.trim(), "utf-8");
+      }
+
+      // Write HTML file
+      fs.writeFileSync(path.join(destDir, "index.html"), htmlForFile, "utf-8");
+
+      return { success: true, path: destDir };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: message };
+    }
+  });
+
+  // Export as image: use Puppeteer to render HTML at given dimensions and save as PNG
+  ipcMain.handle("export-as-image", async (_event, data: { html: string; width: number; height: number; baseUrl?: string }) => {
+    try {
+      const win = BrowserWindow.getFocusedWindow();
+      if (!win) return { success: false, error: "No window available" };
+
+      const result = await dialog.showSaveDialog(win, {
+        title: "Save screenshot",
+        defaultPath: "screenshot.png",
+        filters: [{ name: "PNG Image", extensions: ["png"] }],
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, error: "cancelled" };
+      }
+
+      const cleanedHtml = cleanHtmlForExport(data.html, data.baseUrl);
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const puppeteer = require("puppeteer");
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+
+      try {
+        const page = await browser.newPage();
+        await page.setViewport({ width: data.width, height: data.height });
+        await page.setContent(cleanedHtml, { waitUntil: "networkidle0", timeout: 30000 });
+        await page.screenshot({ path: result.filePath, type: "png", fullPage: true });
+        return { success: true, path: result.filePath };
+      } finally {
+        await browser.close();
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: message };
+    }
+  });
+
+  // Deploy to CodeSandbox using a temp HTML form that auto-submits via POST.
+  // This avoids both URL length limits (GET) and Cloudflare bot blocks (server-side fetch).
+  ipcMain.handle("deploy-codesandbox", async (_event, data: { html: string; css?: string; baseUrl?: string }) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const LZString = require("lz-string");
+
+      let htmlContent = cleanHtmlForExport(data.html, data.baseUrl);
+
+      // Basic minification: collapse whitespace, remove HTML comments
+      htmlContent = htmlContent
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .replace(/\n\s*\n/g, "\n")
+        .replace(/^\s+/gm, "");
+
+      const files: Record<string, { content: string }> = {};
+
+      if (data.css) {
+        let css = data.css;
+        // Basic CSS minification
+        css = css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\n\s*\n/g, "\n").replace(/^\s+/gm, "");
+        files["styles.css"] = { content: css };
+        if (!htmlContent.includes('href="styles.css"')) {
+          htmlContent = htmlContent.replace(
+            /<\/head>/i,
+            '  <link rel="stylesheet" href="styles.css">\n</head>'
+          );
+        }
+      }
+
+      files["index.html"] = { content: htmlContent };
+      files["package.json"] = {
+        content: JSON.stringify({
+          name: "mockpilot-export",
+          version: "1.0.0",
+          description: "Exported from MockPilot",
+          main: "index.html",
+        }, null, 2),
+      };
+
+      // Check total size — CodeSandbox define API has ~5MB payload limit
+      const totalSize = Object.values(files).reduce((sum, f) => sum + f.content.length, 0);
+      const sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+      if (totalSize > 5 * 1024 * 1024) {
+        return {
+          success: false,
+          error: `Project is too large for CodeSandbox (${sizeMB} MB). Use "Download ZIP" and deploy manually instead.`,
+        };
+      }
+
+      const parameters = LZString.compressToBase64(JSON.stringify({ files }))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+
+      // Write a temp HTML file with a form that auto-submits to CodeSandbox
+      const tmpDir = path.join(app.getPath("temp"), "mockpilot-deploy");
+      fs.mkdirSync(tmpDir, { recursive: true });
+      const tmpFile = path.join(tmpDir, "deploy.html");
+
+      const formHtml = `<!DOCTYPE html>
+<html>
+<head><title>Deploying to CodeSandbox...</title></head>
+<body style="background:#0b1326;color:#dae2fd;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+  <p>Deploying to CodeSandbox…</p>
+  <form id="f" action="https://codesandbox.io/api/v1/sandboxes/define" method="POST">
+    <input type="hidden" name="parameters" value="${parameters}">
+  </form>
+  <script>document.getElementById("f").submit();</script>
+</body>
+</html>`;
+
+      fs.writeFileSync(tmpFile, formHtml, "utf-8");
+      await shell.openExternal(`file://${tmpFile}`);
+
+      return { success: true };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: message };
+    }
+  });
+
+  // Deploy to StackBlitz using their form POST API (no auth required)
+  ipcMain.handle("deploy-stackblitz", async (_event, data: { html: string; css?: string; baseUrl?: string }) => {
+    try {
+      let htmlContent = cleanHtmlForExport(data.html, data.baseUrl);
+
+      // Basic minification
+      htmlContent = htmlContent
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .replace(/\n\s*\n/g, "\n")
+        .replace(/^\s+/gm, "");
+
+      const files: Record<string, string> = {};
+
+      if (data.css) {
+        let css = data.css;
+        css = css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\n\s*\n/g, "\n").replace(/^\s+/gm, "");
+        files["styles.css"] = css;
+        if (!htmlContent.includes('href="styles.css"')) {
+          htmlContent = htmlContent.replace(
+            /<\/head>/i,
+            '  <link rel="stylesheet" href="styles.css">\n</head>'
+          );
+        }
+      }
+
+      files["index.html"] = htmlContent;
+
+      // Check total size — StackBlitz form POST has practical limits (~5MB)
+      const totalSize = Object.values(files).reduce((sum, f) => sum + f.length, 0);
+      const sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+      if (totalSize > 5 * 1024 * 1024) {
+        return {
+          success: false,
+          error: `Project is too large for StackBlitz (${sizeMB} MB). Use "Download ZIP" and deploy manually instead.`,
+        };
+      }
+
+      // Build form fields for StackBlitz
+      const formFields = Object.entries(files)
+        .map(([name, content]) => {
+          const escaped = content.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          return `<input type="hidden" name="project[files][${name}]" value="${escaped}">`;
+        })
+        .join("\n    ");
+
+      const tmpDir = path.join(app.getPath("temp"), "mockpilot-deploy");
+      fs.mkdirSync(tmpDir, { recursive: true });
+      const tmpFile = path.join(tmpDir, "stackblitz.html");
+
+      const formHtml = `<!DOCTYPE html>
+<html>
+<head><title>Opening in StackBlitz...</title></head>
+<body style="background:#0b1326;color:#dae2fd;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+  <p>Opening in StackBlitz…</p>
+  <form id="f" action="https://stackblitz.com/run" method="POST" target="_self">
+    <input type="hidden" name="project[title]" value="MockPilot Export">
+    <input type="hidden" name="project[description]" value="Exported from MockPilot">
+    <input type="hidden" name="project[template]" value="html">
+    ${formFields}
+  </form>
+  <script>document.getElementById("f").submit();</script>
+</body>
+</html>`;
+
+      fs.writeFileSync(tmpFile, formHtml, "utf-8");
+      await shell.openExternal(`file://${tmpFile}`);
+
+      return { success: true };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: message };
+    }
   });
 
   createWindow();

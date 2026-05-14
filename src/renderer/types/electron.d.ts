@@ -80,6 +80,25 @@ declare global {
       }>;
       openExternal: (url: string) => Promise<void>;
       getAppVersion: () => Promise<string>;
+      // Export
+      exportSaveFiles: (data: { projectId: string; html: string; baseUrl?: string }) => Promise<{
+        success: boolean;
+        path?: string;
+        error?: string;
+      }>;
+      exportAsImage: (data: { html: string; width: number; height: number; baseUrl?: string }) => Promise<{
+        success: boolean;
+        path?: string;
+        error?: string;
+      }>;
+      deployToCodesandbox: (data: { html: string; css?: string; baseUrl?: string }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      deployToStackblitz: (data: { html: string; css?: string; baseUrl?: string }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
     };
   }
 }

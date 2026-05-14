@@ -32,4 +32,13 @@ contextBridge.exposeInMainWorld("api", {
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+  // Export
+  exportSaveFiles: (data: { projectId: string; html: string; baseUrl?: string }) =>
+    ipcRenderer.invoke("export-save-files", data),
+  exportAsImage: (data: { html: string; width: number; height: number; baseUrl?: string }) =>
+    ipcRenderer.invoke("export-as-image", data),
+  deployToCodesandbox: (data: { html: string; css?: string; baseUrl?: string }) =>
+    ipcRenderer.invoke("deploy-codesandbox", data),
+  deployToStackblitz: (data: { html: string; css?: string; baseUrl?: string }) =>
+    ipcRenderer.invoke("deploy-stackblitz", data),
 });

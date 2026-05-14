@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-type ActiveTab = "editor" | "assets" | "settings";
+type ActiveTab = "editor" | "assets" | "settings" | "export";
 
 interface NavItemProps {
   icon: string;
@@ -40,6 +40,7 @@ function NavItem({ icon, label, active, collapsed, onClick }: NavItemProps) {
 const pageTabs: { label: string; key: ActiveTab; to: string; icon: string }[] = [
   { label: "Editor", key: "editor", to: "/editor", icon: "edit" },
   { label: "Assets", key: "assets", to: "/assets", icon: "widgets" },
+  { label: "Export", key: "export", to: "/export", icon: "ios_share" },
   { label: "Settings", key: "settings", to: "/settings", icon: "settings" },
 ];
 
@@ -108,7 +109,6 @@ export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToo
         <NavItem icon="history" label="History" active={activeTool === "History"} collapsed={collapsed} onClick={() => onToolClick?.("History")} />
         <NavItem icon="layers" label="Layers" active={activeTool === "Layers"} collapsed={collapsed} onClick={() => onToolClick?.("Layers")} />
         <NavItem icon="code" label="Code Editor" active={activeTool === "Code Editor"} collapsed={collapsed} onClick={() => onToolClick?.("Code Editor")} />
-        <NavItem icon="ios_share" label="Export" active={activeTool === "Export"} collapsed={collapsed} onClick={() => onToolClick?.("Export")} />
       </nav>
 
       <div className="border-t border-slate-700 p-sm flex flex-col gap-1">
