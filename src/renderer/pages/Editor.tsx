@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
 import { SideNav } from "../components/layout/SideNav";
 import { CanvasPreview, CanvasPreviewHandle } from "../components/CanvasPreview";
@@ -28,14 +28,15 @@ const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number }> = {
   phone: { width: 390, height: 844 },
 };
 
-export function Editor() {
+export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: boolean }) {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const [pickerActive, setPickerActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [zoom, setZoom] = useState(100);
   const [device, setDevice] = useState<DevicePreset>("desktop");
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [codeEditorOpen, setCodeEditorOpen] = useState(false);
+  const codeEditorOpen = codeEditorDefault;
   const [codeTab, setCodeTab] = useState<"html" | "css">("html");
   const [projectName, setProjectName] = useState("");
   const canvasRef = useRef<CanvasPreviewHandle>(null);
@@ -67,17 +68,10 @@ export function Editor() {
       setPickerActive((prev) => !prev);
       setSelectedElement(null);
       setHistoryOpen(false);
-      setCodeEditorOpen(false);
     } else if (tool === "History") {
       setHistoryOpen((prev) => !prev);
       setPickerActive(false);
       setSelectedElement(null);
-      setCodeEditorOpen(false);
-    } else if (tool === "Code Editor") {
-      setCodeEditorOpen((prev) => !prev);
-      setPickerActive(false);
-      setSelectedElement(null);
-      setHistoryOpen(false);
     }
   };
 
@@ -129,23 +123,26 @@ export function Editor() {
     if (projectId) {
       window.api.updateProjectHtml(projectId, fullHtml);
     }
-    setCodeEditorOpen(false);
-  }, [history.push, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+    navigate(projectId ? `/editor/${projectId}` : '/editor');
+  }, [history.push, projectId, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { width: deviceWidth, height: deviceHeight } = DEVICE_SIZES[device];
 
   return (
-    <div className="overflow-hidden">
-      <TopNav />
-      <div className="flex pt-12 h-screen">
-        <SideNav
-          activeTab="editor"
-          activeTool={pickerActive ? "Element Picker" : historyOpen ? "History" : codeEditorOpen ? "Code Editor" : undefined}
-          onToolClick={handleToolClick}
-          projectId={projectId}
-          projectName={projectName}
-          revisionCount={history.entries.length}
-        />
+    <div className="h-screen flex flex-col overflow-hidden">
+      <TopNav
+        activeTab={codeEditorOpen ? "code-editor" : "editor"}
+        projectId={projectId}
+      />
+      <div className="flex flex-1 min-h-0">
+        {!codeEditorOpen && (
+          <SideNav
+            activeTool={pickerActive ? "Element Picker" : historyOpen ? "History" : undefined}
+            onToolClick={handleToolClick}
+            projectName={projectName}
+            revisionCount={history.entries.length}
+          />
+        )}
         <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">

@@ -2,13 +2,30 @@ import { ReactNode, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
+type ActiveTab = "editor" | "assets" | "settings" | "export" | "code-editor";
+
+const pageTabs: { label: string; key: ActiveTab; to: string; icon: string }[] = [
+  { label: "Editor", key: "editor", to: "/editor", icon: "edit" },
+  { label: "Code Editor", key: "code-editor", to: "/code-editor", icon: "code" },
+  { label: "Assets", key: "assets", to: "/assets", icon: "widgets" },
+  { label: "Export", key: "export", to: "/export", icon: "ios_share" },
+  { label: "Settings", key: "settings", to: "/settings", icon: "settings" },
+];
+
 interface TopNavProps {
   children?: ReactNode;
+  activeTab?: ActiveTab;
+  projectId?: string;
 }
 
-export function TopNav({ children }: TopNavProps) {
+export function TopNav({ children, activeTab, projectId }: TopNavProps) {
   const navigate = useNavigate();
   const auth = useAuth();
+
+  const getTabRoute = (tab: typeof pageTabs[0]) => {
+    if (projectId) return `${tab.to}/${projectId}`;
+    return tab.to;
+  };
   const [showLoginFlow, setShowLoginFlow] = useState(false);
   const [userCode, setUserCode] = useState("");
   const [deviceCode, setDeviceCode] = useState("");
@@ -88,7 +105,7 @@ export function TopNav({ children }: TopNavProps) {
 
   return (
     <>
-      <header className="bg-slate-900 border-b border-slate-700 flex justify-between items-center pl-20 pr-4 h-12 w-full fixed top-0 z-50 text-sm tracking-tight [-webkit-app-region:drag]">
+      <header className="bg-slate-900 border-b border-slate-700 flex items-center pl-20 pr-4 h-12 w-full z-50 text-sm tracking-tight [-webkit-app-region:drag] shrink-0 relative">
         <div className="flex items-center gap-md [-webkit-app-region:no-drag]">
           <span
             onClick={() => navigate("/")}
@@ -97,7 +114,25 @@ export function TopNav({ children }: TopNavProps) {
             MockPilot
           </span>
         </div>
-        <div className="flex items-center gap-md [-webkit-app-region:no-drag]">
+        {activeTab && (
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 [-webkit-app-region:no-drag]">
+            {pageTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => navigate(getTabRoute(tab))}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-colors cursor-pointer ${
+                  tab.key === activeTab
+                    ? "bg-slate-800 text-violet-400"
+                    : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                }`}
+              >
+                <span className="material-symbols-outlined leading-none" style={{ fontSize: 18 }}>{tab.icon}</span>
+                <span className="translate-y-px">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="ml-auto flex items-center gap-md [-webkit-app-region:no-drag]">
           {children}
           <div className="flex items-center gap-sm">
             <button

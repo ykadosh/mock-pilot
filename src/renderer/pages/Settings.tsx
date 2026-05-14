@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
-import { SideNav } from "../components/layout/SideNav";
 import { Dialog } from "../components/ui/Dialog";
 
 interface ProjectMeta {
@@ -47,10 +46,9 @@ export function Settings() {
   };
 
   return (
-    <div className="overflow-hidden">
-      <TopNav />
-      <div className="flex pt-12 h-screen">
-        <SideNav activeTab="settings" defaultCollapsed projectId={projectId} />
+    <div className="h-screen flex flex-col overflow-hidden">
+      <TopNav activeTab="settings" projectId={projectId} />
+      <div className="flex flex-1 min-h-0">
         <main className="flex-1 min-w-0 bg-[#020617] overflow-y-auto p-lg">
           <h1 className="font-headline-lg text-headline-lg text-on-surface mb-lg">
             Project Settings

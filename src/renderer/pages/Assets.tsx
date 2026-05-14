@@ -1,5 +1,4 @@
 import { TopNav } from "../components/layout/TopNav";
-import { SideNav } from "../components/layout/SideNav";
 
 function SearchBar() {
   return (
@@ -112,12 +111,11 @@ function ComponentCard({
 
 export function Assets() {
   return (
-    <div className="overflow-hidden">
-      <TopNav>
+    <div className="h-screen flex flex-col overflow-hidden">
+      <TopNav activeTab="assets">
         <SearchBar />
       </TopNav>
-      <div className="flex pt-12 h-screen">
-        <SideNav activeTab="assets" defaultCollapsed />
+      <div className="flex flex-1 min-h-0">
 
         <main className="flex-1 grid grid-cols-12 h-full overflow-hidden">
           {/* Center: Component Bank */}

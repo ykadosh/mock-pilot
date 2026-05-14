@@ -18,6 +18,7 @@ function App() {
             <Route path="/capture" element={<CaptureBrowser />} />
             <Route path="/editor" element={<Editor />} />
             <Route path="/editor/:projectId" element={<Editor />} />
+            <Route path="/code-editor/:projectId" element={<Editor codeEditorDefault />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/settings/:projectId" element={<Settings />} />
             <Route path="/export/:projectId" element={<Export />} />

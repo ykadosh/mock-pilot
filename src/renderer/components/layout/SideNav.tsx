@@ -1,7 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-type ActiveTab = "editor" | "assets" | "settings" | "export";
 
 interface NavItemProps {
   icon: string;
@@ -37,35 +34,20 @@ function NavItem({ icon, label, active, collapsed, onClick }: NavItemProps) {
   );
 }
 
-const pageTabs: { label: string; key: ActiveTab; to: string; icon: string }[] = [
-  { label: "Editor", key: "editor", to: "/editor", icon: "edit" },
-  { label: "Assets", key: "assets", to: "/assets", icon: "widgets" },
-  { label: "Export", key: "export", to: "/export", icon: "ios_share" },
-  { label: "Settings", key: "settings", to: "/settings", icon: "settings" },
-];
-
 interface SideNavProps {
-  activeTab?: ActiveTab;
   defaultCollapsed?: boolean;
   activeTool?: string;
   onToolClick?: (tool: string) => void;
-  projectId?: string;
   projectName?: string;
   revisionCount?: number;
 }
 
-export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToolClick, projectId, projectName, revisionCount }: SideNavProps) {
+export function SideNav({ defaultCollapsed = false, activeTool, onToolClick, projectName, revisionCount }: SideNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  const navigate = useNavigate();
-
-  const getTabRoute = (tab: typeof pageTabs[0]) => {
-    if (projectId) return `${tab.to}/${projectId}`;
-    return tab.to;
-  };
 
   return (
     <aside
-      className={`bg-slate-900 border-r border-slate-700 flex flex-col sticky top-0 h-[calc(100vh-3rem)] z-40 transition-all duration-150 ease-in-out shrink-0 ${
+      className={`bg-slate-900 border-r border-slate-700 flex flex-col h-full z-40 transition-all duration-150 ease-in-out shrink-0 ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
@@ -89,32 +71,12 @@ export function SideNav({ activeTab, defaultCollapsed = false, activeTool, onToo
         )}
       </div>
 
-      {/* Page-level tabs */}
-      <div className="border-b border-slate-700 py-sm flex flex-col gap-1">
-        {pageTabs.map((tab) => (
-          <NavItem
-            key={tab.key}
-            icon={tab.icon}
-            label={tab.label}
-            active={tab.key === activeTab}
-            collapsed={collapsed}
-            onClick={() => navigate(getTabRoute(tab))}
-          />
-        ))}
-      </div>
-
       {/* Tool items */}
       <nav className="flex-1 overflow-y-auto py-sm flex flex-col gap-1">
         <NavItem icon="ads_click" label="Element Picker" active={activeTool === "Element Picker"} collapsed={collapsed} onClick={() => onToolClick?.("Element Picker")} />
         <NavItem icon="history" label="History" active={activeTool === "History"} collapsed={collapsed} onClick={() => onToolClick?.("History")} />
         <NavItem icon="layers" label="Layers" active={activeTool === "Layers"} collapsed={collapsed} onClick={() => onToolClick?.("Layers")} />
-        <NavItem icon="code" label="Code Editor" active={activeTool === "Code Editor"} collapsed={collapsed} onClick={() => onToolClick?.("Code Editor")} />
       </nav>
-
-      <div className="border-t border-slate-700 p-sm flex flex-col gap-1">
-        <NavItem icon="help" label="Docs" collapsed={collapsed} />
-        <NavItem icon="contact_support" label="Support" collapsed={collapsed} />
-      </div>
     </aside>
   );
 }

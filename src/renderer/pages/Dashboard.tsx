@@ -78,9 +78,9 @@ export function Dashboard() {
   };
 
   return (
-    <>
+    <div className="h-screen flex flex-col overflow-hidden">
       <TopNav />
-      <main className="mt-12 overflow-y-auto h-[calc(100vh-48px)] p-lg bg-[#020617]">
+      <main className="flex-1 overflow-y-auto p-lg bg-[#020617]">
       {/* Dashboard Header */}
       <section className="flex justify-between items-end mb-xl">
         <div className="space-y-xs">
@@ -144,6 +144,6 @@ export function Dashboard() {
           </button>
         </div>
       </Dialog>
-    </>
+    </div>
   );
 }
