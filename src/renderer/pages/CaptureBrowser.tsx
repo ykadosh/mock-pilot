@@ -34,7 +34,6 @@ export function CaptureBrowser() {
   const [captureSettingsOpen, setCaptureSettingsOpen] = useState(false);
   const [heightMode, setHeightMode] = useState<HeightMode>("convert-vh");
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
-  const settingsPopoverRef = useRef<HTMLDivElement | null>(null);
   const [captureSteps, setCaptureSteps] = useState<CaptureStep[]>([]);
   const [capturePercent, setCapturePercent] = useState(0);
   const abortCaptureRef = useRef(false);
@@ -576,24 +575,14 @@ export function CaptureBrowser() {
     return () => window.removeEventListener("focusin", onFocusIn);
   }, [hasNavigated]);
 
-  // Close capture settings popover on outside click or Escape
+  // Close capture settings modal on Escape
   useEffect(() => {
     if (!captureSettingsOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (
-        settingsPopoverRef.current && !settingsPopoverRef.current.contains(e.target as Node) &&
-        settingsButtonRef.current && !settingsButtonRef.current.contains(e.target as Node)
-      ) {
-        setCaptureSettingsOpen(false);
-      }
-    };
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setCaptureSettingsOpen(false);
     };
-    document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleKey);
     return () => {
-      document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleKey);
     };
   }, [captureSettingsOpen]);
@@ -680,49 +669,94 @@ export function CaptureBrowser() {
             <span className="material-symbols-outlined text-[18px]">tune</span>
           </button>
 
-          {/* Settings popover */}
+          {/* Settings modal */}
           {captureSettingsOpen && (
             <div
-              ref={settingsPopoverRef}
-              className="absolute right-0 top-full mt-1 z-50 bg-surface-container border border-outline-variant/40 rounded-lg shadow-2xl p-md w-72"
+              className="fixed inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center p-md"
+              onMouseDown={(e) => { if (e.target === e.currentTarget) setCaptureSettingsOpen(false); }}
             >
-              <h3 className="font-ui-small text-on-surface-variant uppercase font-bold tracking-wider mb-sm">
-                Height Handling
-              </h3>
-              <p className="text-[11px] text-on-surface-variant/70 mb-md">
-                How to handle JS-set pixel heights that track the viewport.
-              </p>
-              <div className="space-y-sm">
-                {([
-                  { value: "convert-vh" as HeightMode, label: "Convert to viewport-relative", desc: "Replace frozen heights with dynamic calc(100vh − …)" },
-                  { value: "remove" as HeightMode, label: "Remove hardcoded heights", desc: "Strip matching heights, let CSS rules take over" },
-                  { value: "keep-as-is" as HeightMode, label: "Keep original heights", desc: "Preserve pixel values as captured" },
-                ]).map(opt => (
-                  <label
-                    key={opt.value}
-                    className={`flex items-start gap-sm p-sm rounded-md cursor-pointer transition-colors ${
-                      heightMode === opt.value ? "bg-primary-container/20" : "hover:bg-surface-container-high"
-                    }`}
+              <div className="w-[420px] bg-surface-container-high rounded shadow-2xl border border-outline-variant overflow-hidden flex flex-col">
+                {/* Modal Header */}
+                <div className="px-md py-sm bg-surface-container-highest border-b border-outline-variant flex justify-between items-center">
+                  <div className="flex items-center gap-sm">
+                    <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>settings_overscan</span>
+                    <span className="font-label-caps text-label-caps text-on-surface">Capture Settings</span>
+                  </div>
+                  <button
+                    onClick={() => setCaptureSettingsOpen(false)}
+                    className="text-outline hover:text-on-surface transition-colors cursor-pointer"
                   >
-                    <input
-                      type="radio"
-                      name="heightMode"
-                      value={opt.value}
-                      checked={heightMode === opt.value}
-                      onChange={() => setHeightMode(opt.value)}
-                      className="mt-0.5 appearance-none w-4 h-4 rounded-full border-2 border-primary bg-transparent checked:border-[5px] cursor-pointer shrink-0"
-                    />
-                    <div>
-                      <span className="text-ui-small text-on-surface font-medium">
-                        {opt.label}
-                        {opt.value === "convert-vh" && (
-                          <span className="ml-1 text-[10px] text-primary font-bold uppercase">Recommended</span>
-                        )}
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-md space-y-md overflow-y-auto max-h-[70vh]">
+                  <section className="space-y-sm">
+                    <div className="flex justify-between items-center border-b border-outline-variant pb-xs">
+                      <label className="font-label-caps text-label-caps text-on-surface-variant">Height Handling</label>
+                      <span className="relative group cursor-help">
+                        <span className="material-symbols-outlined text-outline text-[14px]">info</span>
+                        <span className="pointer-events-none absolute right-0 top-full mt-1 w-56 rounded bg-surface-container-highest border border-outline-variant px-sm py-xs text-[11px] text-on-surface-variant leading-relaxed shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                          How to handle JS-set pixel heights that track the viewport.
+                        </span>
                       </span>
-                      <p className="text-[11px] text-on-surface-variant/70 mt-0.5">{opt.desc}</p>
                     </div>
-                  </label>
-                ))}
+                    <div className="flex flex-col gap-gutter">
+                      {([
+                        { value: "convert-vh" as HeightMode, label: "Convert to viewport-relative", desc: "Replace frozen heights with dynamic calc(100vh − …)", icon: "swap_vert" },
+                        { value: "remove" as HeightMode, label: "Remove hardcoded heights", desc: "Strip matching heights, let CSS rules take over", icon: "delete_sweep" },
+                        { value: "keep-as-is" as HeightMode, label: "Keep original heights", desc: "Preserve pixel values as captured", icon: "lock" },
+                      ]).map(opt => (
+                        <label
+                          key={opt.value}
+                          className="flex items-center justify-between p-sm bg-surface-container-lowest border border-outline-variant cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-sm">
+                            <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">{opt.icon}</span>
+                            <div>
+                              <span className="text-ui-small text-on-surface">
+                                {opt.label}
+                                {opt.value === "convert-vh" && (
+                                  <span className="ml-1 text-[10px] text-primary font-bold uppercase">Recommended</span>
+                                )}
+                              </span>
+                              <p className="text-[11px] text-on-surface-variant/70 mt-0.5">{opt.desc}</p>
+                            </div>
+                          </div>
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                              heightMode === opt.value
+                                ? "border-primary-container bg-primary-container"
+                                : "border-outline-variant"
+                            }`}
+                            onClick={() => setHeightMode(opt.value)}
+                          >
+                            {heightMode === opt.value && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                          </div>
+                          <input
+                            type="radio"
+                            name="heightMode"
+                            value={opt.value}
+                            checked={heightMode === opt.value}
+                            onChange={() => setHeightMode(opt.value)}
+                            className="sr-only"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-md py-sm bg-surface-container-highest border-t border-outline-variant flex justify-end gap-sm">
+                  <button
+                    onClick={() => setCaptureSettingsOpen(false)}
+                    className="bg-surface-container-low border border-outline-variant text-on-surface px-md py-1.5 rounded-sm text-ui-small font-semibold hover:bg-surface-variant transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           )}
