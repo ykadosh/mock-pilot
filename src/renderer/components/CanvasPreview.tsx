@@ -418,8 +418,11 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
-    // Temporarily shrink iframe to force content to reflow at new width
-    iframe.style.height = "1px";
+    // Shrink iframe height via React state to force content reflow at the new
+    // width.  Using state (not an imperative DOM mutation) ensures React always
+    // re-applies the measured height — even when the new measurement equals the
+    // previous value — because the state transition is 1 → measured, not N → N.
+    setIframeHeight(1);
     const t = setTimeout(() => {
       iframe.contentWindow?.postMessage({ type: "measure-height" }, "*");
     }, 50);
