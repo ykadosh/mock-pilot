@@ -134,15 +134,13 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
         activeTab={codeEditorOpen ? "code-editor" : "editor"}
         projectId={projectId}
       />
+      {!codeEditorOpen && (
+        <SideNav
+          activeTool={pickerActive ? "Element Picker" : historyOpen ? "History" : undefined}
+          onToolClick={handleToolClick}
+        />
+      )}
       <div className="flex flex-1 min-h-0">
-        {!codeEditorOpen && (
-          <SideNav
-            activeTool={pickerActive ? "Element Picker" : historyOpen ? "History" : undefined}
-            onToolClick={handleToolClick}
-            projectName={projectName}
-            revisionCount={history.entries.length}
-          />
-        )}
         <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">
