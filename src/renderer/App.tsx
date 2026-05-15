@@ -20,6 +20,7 @@ function App() {
             <Route path="/editor/:projectId" element={<Editor />} />
             <Route path="/code-editor/:projectId" element={<Editor codeEditorDefault />} />
             <Route path="/assets" element={<Assets />} />
+            <Route path="/assets/:projectId" element={<Assets />} />
             <Route path="/settings/:projectId" element={<Settings />} />
             <Route path="/export/:projectId" element={<Export />} />
             <Route path="/app-settings" element={<AppSettings />} />
