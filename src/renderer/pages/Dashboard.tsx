@@ -40,7 +40,7 @@ export function Dashboard() {
   const handleOpenProject = async (project: SavedProject) => {
     const result = await window.api.loadProject(project.id);
     if (result.success && result.html) {
-      setCapturedHtml(result.html);
+      setCapturedHtml(result.html, result.assetsBasePath);
       navigate(`/editor/${project.id}`);
     }
   };

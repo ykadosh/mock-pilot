@@ -7,7 +7,7 @@ import { PropertiesPanel } from "../components/PropertiesPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { CodeEditor, CodeEditorHandle } from "../components/CodeEditor";
 import { useHistory } from "../hooks/useHistory";
-import { getCapturedHtml } from "../lib/store";
+import { getCapturedHtml, getAssetsBasePath } from "../lib/store";
 
 export interface SelectedElement {
   tagName: string;
@@ -41,10 +41,21 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
   const codeEditorOpen = codeEditorDefault;
   const [codeTab, setCodeTab] = useState<"html" | "css">("html");
   const [projectName, setProjectName] = useState("");
+  const [assetsBasePath, setAssetsBasePath] = useState<string | null>(getAssetsBasePath());
   const canvasRef = useRef<CanvasPreviewHandle>(null);
   const codeEditorRef = useRef<CodeEditorHandle>(null);
   const pendingLabelRef = useRef<string>("AI modification");
   const history = useHistory(projectId);
+
+  // Ensure assetsBasePath is available (e.g. after page refresh)
+  useEffect(() => {
+    if (assetsBasePath || !projectId) return;
+    window.api.loadProject(projectId).then((result) => {
+      if (result.success && result.assetsBasePath) {
+        setAssetsBasePath(result.assetsBasePath);
+      }
+    });
+  }, [projectId, assetsBasePath]);
 
   // Initialize history with the project HTML on load (only if no persisted history)
   useEffect(() => {
@@ -270,6 +281,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
               viewportWidth={deviceWidth}
               projectId={projectId}
               htmlContent={history.currentHtml}
+              assetsBasePath={assetsBasePath}
             />
           )}
 

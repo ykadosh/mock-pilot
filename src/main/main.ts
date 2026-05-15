@@ -1,6 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, protocol, net, shell } from "electron";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
+import { pathToFileURL } from "url";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { html_beautify } = require("js-beautify");
@@ -166,6 +168,112 @@ function saveProjectsIndex(projects: ProjectMeta[]) {
   fs.writeFileSync(path.join(projectsDir, "index.json"), JSON.stringify(projects, null, 2));
 }
 
+/**
+ * Extract base64 data URIs from HTML and save them as files in a per-project assets folder.
+ * - Extracts base64 images from <img src="data:..."> attributes
+ * - Extracts base64 fonts/images from CSS url("data:...") references
+ * - Saves each unique asset as {hash}.{ext} in {id}.assets/
+ * - Replaces data URIs in the HTML with relative paths (assets/{hash}.{ext})
+ * Returns the modified HTML.
+ */
+function extractAndSaveAssets(id: string, html: string): string {
+  const assetsDir = path.join(projectsDir, `${id}.assets`);
+
+  // Map of data URI → relative path (for deduplication)
+  const assetMap = new Map<string, string>();
+
+  function saveAsset(dataUri: string): string {
+    // Check dedup cache
+    const cached = assetMap.get(dataUri);
+    if (cached) return cached;
+
+    // Parse the data URI: data:[<mediatype>][;base64],<data>
+    const match = dataUri.match(/^data:([^;,]+)(?:;base64)?,(.*)$/s);
+    if (!match) return dataUri; // Can't parse, leave as-is
+
+    const mimeType = match[1];
+    const base64Data = match[2];
+
+    // Determine file extension from MIME type
+    const extMap: Record<string, string> = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/jpg": "jpg",
+      "image/gif": "gif",
+      "image/svg+xml": "svg",
+      "image/webp": "webp",
+      "image/avif": "avif",
+      "image/bmp": "bmp",
+      "image/x-icon": "ico",
+      "image/vnd.microsoft.icon": "ico",
+      "font/woff": "woff",
+      "font/woff2": "woff2",
+      "application/font-woff": "woff",
+      "application/font-woff2": "woff2",
+      "font/ttf": "ttf",
+      "font/otf": "otf",
+      "application/x-font-ttf": "ttf",
+      "application/x-font-opentype": "otf",
+      "font/opentype": "otf",
+      "application/vnd.ms-fontobject": "eot",
+    };
+    const ext = extMap[mimeType] || mimeType.split("/")[1] || "bin";
+
+    // Compute content hash for deduplication and filename
+    const hash = crypto.createHash("sha256").update(base64Data).digest("hex").slice(0, 12);
+    const filename = `${hash}.${ext}`;
+    const relativePath = `${id}.assets/${filename}`;
+
+    // Ensure assets directory exists
+    if (!fs.existsSync(assetsDir)) {
+      fs.mkdirSync(assetsDir, { recursive: true });
+    }
+
+    // Write the file (skip if already exists — same content hash)
+    const filePath = path.join(assetsDir, filename);
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, base64Data, "base64");
+    }
+
+    assetMap.set(dataUri, relativePath);
+    return relativePath;
+  }
+
+  // Extract base64 images from img src attributes
+  // Matches: src="data:image/...;base64,..."
+  html = html.replace(
+    /(<img\b[^>]*\bsrc\s*=\s*")([^"]*data:[^"]+;base64,[^"]+)(")/gi,
+    (_match, prefix, dataUri, suffix) => {
+      const relativePath = saveAsset(dataUri);
+      return `${prefix}${relativePath}${suffix}`;
+    }
+  );
+
+  // Remove srcset attributes from img tags that now use local asset paths
+  // (srcset would point to stale external URLs and override the local src)
+  html = html.replace(
+    /<img\b[^>]*>/gi,
+    (imgTag) => {
+      if (/\bsrc\s*=\s*"[^"]*\.assets\//.test(imgTag) && /\bsrcset\s*=/.test(imgTag)) {
+        return imgTag.replace(/\s*srcset\s*=\s*"[^"]*"/gi, "");
+      }
+      return imgTag;
+    }
+  );
+
+  // Extract base64 data URIs from CSS url() — fonts and background images
+  // Matches: url("data:...;base64,...") or url(data:...;base64,...)
+  html = html.replace(
+    /url\(\s*["']?(data:[^"')]+;base64,[^"')]+)["']?\s*\)/gi,
+    (_match, dataUri) => {
+      const relativePath = saveAsset(dataUri);
+      return `url("${relativePath}")`;
+    }
+  );
+
+  return html;
+}
+
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -187,8 +295,21 @@ const createWindow = () => {
   }
 };
 
+// Register custom protocol scheme for serving project assets
+protocol.registerSchemesAsPrivileged([
+  { scheme: "mp-asset", privileges: { bypassCSP: true, supportFetchAPI: true, stream: true, corsEnabled: true, standard: true } }
+]);
+
 app.on("ready", () => {
   ensureProjectsDir();
+
+  // Handle mp-asset:// protocol requests to serve local asset files
+  protocol.handle("mp-asset", (request) => {
+    // URL format: mp-asset://assets/{projectId}.assets/{filename}
+    const url = new URL(request.url);
+    const filePath = path.join(projectsDir, decodeURIComponent(url.pathname.replace(/^\//, "")));
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
 
   // List all projects
   ipcMain.handle("list-projects", () => {
@@ -201,8 +322,9 @@ app.on("ready", () => {
     const now = new Date().toISOString();
     const meta: ProjectMeta = { id, title: data.title, url: data.url, createdAt: now, updatedAt: now };
 
-    // Save HTML file
-    fs.writeFileSync(path.join(projectsDir, `${id}.html`), data.html, "utf-8");
+    // Extract base64 assets and save HTML file
+    const processedHtml = extractAndSaveAssets(id, data.html);
+    fs.writeFileSync(path.join(projectsDir, `${id}.html`), processedHtml, "utf-8");
 
     // Save thumbnail if provided
     if (data.thumbnail) {
@@ -223,14 +345,18 @@ app.on("ready", () => {
     const htmlPath = path.join(projectsDir, `${id}.html`);
     if (!fs.existsSync(htmlPath)) return { success: false, error: "Project not found" };
     const html = fs.readFileSync(htmlPath, "utf-8");
-    return { success: true, html };
+    // Provide the base path so the renderer can resolve relative asset paths
+    const assetsBasePath = "mp-asset://assets/";
+    return { success: true, html, assetsBasePath };
   });
 
   // Update a project's HTML (persist modifications)
   ipcMain.handle("update-project-html", (_event, id: string, html: string) => {
     const htmlPath = path.join(projectsDir, `${id}.html`);
     if (!fs.existsSync(htmlPath)) return { success: false };
-    fs.writeFileSync(htmlPath, html, "utf-8");
+    // Extract any new base64 assets introduced by AI modifications
+    const processedHtml = extractAndSaveAssets(id, html);
+    fs.writeFileSync(htmlPath, processedHtml, "utf-8");
     // Update timestamp in index
     const projects = getProjectsIndex();
     const project = projects.find((p) => p.id === id);
@@ -247,9 +373,10 @@ app.on("ready", () => {
       // Save metadata (labels, timestamps, pointer)
       const metaPath = path.join(projectsDir, `${id}.history.json`);
       fs.writeFileSync(metaPath, JSON.stringify({ entries: data.entries, pointer: data.pointer }), "utf-8");
-      // Save each HTML snapshot
+      // Save each HTML snapshot (extract base64 assets to shared folder)
       for (let i = 0; i < data.htmlSnapshots.length; i++) {
-        fs.writeFileSync(path.join(projectsDir, `${id}.snap.${i}.html`), data.htmlSnapshots[i], "utf-8");
+        const processedHtml = extractAndSaveAssets(id, data.htmlSnapshots[i]);
+        fs.writeFileSync(path.join(projectsDir, `${id}.snap.${i}.html`), processedHtml, "utf-8");
       }
       // Clean up old snapshots beyond current count
       let idx = data.htmlSnapshots.length;
@@ -301,8 +428,19 @@ app.on("ready", () => {
     // Remove files
     const htmlPath = path.join(projectsDir, `${id}.html`);
     const pngPath = path.join(projectsDir, `${id}.png`);
+    const assetsDir = path.join(projectsDir, `${id}.assets`);
     if (fs.existsSync(htmlPath)) fs.unlinkSync(htmlPath);
     if (fs.existsSync(pngPath)) fs.unlinkSync(pngPath);
+    if (fs.existsSync(assetsDir)) fs.rmSync(assetsDir, { recursive: true, force: true });
+
+    // Remove history files
+    const historyPath = path.join(projectsDir, `${id}.history.json`);
+    if (fs.existsSync(historyPath)) fs.unlinkSync(historyPath);
+    let idx = 0;
+    while (fs.existsSync(path.join(projectsDir, `${id}.snap.${idx}.html`))) {
+      fs.unlinkSync(path.join(projectsDir, `${id}.snap.${idx}.html`));
+      idx++;
+    }
 
     return { success: true };
   });
@@ -823,6 +961,9 @@ Return only the modified HTML element:`;
   function cleanHtmlForExport(html: string, baseUrl?: string): string {
     let cleaned = html;
 
+    // Strip any <base> tags (injected for preview, not needed in export)
+    cleaned = cleaned.replace(/<base\b[^>]*>/gi, "");
+
     // Strip all <script> tags — external scripts won't work offline
     cleaned = cleaned.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
     // Strip <noscript> wrappers
@@ -896,6 +1037,28 @@ Return only the modified HTML element:`;
       // Write HTML file
       fs.writeFileSync(path.join(destDir, "index.html"), htmlForFile, "utf-8");
 
+      // Copy project assets folder if it exists, and rewrite paths in exported HTML
+      const assetsDir = path.join(projectsDir, `${data.projectId}.assets`);
+      if (fs.existsSync(assetsDir)) {
+        const destAssetsDir = path.join(destDir, "assets");
+        if (!fs.existsSync(destAssetsDir)) {
+          fs.mkdirSync(destAssetsDir, { recursive: true });
+        }
+        const files = fs.readdirSync(assetsDir);
+        for (const file of files) {
+          fs.copyFileSync(path.join(assetsDir, file), path.join(destAssetsDir, file));
+        }
+        // Rewrite asset paths from {id}.assets/ to assets/ in the exported HTML and CSS
+        const idAssetsPrefix = `${data.projectId}.assets/`;
+        htmlForFile = htmlForFile.split(idAssetsPrefix).join("assets/");
+        if (cssContent) {
+          cssContent = cssContent.split(idAssetsPrefix).join("assets/");
+          fs.writeFileSync(path.join(destDir, "styles.css"), cssContent.trim(), "utf-8");
+        }
+        // Re-write the HTML file with updated asset paths
+        fs.writeFileSync(path.join(destDir, "index.html"), htmlForFile, "utf-8");
+      }
+
       return { success: true, path: destDir };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -904,7 +1067,7 @@ Return only the modified HTML element:`;
   });
 
   // Export as image: use Puppeteer to render HTML at given dimensions and save as PNG
-  ipcMain.handle("export-as-image", async (_event, data: { html: string; width: number; height: number; baseUrl?: string }) => {
+  ipcMain.handle("export-as-image", async (_event, data: { html: string; width: number; height: number; baseUrl?: string; projectId?: string }) => {
     try {
       const win = BrowserWindow.getFocusedWindow();
       if (!win) return { success: false, error: "No window available" };
@@ -931,8 +1094,22 @@ Return only the modified HTML element:`;
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: data.width, height: data.height });
-        await page.setContent(cleanedHtml, { waitUntil: "networkidle0", timeout: 30000 });
-        await page.screenshot({ path: result.filePath, type: "png", fullPage: true });
+
+        // If there's a project with assets, write a temp file in the projects dir so relative paths resolve
+        if (data.projectId) {
+          const tempHtmlPath = path.join(projectsDir, `${data.projectId}.export-temp.html`);
+          fs.writeFileSync(tempHtmlPath, cleanedHtml, "utf-8");
+          try {
+            await page.goto(`file://${tempHtmlPath}`, { waitUntil: "networkidle0", timeout: 30000 });
+            await page.screenshot({ path: result.filePath, type: "png", fullPage: true });
+          } finally {
+            fs.unlinkSync(tempHtmlPath);
+          }
+        } else {
+          await page.setContent(cleanedHtml, { waitUntil: "networkidle0", timeout: 30000 });
+          await page.screenshot({ path: result.filePath, type: "png", fullPage: true });
+        }
+
         return { success: true, path: result.filePath };
       } finally {
         await browser.close();

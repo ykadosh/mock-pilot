@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
-import { getCapturedHtml } from "../lib/store";
+import { getCapturedHtml, getAssetsBasePath } from "../lib/store";
 import type { SelectedElement } from "../pages/Editor";
 
 // Script injected into the iframe to handle element picking
@@ -323,12 +323,15 @@ interface CanvasPreviewProps {
   viewportWidth?: number;
   projectId?: string;
   htmlContent?: string | null;
+  assetsBasePath?: string | null;
 }
 
 // Strip picker artifacts (overlays, labels, scripts) from HTML that may have been
 // persisted from a previous session to prevent stale highlights on reload.
 function cleanHtml(html: string | null): string | null {
   if (!html) return html;
+  // Remove void/self-closing elements with data-mp-injected (e.g. <base>)
+  html = html.replace(/<(?:base|br|hr|img|input|link|meta)\b[^>]*data-mp-injected[^>]*\/?>/gi, '');
   // Remove elements with data-mp-injected attribute (picker overlays)
   html = html.replace(/<[^>]+data-mp-injected[^>]*>[\s\S]*?<\/[^>]+>/g, '');
   // Remove fixed overlay divs with z-index 99999 or 100000 (picker highlight divs)
@@ -339,7 +342,7 @@ function cleanHtml(html: string | null): string | null {
   return html;
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, rectSelectorActive, panActive, selectedMpId, selectedSelector, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, rectSelectorActive, panActive, selectedMpId, selectedSelector, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent, assetsBasePath: assetsBasePathProp }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const [selectedRect, setSelectedRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -734,7 +737,15 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             <>
               <iframe
                 ref={iframeRef}
-                srcDoc={html}
+                srcDoc={(() => {
+                  const basePath = assetsBasePathProp || getAssetsBasePath();
+                  if (!basePath || !html) return html;
+                  // Inject <base> tag for resolving relative asset paths (marked for cleanup)
+                  if (html.includes("<head")) {
+                    return html.replace(/<head([^>]*)>/, `<head$1><base href="${basePath}" data-mp-injected="true">`);
+                  }
+                  return `<base href="${basePath}" data-mp-injected="true">` + html;
+                })()}
                 className="border-none origin-top-left"
                 style={{
                   width: `${viewportWidth}px`,

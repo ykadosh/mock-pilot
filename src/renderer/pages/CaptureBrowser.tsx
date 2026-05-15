@@ -283,6 +283,30 @@ export function CaptureBrowser() {
           // Convert images to data URIs (before removing scripts, as some images may need JS)
           const images = document.querySelectorAll("img");
           _log("[step:images] Converting " + images.length + " image(s) to data URIs...");
+
+          // Force lazy images to load
+          for (const img of images) {
+            if (img.loading === "lazy") {
+              img.loading = "eager";
+            }
+          }
+
+          // Wait for images to load (up to 5s total batch)
+          await new Promise(resolve => {
+            var pending = 0;
+            var done = false;
+            var timeout = setTimeout(() => { done = true; resolve(undefined); }, 5000);
+            for (const img of images) {
+              if (img.complete && img.naturalWidth > 0) continue;
+              if (!img.src || img.src.startsWith("data:")) continue;
+              pending++;
+              var check = () => { pending--; if (pending <= 0 && !done) { done = true; clearTimeout(timeout); resolve(undefined); } };
+              img.addEventListener("load", check, { once: true });
+              img.addEventListener("error", check, { once: true });
+            }
+            if (pending === 0) { done = true; clearTimeout(timeout); resolve(undefined); }
+          });
+
           for (const img of images) {
             try {
               const canvas = document.createElement("canvas");
@@ -292,10 +316,95 @@ export function CaptureBrowser() {
               if (ctx && img.complete && img.naturalWidth > 0) {
                 ctx.drawImage(img, 0, 0);
                 img.src = canvas.toDataURL("image/png");
+                // Remove srcset after successful capture to prevent it from being used
+                img.removeAttribute("srcset");
               }
             } catch {}
           }
           _log("Done converting images");
+
+          // Capture video poster frames as static images
+          const videos = document.querySelectorAll("video");
+          _log("[step:videos] Capturing " + videos.length + " video poster frame(s)...");
+
+          // For each video, seek to a small offset and capture the frame
+          for (const video of videos) {
+            try {
+              var replaced = false;
+
+              // Attempt to load and seek the video to get a visible frame
+              if (video.src || video.querySelector("source")) {
+                // Ensure video is loading
+                if (video.readyState < 2) {
+                  video.preload = "auto";
+                  video.muted = true;
+                  video.load();
+                  // Wait for loadeddata
+                  await new Promise(resolve => {
+                    var t = setTimeout(resolve, 3000);
+                    video.addEventListener("loadeddata", () => { clearTimeout(t); resolve(undefined); }, { once: true });
+                    video.addEventListener("error", () => { clearTimeout(t); resolve(undefined); }, { once: true });
+                  });
+                }
+
+                // Seek to 0.1s to ensure a frame is decoded
+                if (video.readyState >= 2 && video.videoWidth > 0) {
+                  video.currentTime = 0.1;
+                  await new Promise(resolve => {
+                    var t = setTimeout(resolve, 2000);
+                    video.addEventListener("seeked", () => { clearTimeout(t); resolve(undefined); }, { once: true });
+                  });
+
+                  // Now try to capture
+                  const canvas = document.createElement("canvas");
+                  canvas.width = video.videoWidth;
+                  canvas.height = video.videoHeight;
+                  const ctx = canvas.getContext("2d");
+                  if (ctx) {
+                    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+                    // Verify canvas has actual content
+                    var pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                    var hasContent = false;
+                    for (var pi = 3; pi < pixelData.length; pi += 400) {
+                      if (pixelData[pi] > 0) { hasContent = true; break; }
+                    }
+                    if (hasContent) {
+                      const dataUri = canvas.toDataURL("image/jpeg", 0.85);
+                      const img = document.createElement("img");
+                      img.src = dataUri;
+                      img.className = video.className;
+                      var vstyle = video.getAttribute("style");
+                      if (vstyle) img.setAttribute("style", vstyle);
+                      img.setAttribute("alt", "Video poster");
+                      video.replaceWith(img);
+                      replaced = true;
+                    }
+                  }
+                }
+              }
+
+              if (!replaced) {
+                if (video.poster) {
+                  const img = document.createElement("img");
+                  img.src = video.poster;
+                  img.className = video.className;
+                  var vstyle2 = video.getAttribute("style");
+                  if (vstyle2) img.setAttribute("style", vstyle2);
+                  img.setAttribute("alt", "Video poster");
+                  video.replaceWith(img);
+                } else {
+                  // Replace with a dark placeholder with play icon
+                  const placeholder = document.createElement("div");
+                  placeholder.className = video.className;
+                  var existingStyle = video.getAttribute("style") || "";
+                  placeholder.setAttribute("style", existingStyle + ";background:#1a1a2e;display:flex;align-items:center;justify-content:center;min-height:120px;");
+                  placeholder.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+                  video.replaceWith(placeholder);
+                }
+              }
+            } catch (e) { _log("  FAILED video capture: " + (e && e.message || e)); }
+          }
+          _log("Done capturing video posters");
 
           // Remove scripts BEFORE CSSOM serialization.
           // This kills MutationObservers (e.g. Griffel) that would react to
@@ -303,6 +412,9 @@ export function CaptureBrowser() {
           // the serialized CSS to be lost.
           _log("[step:scripts] Removing scripts...");
           document.querySelectorAll("script").forEach((s) => s.remove());
+
+          // Remove preload/prefetch links that would cause ERR_FILE_NOT_FOUND
+          document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"], link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').forEach((l) => l.remove());
 
           // Serialize CSSOM rules into style tag textContent.
           // Frameworks like Fluent UI / Griffel inject CSS via insertRule(),
@@ -531,7 +643,7 @@ export function CaptureBrowser() {
       setCaptureSteps(prev => prev.map(s => ({ ...s, status: "done" as const })));
       setCapturePercent(100);
 
-      setCapturedHtml(formatResult.html);
+      setCapturedHtml(formatResult.html, "mp-asset://assets/");
       navigate(`/editor/${project.id}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

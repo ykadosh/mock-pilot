@@ -63,6 +63,7 @@ export function Export() {
   const [deployError, setDeployError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [assetsBasePath, setAssetsBasePath] = useState<string | null>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export function Export() {
     });
     window.api.loadProject(projectId).then((result) => {
       if (result.success && result.html) setHtml(result.html);
+      if (result.success && result.assetsBasePath) setAssetsBasePath(result.assetsBasePath);
     });
   }, [projectId]);
 
@@ -119,8 +121,13 @@ export function Export() {
         cleaned = cleaned.replace(/(url\(\s*['"]?)\/(?!\/)/gi, `$1${origin}/`);
       } catch { /* skip */ }
     }
+    // Inject <base> tag for asset resolution
+    if (assetsBasePath) {
+      const baseTag = `<base href="${assetsBasePath}">`;
+      cleaned = cleaned.replace(/(<head[^>]*>)/i, `$1${baseTag}`);
+    }
     return cleaned;
-  }, [html, project?.url]);
+  }, [html, project?.url, assetsBasePath]);
 
   const handleExportFiles = async () => {
     if (!projectId || !html) return;
@@ -149,6 +156,7 @@ export function Export() {
         width: customWidth,
         height: customHeight,
         baseUrl: project?.url,
+        projectId,
       });
       if (result.success) {
         setImageResult(`Saved to ${result.path}`);

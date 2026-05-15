@@ -29,6 +29,7 @@ declare global {
       loadProject: (id: string) => Promise<{
         success: boolean;
         html?: string;
+        assetsBasePath?: string;
         error?: string;
       }>;
       updateProjectHtml: (id: string, html: string) => Promise<{ success: boolean }>;
@@ -88,7 +89,7 @@ declare global {
         path?: string;
         error?: string;
       }>;
-      exportAsImage: (data: { html: string; width: number; height: number; baseUrl?: string }) => Promise<{
+      exportAsImage: (data: { html: string; width: number; height: number; baseUrl?: string; projectId?: string }) => Promise<{
         success: boolean;
         path?: string;
         error?: string;
