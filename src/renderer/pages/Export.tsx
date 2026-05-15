@@ -4,6 +4,31 @@ import { TopNav } from "../components/layout/TopNav";
 import { PageLayout } from "../components/layout/PageLayout";
 import { SectionCard } from "../components/ui/SectionCard";
 
+function ExportButton({
+  onClick,
+  disabled,
+  icon,
+  children,
+  className = "",
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  icon: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`py-2 px-lg bg-primary-container/80 text-on-primary-container text-ui-small font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+    >
+      <span className="material-symbols-outlined text-[16px]">{icon}</span>
+      {children}
+    </button>
+  );
+}
+
 type DevicePreset = "laptop" | "tablet" | "mobile";
 
 const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number; icon: string; label: string }> = {
@@ -227,14 +252,14 @@ export function Export() {
                   </div>
                 </div>
                 <div>
-                  <button
+                  <ExportButton
                     onClick={handleExportFiles}
                     disabled={filesExporting}
-                    className="w-full py-2 bg-transparent border border-outline hover:bg-surface-container-highest text-on-surface text-ui-small flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    icon="download_for_offline"
+                    className="w-full"
                   >
-                    <span className="material-symbols-outlined text-[16px]">download_for_offline</span>
                     {filesExporting ? "Exporting…" : "Download ZIP"}
-                  </button>
+                  </ExportButton>
                   {filesResult && (
                     <p className="text-[10px] text-outline mt-sm text-center truncate">{filesResult}</p>
                   )}
@@ -287,14 +312,14 @@ export function Export() {
                         </div>
                       </div>
                     </div>
-                    <button
+                    <ExportButton
                       onClick={handleExportImage}
                       disabled={imageExporting}
-                      className="w-full py-2 bg-primary-container text-on-primary-container text-ui-small font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      icon="photo_camera"
+                      className="w-full"
                     >
-                      <span className="material-symbols-outlined text-[16px]">photo_camera</span>
                       {imageExporting ? "Rendering…" : "Export as PNG"}
-                    </button>
+                    </ExportButton>
                     {imageResult && (
                       <p className="text-[10px] text-outline text-center truncate">{imageResult}</p>
                     )}
@@ -350,13 +375,12 @@ export function Export() {
                   </div>
                 </div>
                 <div className="flex gap-sm shrink-0">
-                  <button
+                  <ExportButton
                     onClick={() => projectId && window.api.openProjectInBrowser(projectId)}
-                    className="px-lg py-3 bg-transparent border border-outline hover:bg-surface-container-highest text-on-surface text-ui-small flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    icon="open_in_browser"
                   >
-                    <span className="material-symbols-outlined text-[16px]">open_in_browser</span>
                     Open in Browser
-                  </button>
+                  </ExportButton>
                 </div>
               </SectionCard>
 
@@ -374,22 +398,20 @@ export function Export() {
                   </div>
                 </div>
                 <div className="flex gap-sm shrink-0">
-                  <button
+                  <ExportButton
                     onClick={handleDeployCodesandbox}
                     disabled={!!deploying}
-                    className="flex-1 md:flex-none px-lg py-3 bg-[#151515] border border-white/10 hover:border-white/20 text-white text-ui-small font-bold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    icon="rocket_launch"
                   >
-                    <span className="material-symbols-outlined text-[16px]">rocket_launch</span>
                     {deploying === "codesandbox" ? "Deploying…" : "Deploy to CodeSandbox"}
-                  </button>
-                  <button
+                  </ExportButton>
+                  <ExportButton
                     onClick={handleDeployStackblitz}
                     disabled={!!deploying}
-                    className="flex-1 md:flex-none px-lg py-3 bg-transparent border border-[#334155] hover:bg-surface-container-highest text-on-surface text-ui-small flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    icon="rocket_launch"
                   >
-                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                    {deploying === "stackblitz" ? "Deploying…" : "Open in StackBlitz"}
-                  </button>
+                    {deploying === "stackblitz" ? "Deploying…" : "Deploy to StackBlitz"}
+                  </ExportButton>
                 </div>
               </SectionCard>
 
