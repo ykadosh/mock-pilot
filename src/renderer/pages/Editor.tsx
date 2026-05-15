@@ -32,6 +32,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [pickerActive, setPickerActive] = useState(false);
+  const [rectSelectorActive, setRectSelectorActive] = useState(false);
   const [panActive, setPanActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [zoom, setZoom] = useState(100);
@@ -67,17 +68,26 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
   const handleToolClick = (tool: string) => {
     if (tool === "Element Picker") {
       setPickerActive((prev) => !prev);
+      setRectSelectorActive(false);
+      setPanActive(false);
+      setSelectedElement(null);
+      setHistoryOpen(false);
+    } else if (tool === "Rectangle Selector") {
+      setRectSelectorActive((prev) => !prev);
+      setPickerActive(false);
       setPanActive(false);
       setSelectedElement(null);
       setHistoryOpen(false);
     } else if (tool === "Pan Tool") {
       setPanActive((prev) => !prev);
       setPickerActive(false);
+      setRectSelectorActive(false);
       setSelectedElement(null);
       setHistoryOpen(false);
     } else if (tool === "History") {
       setHistoryOpen((prev) => !prev);
       setPickerActive(false);
+      setRectSelectorActive(false);
       setPanActive(false);
       setSelectedElement(null);
     }
@@ -86,6 +96,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
   const handleElementSelected = (element: SelectedElement) => {
     setSelectedElement(element);
     setPickerActive(false);
+    setRectSelectorActive(false);
     setHistoryOpen(false);
   };
 
@@ -144,7 +155,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
       />
       {!codeEditorOpen && (
         <SideNav
-          activeTool={pickerActive ? "Element Picker" : panActive ? "Pan Tool" : historyOpen ? "History" : undefined}
+          activeTool={pickerActive ? "Element Picker" : rectSelectorActive ? "Rectangle Selector" : panActive ? "Pan Tool" : historyOpen ? "History" : undefined}
           onToolClick={handleToolClick}
         />
       )}
@@ -249,6 +260,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
             <CanvasPreview
               ref={canvasRef}
               pickerActive={pickerActive}
+              rectSelectorActive={rectSelectorActive}
               panActive={panActive}
               selectedMpId={selectedElement?.mpId || null}
               selectedSelector={selectedElement ? (selectedElement.tagName + (selectedElement.id ? '#' + selectedElement.id : selectedElement.className ? '.' + selectedElement.className.trim().split(/\s+/).slice(0, 2).join('.') : '')) : undefined}

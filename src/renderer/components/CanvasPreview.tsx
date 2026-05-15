@@ -233,6 +233,71 @@ const PICKER_SCRIPT = `
       } else {
         window.parent.postMessage({ type: 'element-html-response', mpId: mpId, outerHTML: null }, '*');
       }
+    } else if (e.data && e.data.type === 'rect-select') {
+      var selRect = e.data.rect;
+      // Find the biggest element fully contained within the selection rectangle
+      var allEls = document.body.querySelectorAll('*');
+      var bestEl = null;
+      var bestArea = 0;
+      for (var i = 0; i < allEls.length; i++) {
+        var el = allEls[i];
+        if (el.getAttribute('data-mp-injected')) continue;
+        if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'LINK' || el.tagName === 'META') continue;
+        var r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) continue;
+        // Check if this element is fully contained within the selection rect
+        if (r.left >= selRect.left && r.top >= selRect.top &&
+            r.left + r.width <= selRect.left + selRect.width &&
+            r.top + r.height <= selRect.top + selRect.height) {
+          var area = r.width * r.height;
+          if (area > bestArea) {
+            bestArea = area;
+            bestEl = el;
+          }
+        }
+      }
+      if (!bestEl) return;
+      var lca = bestEl;
+
+      // Assign a unique data-mp-id
+      var mpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      lca.setAttribute('data-mp-id', mpId);
+
+      // Show overlay on the selected element
+      if (!overlay) createOverlay();
+      var lcaRect = lca.getBoundingClientRect();
+      overlay.style.display = 'block';
+      overlay.style.top = lcaRect.top + 'px';
+      overlay.style.left = lcaRect.left + 'px';
+      overlay.style.width = lcaRect.width + 'px';
+      overlay.style.height = lcaRect.height + 'px';
+      label.style.display = 'block';
+      label.style.top = Math.max(0, lcaRect.top - 22) + 'px';
+      label.style.left = lcaRect.left + 'px';
+      label.textContent = getSelector(lca);
+
+      // Get computed style
+      var computed = window.getComputedStyle(lca);
+      var style = {};
+      for (var i = 0; i < computed.length; i++) {
+        var prop = computed[i];
+        if (prop.startsWith('-webkit-') || prop.startsWith('-moz-') || prop.startsWith('-ms-')) continue;
+        style[prop] = computed.getPropertyValue(prop);
+      }
+
+      window.parent.postMessage({
+        type: 'element-selected',
+        data: {
+          tagName: lca.tagName.toLowerCase(),
+          id: lca.id || '',
+          className: (typeof lca.className === 'string' ? lca.className : ''),
+          computedStyle: style,
+          outerHTML: lca.outerHTML,
+          cssPath: getUniquePath(lca),
+          mpId: mpId,
+          rect: { top: lcaRect.top, left: lcaRect.left, width: lcaRect.width, height: lcaRect.height }
+        }
+      }, '*');
     }
   });
 
@@ -248,6 +313,7 @@ export interface CanvasPreviewHandle {
 
 interface CanvasPreviewProps {
   pickerActive?: boolean;
+  rectSelectorActive?: boolean;
   panActive?: boolean;
   selectedMpId?: string | null;
   selectedSelector?: string;
@@ -273,7 +339,7 @@ function cleanHtml(html: string | null): string | null {
   return html;
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, panActive, selectedMpId, selectedSelector, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(function CanvasPreview({ pickerActive, rectSelectorActive, panActive, selectedMpId, selectedSelector, onElementSelected, onElementDeselected, zoom = 100, viewportWidth = 1280, projectId, htmlContent }, ref) {
   const [html, setHtml] = useState<string | null>(null);
   const [iframeHeight, setIframeHeight] = useState(800);
   const [selectedRect, setSelectedRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -526,6 +592,87 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
   const scale = zoom / 100;
 
+  // Rectangle selector: drag to draw a selection marquee
+  const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const rectStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isDraggingRectRef = useRef(false);
+  const selectionRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !rectSelectorActive) {
+      setSelectionRect(null);
+      selectionRectRef.current = null;
+      return;
+    }
+
+    // Convert a mouse event to iframe-content coordinates (accounting for scroll + zoom)
+    const toContentCoords = (e: MouseEvent) => {
+      const canvasWrapper = container.querySelector('[data-canvas-wrapper]') as HTMLElement | null;
+      if (!canvasWrapper) return { x: 0, y: 0 };
+      const wrapperRect = canvasWrapper.getBoundingClientRect();
+      const x = (e.clientX - wrapperRect.left) / scale;
+      const y = (e.clientY - wrapperRect.top) / scale;
+      return { x, y };
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const coords = toContentCoords(e);
+      rectStartRef.current = coords;
+      isDraggingRectRef.current = false;
+      setSelectionRect(null);
+      selectionRectRef.current = null;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!rectStartRef.current) return;
+      isDraggingRectRef.current = true;
+      const coords = toContentCoords(e);
+      const start = rectStartRef.current;
+      const x = Math.min(start.x, coords.x);
+      const y = Math.min(start.y, coords.y);
+      const w = Math.abs(coords.x - start.x);
+      const h = Math.abs(coords.y - start.y);
+      const rect = { x, y, w, h };
+      selectionRectRef.current = rect;
+      setSelectionRect(rect);
+    };
+
+    const handleMouseUp = () => {
+      if (!rectStartRef.current || !isDraggingRectRef.current) {
+        rectStartRef.current = null;
+        setSelectionRect(null);
+        selectionRectRef.current = null;
+        return;
+      }
+      const rect = selectionRectRef.current;
+      rectStartRef.current = null;
+      isDraggingRectRef.current = false;
+      if (rect && rect.w > 5 && rect.h > 5) {
+        const iframe = iframeRef.current;
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage({
+            type: 'rect-select',
+            rect: { top: rect.y, left: rect.x, width: rect.w, height: rect.h }
+          }, '*');
+        }
+      }
+      setSelectionRect(null);
+      selectionRectRef.current = null;
+    };
+
+    container.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      rectStartRef.current = null;
+      isDraggingRectRef.current = false;
+    };
+  }, [rectSelectorActive, scale]);
+
   const sendPickerAction = (action: string) => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow || !selectedMpId) return;
@@ -538,8 +685,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   };
 
   return (
-    <div ref={scrollContainerRef} className={`flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]${panActive ? (isPanning ? " cursor-grabbing" : " cursor-grab") : ""}`}>
-      <div className="relative mx-auto" style={{ width: `${viewportWidth * scale}px` }}>
+    <div ref={scrollContainerRef} className={`flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]${panActive ? (isPanning ? " cursor-grabbing" : " cursor-grab") : ""}${rectSelectorActive ? " cursor-crosshair" : ""}`}>
+      <div data-canvas-wrapper className="relative mx-auto" style={{ width: `${viewportWidth * scale}px` }}>
         {/* Floating toolbar for selected element */}
         {selectedMpId && selectedRect && (
           <div
@@ -559,6 +706,21 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
               <button onClick={() => onElementDeselected?.()} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Deselect">close</button>
             </div>
           </div>
+        )}
+        {/* Rectangle selection marquee */}
+        {selectionRect && (
+          <div
+            className="absolute pointer-events-none z-30"
+            style={{
+              top: `${selectionRect.y * scale}px`,
+              left: `${selectionRect.x * scale}px`,
+              width: `${selectionRect.w * scale}px`,
+              height: `${selectionRect.h * scale}px`,
+              border: '2px dashed #7c3aed',
+              background: 'rgba(124, 58, 237, 0.08)',
+              borderRadius: '2px',
+            }}
+          />
         )}
         {/* Canvas container */}
         <div
@@ -585,7 +747,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
               />
               {/* Block interaction when picker is not active */}
               {!pickerActive && (
-                <div className={`absolute inset-0 ${panActive ? (isPanning ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}`} />
+                <div className={`absolute inset-0 ${panActive ? (isPanning ? "cursor-grabbing" : "cursor-grab") : rectSelectorActive ? "cursor-crosshair" : "cursor-default"}`} />
               )}
             </>
           ) : (
