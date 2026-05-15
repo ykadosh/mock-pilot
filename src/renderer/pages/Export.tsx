@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
+import { PageLayout } from "../components/layout/PageLayout";
+import { SectionCard } from "../components/ui/SectionCard";
 
 type DevicePreset = "laptop" | "tablet" | "mobile";
 
@@ -189,26 +191,19 @@ export function Export() {
     <div className="h-screen flex flex-col overflow-hidden">
       <TopNav activeTab="export" projectId={projectId} />
       <div className="flex flex-1 min-h-0">
-        <main className="flex-1 min-w-0 bg-background overflow-y-auto p-lg">
-          <header className="mb-lg max-w-5xl mx-auto">
-            <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">
-              Export Project
-            </h1>
-            <p className="text-ui-small text-outline">
-              Configure and generate production-ready assets from {project?.title || "Project Alpha"}.
-            </p>
-          </header>
-
+        <PageLayout
+          title="Export Project"
+          subtitle={`Configure and generate production-ready assets from ${project?.title || "Project Alpha"}.`}
+        >
           {!html ? (
-            <p className="text-body-main text-on-surface-variant max-w-5xl mx-auto">
+            <p className="text-body-main text-on-surface-variant">
               {!projectId ? "No project selected." : "Loading project…"}
             </p>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-md max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-md">
               {/* Section 1: Files Export */}
-              <section className="lg:col-span-4 bg-surface-container border border-[#334155] p-md flex flex-col justify-between">
+              <SectionCard title="FILES" className="lg:col-span-4 flex flex-col justify-between">
                 <div>
-                  <h2 className="font-label-caps text-label-caps text-secondary mb-md">FILES</h2>
                   <p className="text-body-main text-on-surface-variant mb-lg leading-relaxed">
                     Generate a production-ready package containing compiled HTML5, modular CSS, and optimized asset links.
                   </p>
@@ -244,11 +239,10 @@ export function Export() {
                     <p className="text-[10px] text-outline mt-sm text-center truncate">{filesResult}</p>
                   )}
                 </div>
-              </section>
+              </SectionCard>
 
               {/* Section 2: Image Render */}
-              <section className="lg:col-span-8 bg-surface-container border border-[#334155] p-md">
-                <h2 className="font-label-caps text-label-caps text-secondary mb-md">IMAGE RENDER</h2>
+              <SectionCard title="IMAGE RENDER" className="lg:col-span-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-lg h-[calc(100%-2rem)]">
                   <div className="space-y-lg">
                     <div>
@@ -340,10 +334,10 @@ export function Export() {
                     )}
                   </div>
                 </div>
-              </section>
+              </SectionCard>
 
               {/* Section 3: Open in Browser */}
-              <section className="lg:col-span-12 bg-surface-container border border-[#334155] p-md flex flex-col md:flex-row items-center justify-between gap-md">
+              <SectionCard className="lg:col-span-12 flex flex-col md:flex-row items-center justify-between gap-md">
                 <div className="flex items-center gap-lg min-w-0 flex-1">
                   <div className="w-12 h-12 bg-[#334155] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-secondary text-2xl">open_in_browser</span>
@@ -364,10 +358,10 @@ export function Export() {
                     Open in Browser
                   </button>
                 </div>
-              </section>
+              </SectionCard>
 
               {/* Section 4: Deployment */}
-              <section className="lg:col-span-12 bg-surface-container border border-[#334155] p-md flex flex-col md:flex-row items-center justify-between gap-md">
+              <SectionCard className="lg:col-span-12 flex flex-col md:flex-row items-center justify-between gap-md">
                 <div className="flex items-center gap-lg min-w-0 flex-1">
                   <div className="w-12 h-12 bg-[#334155] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-secondary text-2xl">cloud_sync</span>
@@ -397,7 +391,7 @@ export function Export() {
                     {deploying === "stackblitz" ? "Deploying…" : "Open in StackBlitz"}
                   </button>
                 </div>
-              </section>
+              </SectionCard>
 
               {/* Deploy Status */}
               <section className={`lg:col-span-12 bg-surface-container-low border p-sm ${deployError ? 'border-error/20' : 'border-[#334155]'}`}>
@@ -419,7 +413,7 @@ export function Export() {
               </section>
             </div>
           )}
-        </main>
+        </PageLayout>
       </div>
     </div>
   );

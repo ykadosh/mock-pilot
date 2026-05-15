@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
+import { PageLayout } from "../components/layout/PageLayout";
+import { SectionCard } from "../components/ui/SectionCard";
 import { Dialog } from "../components/ui/Dialog";
 
 interface ProjectMeta {
@@ -88,79 +90,61 @@ export function Settings() {
     ? getTimeSince(lastUpdated)
     : null;
 
+  const headerActions = (
+    <>
+      <button
+        onClick={handleDiscard}
+        disabled={!hasChanges}
+        className="px-md py-sm text-ui-small font-bold text-on-surface border border-outline hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Discard
+      </button>
+      <button
+        onClick={handleRename}
+        disabled={!hasChanges}
+        className="px-md py-sm text-ui-small font-bold text-white bg-primary-container hover:opacity-90 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {nameSaved ? "Saved ✓" : "Save Changes"}
+      </button>
+    </>
+  );
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <TopNav activeTab="settings" projectId={projectId} />
       <div className="flex flex-1 min-h-0">
-        <main className="flex-1 min-w-0 bg-surface-container-lowest overflow-y-auto p-xl">
-          <div className="max-w-4xl mx-auto space-y-lg">
-            {/* Header Section */}
-            <div className="flex items-end justify-between border-b border-outline-variant pb-md mb-xl">
-              <div>
-                <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">
-                  General Settings
-                </h1>
-                <p className="font-body-main text-body-main text-outline">
-                  Manage your project core configuration.
-                </p>
-              </div>
-              <div className="flex gap-md">
-                <button
-                  onClick={handleDiscard}
-                  disabled={!hasChanges}
-                  className="px-md py-sm text-ui-small font-bold text-on-surface border border-outline hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Discard
-                </button>
-                <button
-                  onClick={handleRename}
-                  disabled={!hasChanges}
-                  className="px-md py-sm text-ui-small font-bold text-white bg-primary-container hover:opacity-90 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {nameSaved ? "Saved ✓" : "Save Changes"}
-                </button>
-              </div>
-            </div>
-
+        <PageLayout
+          title="General Settings"
+          subtitle="Manage your project core configuration."
+          headerActions={headerActions}
+        >
             {project ? (
               <div className="grid grid-cols-12 gap-md">
                 {/* Project Name Card */}
-                <div className="col-span-12 bg-surface-container-low border border-outline-variant overflow-hidden">
-                  <div className="bg-surface-container-high px-md py-sm border-b border-outline-variant">
-                    <h3 className="font-label-caps text-label-caps text-on-surface">
-                      Project Name
-                    </h3>
-                  </div>
-                  <div className="p-md">
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleRename();
-                      }}
-                      className="w-full bg-surface-container-lowest border border-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container text-on-surface font-body-main px-md py-md transition-all outline-none"
-                    />
-                    <p className="mt-sm text-ui-small text-outline">
-                      The display name for this project.
-                    </p>
-                  </div>
-                </div>
+                <SectionCard title="PROJECT NAME" className="col-span-12">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRename();
+                    }}
+                    className="w-full bg-surface-container-lowest border border-[#334155] focus:border-primary-container focus:ring-1 focus:ring-primary-container text-on-surface font-body-main px-md py-md transition-all outline-none"
+                  />
+                  <p className="mt-sm text-ui-small text-outline">
+                    The display name for this project.
+                  </p>
+                </SectionCard>
 
                 {/* Technical Metadata Section */}
-                <div className="col-span-12 bg-surface-container-low border border-outline-variant overflow-hidden">
-                  <div className="bg-surface-container-high px-md py-sm border-b border-outline-variant">
-                    <h3 className="font-label-caps text-label-caps text-on-surface">
-                      Technical Information
-                    </h3>
-                  </div>
-                  <div className="p-md grid grid-cols-1 md:grid-cols-3 gap-lg">
+                <SectionCard title="TECHNICAL INFORMATION" className="col-span-12">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
                     {/* Source URL */}
                     <div className="space-y-xs">
                       <span className="text-label-caps font-label-caps text-outline block">
                         Source URL
                       </span>
-                      <div className="flex items-center gap-xs font-code-block text-code-block text-on-surface bg-surface-container-lowest px-sm py-xs border border-outline-variant overflow-hidden">
+                      <div className="flex items-center gap-xs font-code-block text-code-block text-on-surface bg-surface-container-lowest px-sm py-xs border border-[#334155] overflow-hidden">
                         <span className="truncate flex-1">{project.url}</span>
                         <span
                           className="material-symbols-outlined text-sm cursor-pointer hover:text-primary shrink-0"
@@ -216,16 +200,11 @@ export function Settings() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </SectionCard>
 
                 {/* Last Activity */}
-                <div className="col-span-12 bg-surface-container-low border border-outline-variant overflow-hidden">
-                  <div className="bg-surface-container-high px-md py-sm border-b border-outline-variant">
-                    <h3 className="font-label-caps text-label-caps text-on-surface">
-                      Last Activity
-                    </h3>
-                  </div>
-                  <div className="p-md flex items-center gap-md">
+                <SectionCard title="LAST ACTIVITY" className="col-span-12">
+                  <div className="flex items-center gap-md">
                     <div className="text-4xl font-bold text-on-surface-variant opacity-20">
                       {timeSinceUpdate ?? "—"}
                     </div>
@@ -244,17 +223,11 @@ export function Settings() {
                       </p>
                     </div>
                   </div>
-                </div>
+                </SectionCard>
 
                 {/* Danger Zone */}
-                <div className="col-span-12 border-2 border-error-container bg-[#1a0002] overflow-hidden mt-lg">
-                  <div className="bg-error-container/20 px-md py-sm border-b border-error-container flex items-center gap-xs">
-                    <span className="material-symbols-outlined text-error text-[16px]">warning</span>
-                    <h3 className="font-label-caps text-label-caps text-error">
-                      Danger Zone
-                    </h3>
-                  </div>
-                  <div className="p-md flex flex-col md:flex-row md:items-center justify-between gap-md">
+                <SectionCard title="DANGER ZONE" variant="danger" className="col-span-12 mt-lg">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-md">
                     <p className="font-body-main text-on-surface">
                       Permanently remove this project and all its associated
                       data. This action is irreversible.
@@ -269,7 +242,7 @@ export function Settings() {
                       Delete Project
                     </button>
                   </div>
-                </div>
+                </SectionCard>
               </div>
             ) : (
               <p className="text-body-main text-on-surface-variant">
@@ -277,7 +250,6 @@ export function Settings() {
               </p>
             )}
 
-            {/* Delete Confirmation Dialog */}
             <Dialog
               open={showDeleteDialog}
               onClose={() => setShowDeleteDialog(false)}
@@ -307,8 +279,7 @@ export function Settings() {
                 </button>
               </div>
             </Dialog>
-          </div>
-        </main>
+        </PageLayout>
       </div>
     </div>
   );
