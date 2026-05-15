@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld("api", {
   // Updates
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
+  openProjectInBrowser: (id: string) => ipcRenderer.invoke("open-project-in-browser", id),
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
   // Export
   exportSaveFiles: (data: { projectId: string; html: string; baseUrl?: string }) =>

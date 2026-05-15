@@ -800,6 +800,14 @@ Return only the modified HTML element:`;
     shell.openExternal(url);
   });
 
+  // Open the project's latest HTML file in the default browser
+  ipcMain.handle("open-project-in-browser", (_event, id: string) => {
+    const htmlPath = path.join(projectsDir, `${id}.html`);
+    if (!fs.existsSync(htmlPath)) return { success: false, error: "Project file not found" };
+    shell.openPath(htmlPath);
+    return { success: true };
+  });
+
   // Get current app version
   ipcMain.handle("get-app-version", () => {
     return app.getVersion();

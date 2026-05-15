@@ -80,6 +80,7 @@ declare global {
         error?: string;
       }>;
       openExternal: (url: string) => Promise<void>;
+      openProjectInBrowser: (id: string) => Promise<{ success: boolean; error?: string }>;
       getAppVersion: () => Promise<string>;
       // Export
       exportSaveFiles: (data: { projectId: string; html: string; baseUrl?: string }) => Promise<{

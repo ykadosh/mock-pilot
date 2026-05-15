@@ -208,7 +208,7 @@ export function Export() {
               {/* Section 1: Files Export */}
               <section className="lg:col-span-4 bg-surface-container border border-[#334155] p-md flex flex-col justify-between">
                 <div>
-                  <h2 className="font-label-caps text-label-caps text-secondary mb-md">1. FILES</h2>
+                  <h2 className="font-label-caps text-label-caps text-secondary mb-md">FILES</h2>
                   <p className="text-body-main text-on-surface-variant mb-lg leading-relaxed">
                     Generate a production-ready package containing compiled HTML5, modular CSS, and optimized asset links.
                   </p>
@@ -248,7 +248,7 @@ export function Export() {
 
               {/* Section 2: Image Render */}
               <section className="lg:col-span-8 bg-surface-container border border-[#334155] p-md">
-                <h2 className="font-label-caps text-label-caps text-secondary mb-md">2. IMAGE RENDER</h2>
+                <h2 className="font-label-caps text-label-caps text-secondary mb-md">IMAGE RENDER</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-lg h-[calc(100%-2rem)]">
                   <div className="space-y-lg">
                     <div>
@@ -342,14 +342,38 @@ export function Export() {
                 </div>
               </section>
 
-              {/* Section 3: Deployment */}
+              {/* Section 3: Open in Browser */}
+              <section className="lg:col-span-12 bg-surface-container border border-[#334155] p-md flex flex-col md:flex-row items-center justify-between gap-md">
+                <div className="flex items-center gap-lg min-w-0 flex-1">
+                  <div className="w-12 h-12 bg-[#334155] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-secondary text-2xl">open_in_browser</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="font-label-caps text-label-caps text-secondary">OPEN IN BROWSER</h2>
+                    <p className="text-ui-small text-on-surface-variant">
+                      Open the latest saved revision of this project directly in your default browser.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-sm shrink-0">
+                  <button
+                    onClick={() => projectId && window.api.openProjectInBrowser(projectId)}
+                    className="px-lg py-3 bg-transparent border border-outline hover:bg-surface-container-highest text-on-surface text-ui-small flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">open_in_browser</span>
+                    Open in Browser
+                  </button>
+                </div>
+              </section>
+
+              {/* Section 4: Deployment */}
               <section className="lg:col-span-12 bg-surface-container border border-[#334155] p-md flex flex-col md:flex-row items-center justify-between gap-md">
                 <div className="flex items-center gap-lg min-w-0 flex-1">
                   <div className="w-12 h-12 bg-[#334155] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-secondary text-2xl">cloud_sync</span>
                   </div>
                   <div className="min-w-0">
-                    <h2 className="font-label-caps text-label-caps text-secondary">3. DEPLOYMENT</h2>
+                    <h2 className="font-label-caps text-label-caps text-secondary">DEPLOYMENT</h2>
                     <p className="text-ui-small text-on-surface-variant">
                       Push your latest build directly to external platforms for collaborative editing or live staging.
                     </p>
