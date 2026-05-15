@@ -148,7 +148,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
   const { width: deviceWidth, height: deviceHeight } = DEVICE_SIZES[device];
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden select-none">
       <TopNav
         activeTab={codeEditorOpen ? "code-editor" : "editor"}
         projectId={projectId}
