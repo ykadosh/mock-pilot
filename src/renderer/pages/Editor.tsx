@@ -40,6 +40,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
   const [historyOpen, setHistoryOpen] = useState(false);
   const codeEditorOpen = codeEditorDefault;
   const [codeTab, setCodeTab] = useState<"html" | "css">("html");
+  const [codeDirty, setCodeDirty] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [assetsBasePath, setAssetsBasePath] = useState<string | null>(getAssetsBasePath());
   const canvasRef = useRef<CanvasPreviewHandle>(null);
@@ -171,7 +172,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
         />
       )}
       <div className="flex flex-1 min-h-0">
-        <main className="flex-1 min-w-0 bg-[#020617] flex flex-col h-full relative">
+        <main className="flex-1 min-w-0 bg-background flex flex-col h-full relative">
           {/* Toolbar */}
           <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">
             {codeEditorOpen ? (
@@ -201,15 +202,18 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
                 </div>
                 <button
                   onClick={() => codeEditorRef.current?.update()}
-                  className="px-3 py-1 text-xs font-mono bg-violet-600 hover:bg-violet-500 text-white rounded cursor-pointer transition-colors"
+                  className="px-3 py-1 text-xs font-mono bg-violet-600 hover:bg-violet-500 text-white rounded cursor-pointer transition-colors relative"
                 >
-                  Update
+                  Save
+                  {codeDirty && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-on-primary-container" />
+                  )}
                 </button>
               </>
             ) : (
               <>
                 {/* Device buttons lip — absolutely positioned */}
-                <div className="absolute top-0 bottom-[-5px] left-md flex items-center bg-[#020617] rounded-b-lg px-1 border border-t-0 border-[#334155]">
+                <div className="absolute top-0 bottom-[-5px] left-md flex items-center bg-background rounded-b-lg px-1 border border-t-0 border-[#334155]">
                   <button
                     onClick={() => setDevice("desktop")}
                     className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
@@ -266,6 +270,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
               htmlContent={history.currentHtml}
               onUpdate={handleCodeUpdate}
               activeTab={codeTab}
+              onDirtyChange={setCodeDirty}
             />
           ) : (
             <CanvasPreview

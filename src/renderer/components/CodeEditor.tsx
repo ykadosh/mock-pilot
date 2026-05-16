@@ -16,6 +16,7 @@ interface CodeEditorProps {
   htmlContent: string;
   onUpdate: (fullHtml: string, label: string) => void;
   activeTab: Tab;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 function extractParts(fullHtml: string) {
@@ -55,11 +56,13 @@ function reassemble(originalHtml: string, newBodyHtml: string, newCss: string): 
   return "<!DOCTYPE html><html>" + doc.documentElement.innerHTML + "</html>";
 }
 
-export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor({ htmlContent, onUpdate, activeTab }, ref) {
+export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor({ htmlContent, onUpdate, activeTab, onDirtyChange }, ref) {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const htmlDocRef = useRef("");
   const cssDocRef = useRef("");
+  const initialHtmlRef = useRef("");
+  const initialCssRef = useRef("");
   const initializedRef = useRef(false);
 
   // Parse the incoming HTML into parts on first load
@@ -68,6 +71,8 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
     const { bodyHtml, cssContent } = extractParts(htmlContent);
     htmlDocRef.current = bodyHtml;
     cssDocRef.current = cssContent;
+    initialHtmlRef.current = bodyHtml;
+    initialCssRef.current = cssContent;
     initializedRef.current = true;
   }, [htmlContent]);
 
@@ -88,12 +93,13 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
       extensions: [
         basicSetup,
         lang,
-        oneDark,
         EditorView.theme({
-          "&": { height: "100%", fontSize: "13px" },
+          "&": { height: "100%", fontSize: "13px", backgroundColor: "var(--color-background)" },
           ".cm-scroller": { overflow: "auto" },
           ".cm-content": { fontFamily: "'JetBrains Mono', 'Fira Code', monospace" },
-        }),
+          ".cm-gutters": { backgroundColor: "var(--color-background)", borderRight: "none" },
+        }, { dark: true }),
+        oneDark,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const value = update.state.doc.toString();
@@ -102,6 +108,8 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
             } else {
               cssDocRef.current = value;
             }
+            const isDirty = htmlDocRef.current !== initialHtmlRef.current || cssDocRef.current !== initialCssRef.current;
+            onDirtyChange?.(isDirty);
           }
         }),
       ],
@@ -125,11 +133,14 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
     update: () => {
       const fullHtml = reassemble(htmlContent, htmlDocRef.current, cssDocRef.current);
       onUpdate(fullHtml, "Code edit");
+      initialHtmlRef.current = htmlDocRef.current;
+      initialCssRef.current = cssDocRef.current;
+      onDirtyChange?.(false);
     },
-  }), [htmlContent, onUpdate]);
+  }), [htmlContent, onUpdate, onDirtyChange]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#020617]">
+    <div className="flex-1 flex flex-col min-h-0 bg-background">
       <div ref={editorContainerRef} className="flex-1 min-h-0 overflow-hidden" />
     </div>
   );
