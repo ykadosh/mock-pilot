@@ -180,10 +180,15 @@ export function CaptureBrowser() {
       log("Starting capture for", currentUrl);
 
       // Capture and inline iframes before the main capture script.
-      // Cross-origin iframes can't be accessed from the webview, so we use
-      // Puppeteer via the main process to capture each iframe's content.
+      // We use Electron's webFrameMain API via the main process to access
+      // the already-loaded iframe content directly — no Puppeteer, no bot detection.
       advanceStep("stylesheets"); // reuse first step for iframe processing
       log("Checking for iframes to inline...");
+
+      // Get the webview's webContentsId to access its frames from the main process
+      const wcId: number | undefined = (wv as unknown as { getWebContentsId?: () => number }).getWebContentsId?.();
+
+      // Get iframe info from the DOM (src and index for matching)
       const iframeData: { src: string; index: number }[] = await wv.executeJavaScript(`
         (function() {
           var iframes = document.querySelectorAll("iframe");
@@ -201,26 +206,38 @@ export function CaptureBrowser() {
 
       if (iframeData.length > 0) {
         log(`Found ${iframeData.length} iframe(s) to capture`);
-        // Process in reverse order so indices remain valid after replacement
-        for (const { src, index } of [...iframeData].reverse()) {
-          log(`Capturing iframe ${index}: ${src.substring(0, 80)}...`);
-          try {
-            const result = await window.api.captureIframe(src);
-            if (result.success && result.html) {
-              log(`Iframe ${index} captured (${result.html.length} chars), injecting...`);
-              // Inject the captured content into the webview, replacing the iframe
+
+        // Use the webContentsId to capture iframe content via Electron's frame API
+        const capturedFrames = wcId
+          ? await window.api.captureWebviewIframes(wcId)
+          : { success: false, error: "Could not get webContentsId" };
+
+        if (capturedFrames.success && capturedFrames.iframes && capturedFrames.iframes.length > 0) {
+          log(`Captured ${capturedFrames.iframes.length} frame(s) via webFrameMain`);
+
+          // Match captured frames to iframes by URL and inject in reverse order
+          for (const { src, index } of [...iframeData].reverse()) {
+            // Find the matching captured frame by URL
+            const captured = capturedFrames.iframes.find(f => {
+              // Normalize URLs for comparison (remove trailing slashes, fragments)
+              const normalize = (u: string) => u.replace(/[#?].*$/, "").replace(/\/+$/, "");
+              return normalize(f.url) === normalize(src) || f.url.includes(src) || src.includes(f.url);
+            });
+
+            if (captured) {
+              log(`Iframe ${index} matched frame (${captured.html.length} chars), injecting...`);
+              const escapedHtml = JSON.stringify(captured.html);
               await wv.executeJavaScript(`
                 (function() {
                   var iframe = document.querySelectorAll("iframe")[${index}];
                   if (!iframe) return;
 
                   var scopeId = "iframe-inline-${index}";
-                  var doc = new DOMParser().parseFromString(${JSON.stringify(result.html)}, "text/html");
+                  var doc = new DOMParser().parseFromString(${escapedHtml}, "text/html");
                   var container = document.createElement("div");
                   container.setAttribute("data-iframe-inline", scopeId);
                   container.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
 
-                  // Preserve iframe dimensions
                   var width = iframe.getAttribute("width") || iframe.style.width || "100%";
                   var height = iframe.getAttribute("height") || iframe.style.height || "auto";
                   container.style.width = (typeof width === "string" && width.indexOf("%") >= 0) ? width : width + "px";
@@ -228,7 +245,6 @@ export function CaptureBrowser() {
                   container.style.overflow = "hidden";
                   container.style.position = "relative";
 
-                  // Scope and inject iframe CSS
                   var scopeSelector = '[data-iframe-inline="' + scopeId + '"]';
                   var iframeStyles = doc.querySelectorAll("style");
                   for (var si = 0; si < iframeStyles.length; si++) {
@@ -248,7 +264,6 @@ export function CaptureBrowser() {
                     container.appendChild(scopedStyle);
                   }
 
-                  // Copy body content
                   var bodyContent = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
                   var contentWrapper = document.createElement("div");
                   contentWrapper.innerHTML = bodyContent;
@@ -259,8 +274,7 @@ export function CaptureBrowser() {
               `);
               log(`Iframe ${index} inlined successfully`);
             } else {
-              log(`Iframe ${index} capture failed: ${result.error || "unknown error"}`);
-              // Replace with placeholder
+              log(`Iframe ${index} (${src.substring(0, 60)}) - no matching frame found, replacing with placeholder`);
               await wv.executeJavaScript(`
                 (function() {
                   var iframe = document.querySelectorAll("iframe")[${index}];
@@ -277,8 +291,26 @@ export function CaptureBrowser() {
                 })()
               `);
             }
-          } catch (iframeErr) {
-            log(`Iframe ${index} error: ${iframeErr instanceof Error ? iframeErr.message : String(iframeErr)}`);
+          }
+        } else {
+          log(`Frame capture failed or returned empty: ${capturedFrames.error || "no frames"}`);
+          // Fallback: replace all iframes with placeholders
+          for (const { index } of [...iframeData].reverse()) {
+            await wv.executeJavaScript(`
+              (function() {
+                var iframe = document.querySelectorAll("iframe")[${index}];
+                if (!iframe) return;
+                var placeholder = document.createElement("div");
+                placeholder.setAttribute("data-iframe-failed", "true");
+                placeholder.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
+                placeholder.style.border = "1px dashed #ccc";
+                placeholder.style.padding = "1em";
+                placeholder.style.textAlign = "center";
+                placeholder.style.color = "#999";
+                placeholder.textContent = "[iframe content could not be captured]";
+                iframe.replaceWith(placeholder);
+              })()
+            `);
           }
         }
         log("Iframe processing complete");

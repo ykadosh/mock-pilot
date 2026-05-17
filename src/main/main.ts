@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, net, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, protocol, net, shell, webContents } from "electron";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
@@ -924,84 +924,101 @@ app.on("ready", () => {
     console.log("[Capture]", ...args);
   });
 
-  // Capture an iframe URL using Puppeteer and return its inlined HTML content.
-  // Used by the CaptureBrowser to replace cross-origin iframes with static content.
-  ipcMain.handle("capture-iframe", async (_event, url: string) => {
+  // Capture all iframe content from an already-loaded webview using Electron's webFrameMain API.
+  // This avoids Puppeteer and bot detection since the iframes are already loaded in the webview.
+  ipcMain.handle("capture-webview-iframes", async (_event, webContentsId: number) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const puppeteer = require("puppeteer");
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-      try {
-        const page = await browser.newPage();
-        await page.setViewport({ width: 1280, height: 800 });
-        await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
-        page.setDefaultTimeout(30000);
+      const wc = webContents.fromId(webContentsId);
+      if (!wc) return { success: false, error: "WebContents not found" };
 
-        // Run the inline capture script to get fully self-contained HTML
-        const html = await page.evaluate(async () => {
+      const mainFrame = wc.mainFrame;
+      const childFrames = mainFrame.frames;
+
+      if (childFrames.length === 0) {
+        return { success: true, iframes: [] };
+      }
+
+      console.log(`[Capture] Found ${childFrames.length} child frame(s) in webview`);
+
+      const captureScript = `
+        (async function() {
           // Inline external stylesheets
-          const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
-          for (const link of stylesheets) {
+          var stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
+          for (var i = 0; i < stylesheets.length; i++) {
             try {
-              const href = (link as HTMLLinkElement).href;
-              const res = await fetch(href);
-              const css = await res.text();
-              const style = document.createElement("style");
+              var href = stylesheets[i].href;
+              var res = await fetch(href);
+              var css = await res.text();
+              var style = document.createElement("style");
               style.textContent = css;
-              link.replaceWith(style);
-            } catch {}
+              stylesheets[i].replaceWith(style);
+            } catch(e) {}
           }
 
           // Convert images to data URIs
-          const images = document.querySelectorAll("img");
-          for (const img of images) {
+          var images = document.querySelectorAll("img");
+          for (var j = 0; j < images.length; j++) {
             try {
+              var img = images[j];
               if (!img.complete || img.naturalWidth === 0) continue;
-              const canvas = document.createElement("canvas");
+              var canvas = document.createElement("canvas");
               canvas.width = img.naturalWidth || img.width || 300;
               canvas.height = img.naturalHeight || img.height || 200;
-              const ctx = canvas.getContext("2d");
+              var ctx = canvas.getContext("2d");
               if (ctx) {
                 ctx.drawImage(img, 0, 0);
                 img.src = canvas.toDataURL("image/png");
                 img.removeAttribute("srcset");
               }
-            } catch {}
+            } catch(e) {}
           }
 
           // Remove scripts
-          document.querySelectorAll("script").forEach(s => s.remove());
+          document.querySelectorAll("script").forEach(function(s) { s.remove(); });
 
           // Remove preload/prefetch links
-          document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"], link[rel="icon"]').forEach(l => l.remove());
+          document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"], link[rel="icon"]').forEach(function(l) { l.remove(); });
 
-          // Serialize CSSOM rules
-          document.querySelectorAll("style").forEach(style => {
+          // Serialize CSSOM rules (captures CSS injected via insertRule)
+          document.querySelectorAll("style").forEach(function(style) {
             try {
-              const sheet = style.sheet;
+              var sheet = style.sheet;
               if (sheet && sheet.cssRules && sheet.cssRules.length > 0) {
-                const rules: string[] = [];
-                for (let i = 0; i < sheet.cssRules.length; i++) {
-                  rules.push(sheet.cssRules[i].cssText);
+                var rules = [];
+                for (var k = 0; k < sheet.cssRules.length; k++) {
+                  rules.push(sheet.cssRules[k].cssText);
                 }
-                const serialized = rules.join("\n");
+                var serialized = rules.join("\\n");
                 if (serialized !== (style.textContent || "").trim()) {
                   style.textContent = serialized;
                 }
               }
-            } catch {}
+            } catch(e) {}
           });
 
           return document.documentElement.outerHTML;
-        });
+        })()
+      `;
 
-        return { success: true, html };
-      } finally {
-        await browser.close();
+      const results: { url: string; html: string }[] = [];
+
+      for (const frame of childFrames) {
+        try {
+          const frameUrl = frame.url;
+          // Skip about:blank and data: frames
+          if (!frameUrl || frameUrl === "about:blank" || frameUrl.startsWith("data:") || frameUrl.startsWith("javascript:")) {
+            continue;
+          }
+          console.log(`[Capture] Capturing frame: ${frameUrl.substring(0, 80)}`);
+          const html = await frame.executeJavaScript(captureScript);
+          results.push({ url: frameUrl, html });
+          console.log(`[Capture] Frame captured: ${html.length} chars`);
+        } catch (frameErr) {
+          console.error(`[Capture] Failed to capture frame:`, frameErr instanceof Error ? frameErr.message : frameErr);
+        }
       }
+
+      return { success: true, iframes: results };
     } catch (error: unknown) {
       return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }

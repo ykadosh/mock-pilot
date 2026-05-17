@@ -12,7 +12,7 @@ declare global {
   interface Window {
     api: {
       captureLog: (...args: unknown[]) => Promise<void>;
-      captureIframe: (url: string) => Promise<{ success: boolean; html?: string; error?: string }>;
+      captureWebviewIframes: (webContentsId: number) => Promise<{ success: boolean; iframes?: { url: string; html: string }[]; error?: string }>;
       captureWebsite: (url: string) => Promise<{
         success: boolean;
         html?: string;
