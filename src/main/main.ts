@@ -931,10 +931,11 @@ app.on("ready", () => {
       const wc = webContents.fromId(webContentsId);
       if (!wc) return { success: false, error: "WebContents not found" };
 
-      // Wait for frames to load — use a fixed delay to avoid interfering with
-      // frame navigation (repeated executeJavaScript can disrupt cross-origin redirects)
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Use Chrome DevTools Protocol to enumerate all frames and capture their content.
+      // webFrameMain.frames is unreliable for cross-origin redirected frames (URL stays empty).
+      const frameLog: string[] = [];
 
+      // First, still collect webFrameMain frames for capturing
       let allFrames: Electron.WebFrameMain[] = [];
       const collectFrames = (frame: Electron.WebFrameMain) => {
         for (const child of frame.frames) {
@@ -944,32 +945,89 @@ app.on("ready", () => {
       };
       try {
         collectFrames(wc.mainFrame);
-      } catch {
-        // mainFrame disposed
+      } catch {}
+
+      // Also use CDP to get the real frame tree (shows actual URLs after redirects)
+      let cdpFrames: { frameId: string; url: string; name: string; parentId?: string }[] = [];
+      try {
+        wc.debugger.attach("1.3");
+        const result = await wc.debugger.sendCommand("Page.getFrameTree");
+        const extractFrames = (node: { frame: { id: string; url: string; name: string; parentId?: string }; childFrames?: unknown[] }) => {
+          cdpFrames.push(node.frame);
+          if (node.childFrames) {
+            for (const child of node.childFrames as typeof node[]) {
+              extractFrames(child);
+            }
+          }
+        };
+        extractFrames(result.frameTree);
+        wc.debugger.detach();
+      } catch (e) {
+        frameLog.push(`CDP error: ${e instanceof Error ? e.message : String(e)}`);
+        try { wc.debugger.detach(); } catch {}
       }
 
-      // If any frame has an empty URL, wait more and re-collect
-      if (allFrames.some(f => !f.url)) {
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        allFrames = [];
-        try {
-          collectFrames(wc.mainFrame);
-        } catch {}
+      frameLog.push(`webFrameMain frames: ${allFrames.length}`);
+      frameLog.push(`CDP frames: ${cdpFrames.length}`);
+      for (const cf of cdpFrames) {
+        frameLog.push(`CDP frame: ${cf.url} (id=${cf.frameId}, name=${cf.name})`);
       }
 
-      if (allFrames.length === 0) {
-        return { success: true, iframes: [] };
-      }
-
-      console.log(`[Capture] Found ${allFrames.length} frame(s) in webview (recursive)`);
-      const frameLog: string[] = [`Found ${allFrames.length} frames`];
+      // Build a map of frame URL (from CDP) to webFrameMain object
+      // CDP gives us reliable URLs; webFrameMain gives us executeJavaScript
+      // Match by: frameId, or by position in the tree
       for (const frame of allFrames) {
         let realUrl = frame.url;
         if (!realUrl) {
+          // Try to find this frame's real URL from CDP data
+          // Match by trying executeJavaScript in the frame to get its frameId
           try { realUrl = await frame.executeJavaScript(`document.location.href`); } catch { realUrl = "(inaccessible)"; }
         }
-        console.log(`[Capture] Frame URL: ${frame.url} | real: ${realUrl}`);
-        frameLog.push(`Frame: ${frame.url} | real: ${realUrl}`);
+        frameLog.push(`webFrameMain: ${frame.url} | real: ${realUrl}`);
+      }
+
+      // For frames with empty webFrameMain.url, try to match them with CDP frames
+      // that have real URLs, and use executeJavaScript on them
+      const framesToCapture: { frame: Electron.WebFrameMain; url: string }[] = [];
+      const usedCdpUrls = new Set<string>();
+
+      for (const frame of allFrames) {
+        if (frame.url && frame.url !== "about:blank" && !frame.url.startsWith("data:") && !frame.url.startsWith("javascript:")) {
+          framesToCapture.push({ frame, url: frame.url });
+          usedCdpUrls.add(frame.url);
+        } else {
+          // Empty URL frame — try document.location.href
+          let realUrl = "";
+          try { realUrl = await frame.executeJavaScript(`document.location.href`); } catch {}
+          if (realUrl && realUrl !== "about:blank" && !realUrl.startsWith("data:")) {
+            framesToCapture.push({ frame, url: realUrl });
+            usedCdpUrls.add(realUrl);
+          } else {
+            // Still about:blank — try to find a CDP frame that doesn't match any known frame
+            // This handles cross-origin redirected frames where even location.href is wrong
+            const unmatchedCdp = cdpFrames.filter(cf =>
+              cf.url && cf.url !== "about:blank" && !cf.url.startsWith("data:") &&
+              !usedCdpUrls.has(cf.url) &&
+              // Skip the main frame
+              cf.url !== wc.mainFrame.url
+            );
+            if (unmatchedCdp.length > 0) {
+              // This frame likely corresponds to the unmatched CDP frame
+              framesToCapture.push({ frame, url: unmatchedCdp[0].url });
+              usedCdpUrls.add(unmatchedCdp[0].url);
+              frameLog.push(`Matched empty-URL frame to CDP: ${unmatchedCdp[0].url}`);
+            } else {
+              frameLog.push(`Skipped: ${frame.url} (real: ${realUrl})`);
+            }
+          }
+        }
+      }
+
+      frameLog.push(`Frames to capture: ${framesToCapture.length}`);
+
+      if (framesToCapture.length === 0) {
+        require("fs").writeFileSync("/tmp/mock-pilot-frame-debug.log", frameLog.join("\n"));
+        return { success: true, iframes: [] };
       }
 
       const captureScript = `
@@ -1047,24 +1105,8 @@ app.on("ready", () => {
 
       // Process frames in reverse order (leaf frames first) so that capturing
       // a parent frame doesn't destroy child frames before they're captured
-      for (const frame of [...allFrames].reverse()) {
+      for (const { frame, url: frameUrl } of [...framesToCapture].reverse()) {
         try {
-          // Get URL from frame.url first, but also try document.location.href
-          // (frame.url can be empty for cross-origin redirected frames)
-          let frameUrl = frame.url;
-          if (!frameUrl || frameUrl === "about:blank") {
-            try {
-              frameUrl = await frame.executeJavaScript(`document.location.href`);
-            } catch {
-              // Can't access frame at all
-            }
-          }
-          // Skip about:blank, data:, and javascript: frames (but NOT about:srcdoc which has content)
-          if (!frameUrl || frameUrl === "about:blank" || frameUrl.startsWith("data:") || frameUrl.startsWith("javascript:")) {
-            frameLog.push(`Skipped: ${frameUrl}`);
-            continue;
-          }
-          
           // Before capture, get the iframe src URLs inside this frame
           let childIframeSrcs: string[] = [];
           try {
@@ -1086,15 +1128,13 @@ app.on("ready", () => {
           console.log(`[Capture] Capturing frame: ${frameUrl.substring(0, 80)}`);
           const html = await frame.executeJavaScript(captureScript);
           
-          // Check if child iframes were inlined vs remaining
-          const inlinedCount = (html.match(/data-inlined-child-iframe/g) || []).length;
           const remainingIframes = (html.match(/<iframe /g) || []).length;
-          frameLog.push(`Captured: ${frameUrl} (${html.length} chars, ${inlinedCount} inlined, ${remainingIframes} remaining iframes)`);
+          frameLog.push(`Captured: ${frameUrl} (${html.length} chars, ${remainingIframes} remaining iframes)`);
           
           results.push({ url: frameUrl, html, childIframeSrcs });
           console.log(`[Capture] Frame captured: ${html.length} chars`);
         } catch (frameErr) {
-          frameLog.push(`Failed: ${frameErr instanceof Error ? frameErr.message : String(frameErr)}`);
+          frameLog.push(`Failed ${frameUrl}: ${frameErr instanceof Error ? frameErr.message : String(frameErr)}`);
           console.error(`[Capture] Failed to capture frame:`, frameErr instanceof Error ? frameErr.message : frameErr);
         }
       }
