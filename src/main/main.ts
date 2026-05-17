@@ -970,71 +970,6 @@ app.on("ready", () => {
             } catch(e) {}
           }
 
-          // Try to inline child iframes that we can access (same-origin)
-          var childIframes = document.querySelectorAll("iframe");
-          for (var ci = childIframes.length - 1; ci >= 0; ci--) {
-            try {
-              var cif = childIframes[ci];
-              var childDoc = cif.contentDocument || (cif.contentWindow && cif.contentWindow.document);
-              if (childDoc && childDoc.documentElement) {
-                // Inline stylesheets in the child iframe first
-                var childStyles = childDoc.querySelectorAll('link[rel="stylesheet"]');
-                for (var csi = 0; csi < childStyles.length; csi++) {
-                  try {
-                    var chref = childStyles[csi].href;
-                    var cres = await fetch(chref);
-                    var ccss = await cres.text();
-                    var cstyle = childDoc.createElement("style");
-                    cstyle.textContent = ccss;
-                    childStyles[csi].replaceWith(cstyle);
-                  } catch(e) {}
-                }
-                // Remove scripts from child
-                childDoc.querySelectorAll("script").forEach(function(s) { s.remove(); });
-                // Serialize child CSSOM
-                childDoc.querySelectorAll("style").forEach(function(st) {
-                  try {
-                    var sh = st.sheet;
-                    if (sh && sh.cssRules && sh.cssRules.length > 0) {
-                      var rs = [];
-                      for (var rk = 0; rk < sh.cssRules.length; rk++) rs.push(sh.cssRules[rk].cssText);
-                      st.textContent = rs.join("\\n");
-                    }
-                  } catch(e) {}
-                });
-                // Create replacement container
-                var container = document.createElement("div");
-                container.setAttribute("data-inlined-child-iframe", "true");
-                container.setAttribute("data-original-src", cif.getAttribute("src") || cif.src || "");
-                var w = cif.getAttribute("width") || cif.style.width || "100%";
-                var h = cif.getAttribute("height") || cif.style.height || "100%";
-                container.style.width = (typeof w === "string" && w.indexOf("%") >= 0) ? w : (parseInt(w) ? w + "px" : w);
-                container.style.height = (typeof h === "string" && h.indexOf("%") >= 0) ? h : (parseInt(h) ? h + "px" : h);
-                container.style.overflow = "hidden";
-                // Copy head styles
-                var headStyles = childDoc.querySelectorAll("style");
-                for (var hs = 0; hs < headStyles.length; hs++) {
-                  container.appendChild(headStyles[hs].cloneNode(true));
-                }
-                // Copy body content
-                if (childDoc.body) {
-                  container.innerHTML += childDoc.body.innerHTML;
-                }
-                // Remove trust warnings from inlined content
-                container.querySelectorAll('[class*="trust-warning"], [class*="TrustWarning"]').forEach(function(el) { el.remove(); });
-                var allEls = container.querySelectorAll("div, section, aside, p, span");
-                for (var ae = 0; ae < allEls.length; ae++) {
-                  if (allEls[ae].textContent && allEls[ae].textContent.indexOf("Do not enter passwords") >= 0) {
-                    allEls[ae].remove();
-                  }
-                }
-                cif.replaceWith(container);
-              }
-            } catch(e) {
-              // Cross-origin, can't access - leave iframe for outer replacement
-            }
-          }
-
           // Convert images to data URIs
           var images = document.querySelectorAll("img");
           for (var j = 0; j < images.length; j++) {
@@ -1061,7 +996,6 @@ app.on("ready", () => {
 
           // Remove trust/security warning banners (e.g., CodePen's "Do not enter passwords" warning)
           document.querySelectorAll('#trust-warning, .trust-warning, [class*="trust-warning"], [class*="embed-warning"], #embed-trust, [class*="TrustWarning"], [data-testid*="trust"]').forEach(function(el) { el.remove(); });
-          // Also remove any element containing the specific CodePen trust warning text
           document.querySelectorAll('div, section, aside, p, span').forEach(function(el) {
             if (el.textContent && el.textContent.indexOf('Do not enter passwords') >= 0 && el.textContent.indexOf('CodePen') >= 0) {
               el.remove();
@@ -1091,7 +1025,9 @@ app.on("ready", () => {
 
       const results: { url: string; html: string; childIframeSrcs: string[] }[] = [];
 
-      for (const frame of allFrames) {
+      // Process frames in reverse order (leaf frames first) so that capturing
+      // a parent frame doesn't destroy child frames before they're captured
+      for (const frame of [...allFrames].reverse()) {
         try {
           const frameUrl = frame.url;
           // Skip about:blank, data:, and javascript: frames (but NOT about:srcdoc which has content)
