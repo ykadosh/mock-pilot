@@ -238,10 +238,16 @@ export function CaptureBrowser() {
                   // Find the captured frame whose URL matches this child src
                   const childFrame = capturedFrames.iframes!.find(cf => {
                     const normalize = (u: string) => u.replace(/[#?].*$/, "").replace(/\/+$/, "");
-                    return cf.url !== f.url && (
-                      normalize(cf.url) === normalize(childSrc) ||
-                      cf.url.includes(childSrc) || childSrc.includes(cf.url)
-                    );
+                    if (cf.url === f.url) return false;
+                    if (normalize(cf.url) === normalize(childSrc)) return true;
+                    if (cf.url.includes(childSrc) || childSrc.includes(cf.url)) return true;
+                    // Path-based match (handles domain redirects like codepen.io -> cdpn.io)
+                    try {
+                      const srcPath = new URL(childSrc).pathname.replace(/\/+$/, "");
+                      const cfPath = new URL(cf.url).pathname.replace(/\/+$/, "");
+                      if (srcPath === cfPath && srcPath.length > 1) return true;
+                    } catch { /* ignore */ }
+                    return false;
                   });
                   if (childFrame) {
                     frameMap[childSrc] = childFrame.html;
@@ -257,20 +263,29 @@ export function CaptureBrowser() {
           await wv.executeJavaScript(`
             (function() {
               var capturedMap = ${capturedMap};
-              var mapKeys = Object.keys(capturedMap);
-              console.log("[iframe-capture] capturedMap has " + mapKeys.length + " entries:");
-              mapKeys.forEach(function(k) { console.log("[iframe-capture]   key: " + k.substring(0, 120)); });
 
               function findCapturedHtml(src) {
                 if (capturedMap[src]) return capturedMap[src];
                 // Try normalized
                 var normalized = src.replace(/[#?].*$/, "").replace(/\\/+$/, "");
                 if (capturedMap[normalized]) return capturedMap[normalized];
-                // Try partial match
+                // Try partial match (substring)
                 var keys = Object.keys(capturedMap);
                 for (var i = 0; i < keys.length; i++) {
                   if (keys[i].indexOf(src) >= 0 || src.indexOf(keys[i]) >= 0) return capturedMap[keys[i]];
                 }
+                // Try path-based match (handles domain redirects like codepen.io -> cdpn.io)
+                try {
+                  var srcUrl = new URL(src);
+                  var srcPath = srcUrl.pathname.replace(/\\/+$/, "");
+                  for (var j = 0; j < keys.length; j++) {
+                    try {
+                      var keyUrl = new URL(keys[j]);
+                      var keyPath = keyUrl.pathname.replace(/\\/+$/, "");
+                      if (srcPath === keyPath && srcPath.length > 1) return capturedMap[keys[j]];
+                    } catch(e2) {}
+                  }
+                } catch(e) {}
                 return null;
               }
 
@@ -340,20 +355,13 @@ export function CaptureBrowser() {
 
               function replaceIframeInDoc(doc, iframe, scopeId, parentUrl) {
                 var src = iframe.getAttribute("src") || iframe.getAttribute("data-src") || "";
-                var originalSrc = src;
                 // Resolve relative URL against the PARENT iframe's URL, not the page's baseURI
                 try { src = new URL(src, parentUrl || document.baseURI).href; } catch(e) {}
 
                 var capturedHtml = findCapturedHtml(src);
                 if (!capturedHtml) {
-                  // Instead of removing, replace with debug placeholder showing what we tried to match
-                  var debugDiv = doc.createElement("div");
-                  debugDiv.setAttribute("data-iframe-debug", "true");
-                  debugDiv.setAttribute("data-iframe-original-src", originalSrc);
-                  debugDiv.setAttribute("data-iframe-resolved-src", src);
-                  debugDiv.setAttribute("data-iframe-parent-url", parentUrl || "none");
-                  debugDiv.setAttribute("data-iframe-available-keys", Object.keys(capturedMap).map(function(k) { return k.substring(0, 100); }).join(" | "));
-                  iframe.replaceWith(debugDiv);
+                  // No matching captured content — remove the iframe
+                  iframe.remove();
                   return;
                 }
 
