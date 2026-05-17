@@ -754,10 +754,12 @@ app.on("ready", () => {
           return data;
         });
 
-        if (iframeData.length === 0) return;
+        if (iframeData.length === 0) {
+          console.log(`[Capture] No iframes found at depth ${depth}`);
+          return;
+        }
 
         console.log(`[Capture] Found ${iframeData.length} iframe(s) at depth ${depth}`);
-
         // Process iframes in reverse order so that replacing earlier iframes
         // doesn't shift the indices of later ones
         iframeData.reverse();
@@ -767,7 +769,7 @@ app.on("ready", () => {
               try { return new URL(s, document.baseURI).href; } catch { return s; }
             }, src);
 
-            console.log(`[Capture] Processing iframe ${index}: ${resolvedUrl}`);
+            console.log(`[Capture] Processing iframe ${index}: ${resolvedUrl.substring(0, 80)}`);
 
             // Open a new page for this iframe's content
             const iframePage = await browser.newPage();
@@ -920,6 +922,89 @@ app.on("ready", () => {
 
   ipcMain.handle("capture-log", (_event, ...args: unknown[]) => {
     console.log("[Capture]", ...args);
+  });
+
+  // Capture an iframe URL using Puppeteer and return its inlined HTML content.
+  // Used by the CaptureBrowser to replace cross-origin iframes with static content.
+  ipcMain.handle("capture-iframe", async (_event, url: string) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const puppeteer = require("puppeteer");
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+      try {
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+        await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+        page.setDefaultTimeout(30000);
+
+        // Run the inline capture script to get fully self-contained HTML
+        const html = await page.evaluate(async () => {
+          // Inline external stylesheets
+          const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
+          for (const link of stylesheets) {
+            try {
+              const href = (link as HTMLLinkElement).href;
+              const res = await fetch(href);
+              const css = await res.text();
+              const style = document.createElement("style");
+              style.textContent = css;
+              link.replaceWith(style);
+            } catch {}
+          }
+
+          // Convert images to data URIs
+          const images = document.querySelectorAll("img");
+          for (const img of images) {
+            try {
+              if (!img.complete || img.naturalWidth === 0) continue;
+              const canvas = document.createElement("canvas");
+              canvas.width = img.naturalWidth || img.width || 300;
+              canvas.height = img.naturalHeight || img.height || 200;
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                img.src = canvas.toDataURL("image/png");
+                img.removeAttribute("srcset");
+              }
+            } catch {}
+          }
+
+          // Remove scripts
+          document.querySelectorAll("script").forEach(s => s.remove());
+
+          // Remove preload/prefetch links
+          document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"], link[rel="icon"]').forEach(l => l.remove());
+
+          // Serialize CSSOM rules
+          document.querySelectorAll("style").forEach(style => {
+            try {
+              const sheet = style.sheet;
+              if (sheet && sheet.cssRules && sheet.cssRules.length > 0) {
+                const rules: string[] = [];
+                for (let i = 0; i < sheet.cssRules.length; i++) {
+                  rules.push(sheet.cssRules[i].cssText);
+                }
+                const serialized = rules.join("\n");
+                if (serialized !== (style.textContent || "").trim()) {
+                  style.textContent = serialized;
+                }
+              }
+            } catch {}
+          });
+
+          return document.documentElement.outerHTML;
+        });
+
+        return { success: true, html };
+      } finally {
+        await browser.close();
+      }
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    }
   });
 
   ipcMain.handle("format-html", (_event, rawHtml: string) => {

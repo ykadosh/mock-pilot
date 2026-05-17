@@ -179,6 +179,113 @@ export function CaptureBrowser() {
     try {
       log("Starting capture for", currentUrl);
 
+      // Capture and inline iframes before the main capture script.
+      // Cross-origin iframes can't be accessed from the webview, so we use
+      // Puppeteer via the main process to capture each iframe's content.
+      advanceStep("stylesheets"); // reuse first step for iframe processing
+      log("Checking for iframes to inline...");
+      const iframeData: { src: string; index: number }[] = await wv.executeJavaScript(`
+        (function() {
+          var iframes = document.querySelectorAll("iframe");
+          var data = [];
+          iframes.forEach(function(iframe, index) {
+            var src = iframe.getAttribute("src") || iframe.src;
+            if (src && src !== "about:blank" && src.indexOf("javascript:") !== 0 && src.indexOf("data:") !== 0) {
+              try { src = new URL(src, document.baseURI).href; } catch(e) {}
+              data.push({ src: src, index: index });
+            }
+          });
+          return data;
+        })()
+      `);
+
+      if (iframeData.length > 0) {
+        log(`Found ${iframeData.length} iframe(s) to capture`);
+        // Process in reverse order so indices remain valid after replacement
+        for (const { src, index } of [...iframeData].reverse()) {
+          log(`Capturing iframe ${index}: ${src.substring(0, 80)}...`);
+          try {
+            const result = await window.api.captureIframe(src);
+            if (result.success && result.html) {
+              log(`Iframe ${index} captured (${result.html.length} chars), injecting...`);
+              // Inject the captured content into the webview, replacing the iframe
+              await wv.executeJavaScript(`
+                (function() {
+                  var iframe = document.querySelectorAll("iframe")[${index}];
+                  if (!iframe) return;
+
+                  var scopeId = "iframe-inline-${index}";
+                  var doc = new DOMParser().parseFromString(${JSON.stringify(result.html)}, "text/html");
+                  var container = document.createElement("div");
+                  container.setAttribute("data-iframe-inline", scopeId);
+                  container.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
+
+                  // Preserve iframe dimensions
+                  var width = iframe.getAttribute("width") || iframe.style.width || "100%";
+                  var height = iframe.getAttribute("height") || iframe.style.height || "auto";
+                  container.style.width = (typeof width === "string" && width.indexOf("%") >= 0) ? width : width + "px";
+                  container.style.height = height === "auto" ? "auto" : (typeof height === "string" && height.indexOf("%") >= 0) ? height : height + "px";
+                  container.style.overflow = "hidden";
+                  container.style.position = "relative";
+
+                  // Scope and inject iframe CSS
+                  var scopeSelector = '[data-iframe-inline="' + scopeId + '"]';
+                  var iframeStyles = doc.querySelectorAll("style");
+                  for (var si = 0; si < iframeStyles.length; si++) {
+                    var css = iframeStyles[si].textContent || "";
+                    css = css.replace(/([^{}]+)\\{/g, function(match, selectors) {
+                      if (selectors.trim().charAt(0) === "@") return match;
+                      var parts = selectors.split(",").map(function(sel) {
+                        var trimmed = sel.trim();
+                        if (!trimmed) return sel;
+                        if (trimmed === "html" || trimmed === "body" || trimmed === ":root") return scopeSelector;
+                        return scopeSelector + " " + trimmed;
+                      });
+                      return parts.join(",") + "{";
+                    });
+                    var scopedStyle = document.createElement("style");
+                    scopedStyle.textContent = css;
+                    container.appendChild(scopedStyle);
+                  }
+
+                  // Copy body content
+                  var bodyContent = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
+                  var contentWrapper = document.createElement("div");
+                  contentWrapper.innerHTML = bodyContent;
+                  container.appendChild(contentWrapper);
+
+                  iframe.replaceWith(container);
+                })()
+              `);
+              log(`Iframe ${index} inlined successfully`);
+            } else {
+              log(`Iframe ${index} capture failed: ${result.error || "unknown error"}`);
+              // Replace with placeholder
+              await wv.executeJavaScript(`
+                (function() {
+                  var iframe = document.querySelectorAll("iframe")[${index}];
+                  if (!iframe) return;
+                  var placeholder = document.createElement("div");
+                  placeholder.setAttribute("data-iframe-failed", "true");
+                  placeholder.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
+                  placeholder.style.border = "1px dashed #ccc";
+                  placeholder.style.padding = "1em";
+                  placeholder.style.textAlign = "center";
+                  placeholder.style.color = "#999";
+                  placeholder.textContent = "[iframe content could not be captured]";
+                  iframe.replaceWith(placeholder);
+                })()
+              `);
+            }
+          } catch (iframeErr) {
+            log(`Iframe ${index} error: ${iframeErr instanceof Error ? iframeErr.message : String(iframeErr)}`);
+          }
+        }
+        log("Iframe processing complete");
+      } else {
+        log("No iframes found");
+      }
+
       // Extract the full HTML from the webview's current state
       log("Injecting capture script into webview...");
       const rawHtml = await wv.executeJavaScript(`
@@ -564,6 +671,12 @@ export function CaptureBrowser() {
           while (textWalker.nextNode()) textNodes.push(textWalker.currentNode);
           textNodes.forEach((t) => {
             if (t.textContent && /^\\s+$/.test(t.textContent)) {
+              // Don't collapse whitespace inside <pre> elements — it's significant
+              var ancestor = t.parentElement;
+              while (ancestor) {
+                if (ancestor.tagName === "PRE") return;
+                ancestor = ancestor.parentElement;
+              }
               t.textContent = "\\n";
             }
           });
