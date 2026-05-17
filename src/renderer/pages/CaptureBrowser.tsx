@@ -549,7 +549,10 @@ export function CaptureBrowser() {
             try {
               const href = link.href;
               _log("  Fetching stylesheet: " + href);
-              const res = await fetch(href);
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 5000);
+              const res = await fetch(href, { signal: controller.signal });
+              clearTimeout(timeoutId);
               _log("  Fetched stylesheet (" + res.status + "): " + href);
               let css = await res.text();
               _log("  Inlining fonts for stylesheet: " + href);

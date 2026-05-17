@@ -931,9 +931,10 @@ app.on("ready", () => {
       const wc = webContents.fromId(webContentsId);
       if (!wc) return { success: false, error: "WebContents not found" };
 
-      // Wait for all frames to settle (have navigated past about:blank)
-      // Poll up to 15 seconds, checking every 500ms
-      // Use executeJavaScript to get real URLs since frame.url can be empty for cross-origin frames
+      // Wait for frames to load — use a fixed delay to avoid interfering with
+      // frame navigation (repeated executeJavaScript can disrupt cross-origin redirects)
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
       let allFrames: Electron.WebFrameMain[] = [];
       const collectFrames = (frame: Electron.WebFrameMain) => {
         for (const child of frame.frames) {
@@ -941,34 +942,19 @@ app.on("ready", () => {
           collectFrames(child);
         }
       };
+      try {
+        collectFrames(wc.mainFrame);
+      } catch {
+        // mainFrame disposed
+      }
 
-      for (let attempt = 0; attempt < 30; attempt++) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+      // If any frame has an empty URL, wait more and re-collect
+      if (allFrames.some(f => !f.url)) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
         allFrames = [];
         try {
           collectFrames(wc.mainFrame);
-        } catch {
-          continue;
-        }
-        if (allFrames.length === 0) continue;
-
-        // Check actual URLs inside frames (frame.url is unreliable for cross-origin)
-        // Only check frames with empty frame.url — those are still navigating
-        // Frames with frame.url set (even "about:blank") have already settled
-        let allSettled = true;
-        for (const f of allFrames) {
-          if (f.url) continue; // frame.url is set — already settled
-          try {
-            const realUrl: string = await f.executeJavaScript(`document.location.href`);
-            if (!realUrl || realUrl === "about:blank") {
-              allSettled = false;
-              break;
-            }
-          } catch {
-            // Frame not accessible — treat as settled (will be skipped later)
-          }
-        }
-        if (allSettled) break;
+        } catch {}
       }
 
       if (allFrames.length === 0) {
