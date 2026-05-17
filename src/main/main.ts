@@ -982,7 +982,10 @@ app.on("ready", () => {
           for (var i = 0; i < stylesheets.length; i++) {
             try {
               var href = stylesheets[i].href;
-              var res = await fetch(href);
+              var controller = new AbortController();
+              var timeoutId = setTimeout(function() { controller.abort(); }, 5000);
+              var res = await fetch(href, { signal: controller.signal });
+              clearTimeout(timeoutId);
               var css = await res.text();
               var style = document.createElement("style");
               style.textContent = css;
@@ -1049,7 +1052,16 @@ app.on("ready", () => {
       // a parent frame doesn't destroy child frames before they're captured
       for (const frame of [...allFrames].reverse()) {
         try {
-          const frameUrl = frame.url;
+          // Get URL from frame.url first, but also try document.location.href
+          // (frame.url can be empty for cross-origin redirected frames)
+          let frameUrl = frame.url;
+          if (!frameUrl || frameUrl === "about:blank") {
+            try {
+              frameUrl = await frame.executeJavaScript(`document.location.href`);
+            } catch {
+              // Can't access frame at all
+            }
+          }
           // Skip about:blank, data:, and javascript: frames (but NOT about:srcdoc which has content)
           if (!frameUrl || frameUrl === "about:blank" || frameUrl.startsWith("data:") || frameUrl.startsWith("javascript:")) {
             frameLog.push(`Skipped: ${frameUrl}`);
