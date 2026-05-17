@@ -16,6 +16,7 @@ declare global {
         success: boolean;
         html?: string;
         thumbnail?: string;
+        title?: string;
         error?: string;
       }>;
       formatHtml: (rawHtml: string) => Promise<{

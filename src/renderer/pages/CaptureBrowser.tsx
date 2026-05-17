@@ -620,10 +620,12 @@ export function CaptureBrowser() {
 
       if (abortCaptureRef.current) throw new Error("Capture cancelled");
 
-      // Derive a project title from the URL
+      // Use the website's title, falling back to the URL hostname
       let title: string;
       try {
-        title = new URL(currentUrl).hostname.replace(/^www\./, "");
+        const wv = webviewRef.current;
+        const pageTitle = wv?.getTitle?.();
+        title = pageTitle && pageTitle.trim() ? pageTitle.trim() : new URL(currentUrl).hostname.replace(/^www\./, "");
       } catch {
         title = currentUrl;
       }

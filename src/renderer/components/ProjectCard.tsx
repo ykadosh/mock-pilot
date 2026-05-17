@@ -168,10 +168,14 @@ export function NewProjectCard() {
       const result = await window.api.captureWebsite(url.trim());
       if (result.success && result.html) {
         let title: string;
-        try {
-          title = new URL(url.trim()).hostname.replace(/^www\./, "");
-        } catch {
-          title = url.trim();
+        if (result.title && result.title.trim()) {
+          title = result.title.trim();
+        } else {
+          try {
+            title = new URL(url.trim()).hostname.replace(/^www\./, "");
+          } catch {
+            title = url.trim();
+          }
         }
         const project = await window.api.saveProject({ url: url.trim(), title, html: result.html, thumbnail: result.thumbnail });
         const { setCapturedHtml } = await import("../lib/store");
