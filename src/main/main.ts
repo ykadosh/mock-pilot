@@ -931,18 +931,38 @@ app.on("ready", () => {
       const wc = webContents.fromId(webContentsId);
       if (!wc) return { success: false, error: "WebContents not found" };
 
-      // Wait a moment for any dynamically created iframes to load
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Recursively collect ALL frames (not just direct children)
-      const allFrames: Electron.WebFrameMain[] = [];
+      // Wait for all frames to settle (have non-empty URLs after navigation/redirects)
+      // Poll up to 10 seconds, checking every 500ms
+      let allFrames: Electron.WebFrameMain[] = [];
       const collectFrames = (frame: Electron.WebFrameMain) => {
         for (const child of frame.frames) {
           allFrames.push(child);
           collectFrames(child);
         }
       };
-      collectFrames(wc.mainFrame);
+
+      for (let attempt = 0; attempt < 20; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        allFrames = [];
+        try {
+          collectFrames(wc.mainFrame);
+        } catch {
+          continue;
+        }
+        // Check if all frames have URLs (not empty, not about:blank during navigation)
+        const validFrames = allFrames.filter(f => {
+          const url = f.url;
+          return url && url !== "about:blank" && !url.startsWith("data:") && !url.startsWith("javascript:");
+        });
+        if (validFrames.length > 0) {
+          // Check if any frame still has an empty URL (still navigating)
+          const emptyUrlFrames = allFrames.filter(f => !f.url);
+          if (emptyUrlFrames.length === 0) {
+            // All frames have URLs — they've settled
+            break;
+          }
+        }
+      }
 
       if (allFrames.length === 0) {
         return { success: true, iframes: [] };
