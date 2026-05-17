@@ -931,6 +931,9 @@ app.on("ready", () => {
       const wc = webContents.fromId(webContentsId);
       if (!wc) return { success: false, error: "WebContents not found" };
 
+      // Wait a moment for any dynamically created iframes to load
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       // Recursively collect ALL frames (not just direct children)
       const allFrames: Electron.WebFrameMain[] = [];
       const collectFrames = (frame: Electron.WebFrameMain) => {
@@ -946,8 +949,10 @@ app.on("ready", () => {
       }
 
       console.log(`[Capture] Found ${allFrames.length} frame(s) in webview (recursive)`);
+      const frameLog: string[] = [`Found ${allFrames.length} frames`];
       for (const frame of allFrames) {
         console.log(`[Capture] Frame URL: ${frame.url}`);
+        frameLog.push(`Frame: ${frame.url}`);
       }
 
       const captureScript = `
@@ -963,6 +968,71 @@ app.on("ready", () => {
               style.textContent = css;
               stylesheets[i].replaceWith(style);
             } catch(e) {}
+          }
+
+          // Try to inline child iframes that we can access (same-origin)
+          var childIframes = document.querySelectorAll("iframe");
+          for (var ci = childIframes.length - 1; ci >= 0; ci--) {
+            try {
+              var cif = childIframes[ci];
+              var childDoc = cif.contentDocument || (cif.contentWindow && cif.contentWindow.document);
+              if (childDoc && childDoc.documentElement) {
+                // Inline stylesheets in the child iframe first
+                var childStyles = childDoc.querySelectorAll('link[rel="stylesheet"]');
+                for (var csi = 0; csi < childStyles.length; csi++) {
+                  try {
+                    var chref = childStyles[csi].href;
+                    var cres = await fetch(chref);
+                    var ccss = await cres.text();
+                    var cstyle = childDoc.createElement("style");
+                    cstyle.textContent = ccss;
+                    childStyles[csi].replaceWith(cstyle);
+                  } catch(e) {}
+                }
+                // Remove scripts from child
+                childDoc.querySelectorAll("script").forEach(function(s) { s.remove(); });
+                // Serialize child CSSOM
+                childDoc.querySelectorAll("style").forEach(function(st) {
+                  try {
+                    var sh = st.sheet;
+                    if (sh && sh.cssRules && sh.cssRules.length > 0) {
+                      var rs = [];
+                      for (var rk = 0; rk < sh.cssRules.length; rk++) rs.push(sh.cssRules[rk].cssText);
+                      st.textContent = rs.join("\\n");
+                    }
+                  } catch(e) {}
+                });
+                // Create replacement container
+                var container = document.createElement("div");
+                container.setAttribute("data-inlined-child-iframe", "true");
+                container.setAttribute("data-original-src", cif.getAttribute("src") || cif.src || "");
+                var w = cif.getAttribute("width") || cif.style.width || "100%";
+                var h = cif.getAttribute("height") || cif.style.height || "100%";
+                container.style.width = (typeof w === "string" && w.indexOf("%") >= 0) ? w : (parseInt(w) ? w + "px" : w);
+                container.style.height = (typeof h === "string" && h.indexOf("%") >= 0) ? h : (parseInt(h) ? h + "px" : h);
+                container.style.overflow = "hidden";
+                // Copy head styles
+                var headStyles = childDoc.querySelectorAll("style");
+                for (var hs = 0; hs < headStyles.length; hs++) {
+                  container.appendChild(headStyles[hs].cloneNode(true));
+                }
+                // Copy body content
+                if (childDoc.body) {
+                  container.innerHTML += childDoc.body.innerHTML;
+                }
+                // Remove trust warnings from inlined content
+                container.querySelectorAll('[class*="trust-warning"], [class*="TrustWarning"]').forEach(function(el) { el.remove(); });
+                var allEls = container.querySelectorAll("div, section, aside, p, span");
+                for (var ae = 0; ae < allEls.length; ae++) {
+                  if (allEls[ae].textContent && allEls[ae].textContent.indexOf("Do not enter passwords") >= 0) {
+                    allEls[ae].remove();
+                  }
+                }
+                cif.replaceWith(container);
+              }
+            } catch(e) {
+              // Cross-origin, can't access - leave iframe for outer replacement
+            }
           }
 
           // Convert images to data URIs
@@ -1024,18 +1094,24 @@ app.on("ready", () => {
       for (const frame of allFrames) {
         try {
           const frameUrl = frame.url;
-          // Skip about:blank and data: frames
+          // Skip about:blank, data:, and javascript: frames (but NOT about:srcdoc which has content)
           if (!frameUrl || frameUrl === "about:blank" || frameUrl.startsWith("data:") || frameUrl.startsWith("javascript:")) {
+            frameLog.push(`Skipped: ${frameUrl}`);
             continue;
           }
           console.log(`[Capture] Capturing frame: ${frameUrl.substring(0, 80)}`);
           const html = await frame.executeJavaScript(captureScript);
           results.push({ url: frameUrl, html });
+          frameLog.push(`Captured: ${frameUrl} (${html.length} chars)`);
           console.log(`[Capture] Frame captured: ${html.length} chars`);
         } catch (frameErr) {
+          frameLog.push(`Failed: ${frameErr instanceof Error ? frameErr.message : String(frameErr)}`);
           console.error(`[Capture] Failed to capture frame:`, frameErr instanceof Error ? frameErr.message : frameErr);
         }
       }
+
+      // Write debug log to temp file
+      require("fs").writeFileSync("/tmp/mock-pilot-frame-debug.log", frameLog.join("\n"));
 
       return { success: true, iframes: results };
     } catch (error: unknown) {

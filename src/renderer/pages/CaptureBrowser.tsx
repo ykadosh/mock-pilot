@@ -238,6 +238,9 @@ export function CaptureBrowser() {
           await wv.executeJavaScript(`
             (function() {
               var capturedMap = ${capturedMap};
+              var mapKeys = Object.keys(capturedMap);
+              console.log("[iframe-capture] capturedMap has " + mapKeys.length + " entries:");
+              mapKeys.forEach(function(k) { console.log("[iframe-capture]   key: " + k.substring(0, 120)); });
 
               function findCapturedHtml(src) {
                 if (capturedMap[src]) return capturedMap[src];
@@ -318,19 +321,22 @@ export function CaptureBrowser() {
 
               function replaceIframeInDoc(doc, iframe, scopeId, parentUrl) {
                 var src = iframe.getAttribute("src") || iframe.getAttribute("data-src") || "";
+                var originalSrc = src;
                 // Resolve relative URL against the PARENT iframe's URL, not the page's baseURI
                 try { src = new URL(src, parentUrl || document.baseURI).href; } catch(e) {}
-                console.log("[iframe-capture] Nested iframe src resolved to:", src);
 
                 var capturedHtml = findCapturedHtml(src);
                 if (!capturedHtml) {
-                  console.log("[iframe-capture] No match found for nested iframe:", src);
-                  console.log("[iframe-capture] Available keys:", Object.keys(capturedMap).map(function(k) { return k.substring(0, 80); }));
-                  // Remove unresolved iframes
-                  iframe.remove();
+                  // Instead of removing, replace with debug placeholder showing what we tried to match
+                  var debugDiv = doc.createElement("div");
+                  debugDiv.setAttribute("data-iframe-debug", "true");
+                  debugDiv.setAttribute("data-iframe-original-src", originalSrc);
+                  debugDiv.setAttribute("data-iframe-resolved-src", src);
+                  debugDiv.setAttribute("data-iframe-parent-url", parentUrl || "none");
+                  debugDiv.setAttribute("data-iframe-available-keys", Object.keys(capturedMap).map(function(k) { return k.substring(0, 100); }).join(" | "));
+                  iframe.replaceWith(debugDiv);
                   return;
                 }
-                console.log("[iframe-capture] Matched nested iframe, injecting content");
 
                 var innerDoc = new DOMParser().parseFromString(capturedHtml, "text/html");
 
