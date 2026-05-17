@@ -708,12 +708,18 @@ app.on("ready", () => {
         // Remove hidden elements and empty attributes
         document.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach((el) => el.remove());
 
-        // Collapse whitespace-only text nodes
+        // Collapse whitespace-only text nodes (but not inside <pre> elements where whitespace matters)
         const textWalker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT);
         const textNodes: Text[] = [];
         while (textWalker.nextNode()) textNodes.push(textWalker.currentNode as Text);
         textNodes.forEach((t) => {
           if (t.textContent && /^\s+$/.test(t.textContent)) {
+            // Check if this text node is inside a <pre> element
+            let ancestor = t.parentElement;
+            while (ancestor) {
+              if (ancestor.tagName === "PRE") return;
+              ancestor = ancestor.parentElement;
+            }
             t.textContent = "\n";
           }
         });
@@ -731,7 +737,7 @@ app.on("ready", () => {
         browser: InstanceType<typeof puppeteer.prototype.constructor>,
         depth: number = 0,
         maxDepth: number = 3,
-        iframeTimeout: number = 15000
+        iframeTimeout: number = 30000
       ): Promise<void> {
         if (depth >= maxDepth) return;
 
@@ -750,6 +756,8 @@ app.on("ready", () => {
 
         if (iframeData.length === 0) return;
 
+        console.log(`[Capture] Found ${iframeData.length} iframe(s) at depth ${depth}`);
+
         // Process iframes in reverse order so that replacing earlier iframes
         // doesn't shift the indices of later ones
         iframeData.reverse();
@@ -758,6 +766,8 @@ app.on("ready", () => {
             const resolvedUrl = await page.evaluate((s: string) => {
               try { return new URL(s, document.baseURI).href; } catch { return s; }
             }, src);
+
+            console.log(`[Capture] Processing iframe ${index}: ${resolvedUrl}`);
 
             // Open a new page for this iframe's content
             const iframePage = await browser.newPage();
@@ -833,27 +843,30 @@ app.on("ready", () => {
                 // Replace the iframe with our container
                 iframe.replaceWith(container);
               }, { iframeIndex: index, capturedHtml: iframeHtml, scopeId });
-            } catch {
+            } catch (iframeErr) {
               // On failure, replace iframe with a placeholder
-              await page.evaluate((iframeIndex: number) => {
-                const iframes = document.querySelectorAll("iframe");
-                const iframe = iframes[iframeIndex];
-                if (!iframe) return;
-                const placeholder = document.createElement("div");
-                placeholder.setAttribute("data-iframe-failed", "true");
-                placeholder.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
-                placeholder.style.border = "1px dashed #ccc";
-                placeholder.style.padding = "1em";
-                placeholder.style.textAlign = "center";
-                placeholder.style.color = "#999";
-                placeholder.textContent = `[iframe content could not be captured: ${iframe.getAttribute("src") || "unknown"}]`;
-                iframe.replaceWith(placeholder);
-              }, index);
+              console.error(`[Capture] Failed to capture iframe ${index} (${src}):`, iframeErr instanceof Error ? iframeErr.message : iframeErr);
+              try {
+                await page.evaluate((iframeIndex: number) => {
+                  const iframes = document.querySelectorAll("iframe");
+                  const iframe = iframes[iframeIndex];
+                  if (!iframe) return;
+                  const placeholder = document.createElement("div");
+                  placeholder.setAttribute("data-iframe-failed", "true");
+                  placeholder.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
+                  placeholder.style.border = "1px dashed #ccc";
+                  placeholder.style.padding = "1em";
+                  placeholder.style.textAlign = "center";
+                  placeholder.style.color = "#999";
+                  placeholder.textContent = `[iframe content could not be captured: ${iframe.getAttribute("src") || "unknown"}]`;
+                  iframe.replaceWith(placeholder);
+                }, index);
+              } catch { /* placeholder insertion failed too */ }
             } finally {
               await iframePage.close();
             }
-          } catch {
-            // Skip this iframe entirely on error
+          } catch (outerErr) {
+            console.error(`[Capture] Skipping iframe (${src}):`, outerErr instanceof Error ? outerErr.message : outerErr);
           }
         }
       }
@@ -887,6 +900,7 @@ app.on("ready", () => {
           end_with_newline: true,
           indent_inner_html: true,
           css_indent_size: 2,
+          content_unformatted: ["pre", "code", "textarea"],
         });
 
         return { success: true, html: `<!DOCTYPE html>\n${formattedHtml}`, thumbnail: `data:image/png;base64,${screenshot}`, title: pageTitle || undefined };
@@ -919,6 +933,7 @@ app.on("ready", () => {
         end_with_newline: true,
         indent_inner_html: true,
         css_indent_size: 2,
+        content_unformatted: ["pre", "code", "textarea"],
       });
       return { success: true, html: `<!DOCTYPE html>\n${formattedHtml}` };
     } catch (error: unknown) {
