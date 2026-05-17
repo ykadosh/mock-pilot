@@ -1179,7 +1179,6 @@ app.on("ready", () => {
                 return srcs;
               })()
             `) as string[];
-            `);
             frameLog.push(`Frame ${frameUrl.substring(0, 80)} has ${childIframeSrcs.length} child iframe(s): ${childIframeSrcs.map(s => s.substring(0, 80)).join(", ")}`);
           } catch (e) {
             frameLog.push(`Could not get child iframes for ${frameUrl.substring(0, 80)}`);
