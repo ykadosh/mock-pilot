@@ -600,6 +600,264 @@ app.on("ready", () => {
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
 
+      // The inline capture logic injected into page.evaluate() calls.
+      // It inlines stylesheets, fonts, images, removes scripts, and cleans up the DOM.
+      const inlineCaptureScript = async () => {
+        // Helper: resolve and inline font URLs in CSS text relative to a base URL
+        async function inlineFontUrls(cssText: string, baseUrl: string): Promise<string> {
+          const fontFaceRegex = /@font-face\s*\{[^}]*\}/gi;
+          const fontFaces = [...cssText.matchAll(fontFaceRegex)];
+          for (const faceMatch of fontFaces) {
+            let faceBlock = faceMatch[0];
+            const urlRegex = /url\(["']?([^"')]+?)["']?\)\s*format\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\)/gi;
+            const urlMatches = [...faceBlock.matchAll(urlRegex)];
+            for (const match of urlMatches) {
+              const fontUrl = match[1];
+              if (fontUrl.startsWith("data:")) continue;
+              try {
+                const resolvedUrl = new URL(fontUrl, baseUrl).href;
+                const res = await fetch(resolvedUrl);
+                if (res.ok) {
+                  const blob = await res.blob();
+                  const dataUri = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(blob);
+                  });
+                  faceBlock = faceBlock.replace(match[0], `url("${dataUri}") format("${match[2]}")`);
+                }
+              } catch {
+                // Skip fonts that can't be fetched
+              }
+            }
+            // Also try URLs without format() hint
+            const simpleUrlRegex = /url\(["']?([^"')]+\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\)/gi;
+            const simpleMatches = [...faceBlock.matchAll(simpleUrlRegex)];
+            for (const match of simpleMatches) {
+              const fontUrl = match[1];
+              if (fontUrl.startsWith("data:")) continue;
+              try {
+                const resolvedUrl = new URL(fontUrl, baseUrl).href;
+                const res = await fetch(resolvedUrl);
+                if (res.ok) {
+                  const blob = await res.blob();
+                  const dataUri = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(blob);
+                  });
+                  faceBlock = faceBlock.replace(match[0], `url("${dataUri}")`);
+                }
+              } catch {
+                // Skip fonts that can't be fetched
+              }
+            }
+            cssText = cssText.replace(faceMatch[0], faceBlock);
+          }
+          return cssText;
+        }
+
+        // Inline external stylesheets (resolve font URLs relative to stylesheet origin)
+        const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
+        for (const link of stylesheets) {
+          try {
+            const href = (link as HTMLLinkElement).href;
+            const res = await fetch(href);
+            let css = await res.text();
+            css = await inlineFontUrls(css, href);
+            const style = document.createElement("style");
+            style.textContent = css;
+            link.replaceWith(style);
+          } catch {
+            // Skip failed stylesheets
+          }
+        }
+
+        // Also process any pre-existing <style> tags (resolve relative to document)
+        const inlineStyles = document.querySelectorAll("style");
+        for (const style of inlineStyles) {
+          style.textContent = await inlineFontUrls(style.textContent || "", document.baseURI);
+        }
+
+        // Convert same-origin images to data URIs (cross-origin will be handled server-side)
+        const images = document.querySelectorAll("img");
+        for (const img of images) {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth || img.width || 300;
+            canvas.height = img.naturalHeight || img.height || 200;
+            const ctx = canvas.getContext("2d");
+            if (ctx && img.complete && img.naturalWidth > 0) {
+              ctx.drawImage(img, 0, 0);
+              img.src = canvas.toDataURL("image/png");
+            }
+          } catch {
+            // CORS images will be downloaded server-side after capture
+          }
+        }
+
+        // Remove scripts
+        document.querySelectorAll("script").forEach((s) => s.remove());
+
+        // Remove HTML comments
+        const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+        const comments: Comment[] = [];
+        while (walker.nextNode()) comments.push(walker.currentNode as Comment);
+        comments.forEach((c) => c.remove());
+
+        // Remove hidden elements and empty attributes
+        document.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach((el) => el.remove());
+
+        // Collapse whitespace-only text nodes
+        const textWalker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT);
+        const textNodes: Text[] = [];
+        while (textWalker.nextNode()) textNodes.push(textWalker.currentNode as Text);
+        textNodes.forEach((t) => {
+          if (t.textContent && /^\s+$/.test(t.textContent)) {
+            t.textContent = "\n";
+          }
+        });
+
+        return document.documentElement.outerHTML;
+      };
+
+      /**
+       * Recursively capture iframe content and inline it into the parent page.
+       * Opens a new page for each iframe src, runs the full capture pipeline,
+       * and replaces the iframe element with a scoped static div.
+       */
+      async function captureIframesRecursively(
+        page: InstanceType<typeof puppeteer.prototype.constructor>,
+        browser: InstanceType<typeof puppeteer.prototype.constructor>,
+        depth: number = 0,
+        maxDepth: number = 3,
+        iframeTimeout: number = 15000
+      ): Promise<void> {
+        if (depth >= maxDepth) return;
+
+        // Get all iframe src URLs from the current page
+        const iframeData = await page.evaluate(() => {
+          const iframes = document.querySelectorAll("iframe");
+          const data: { src: string; index: number }[] = [];
+          iframes.forEach((iframe, index) => {
+            const src = iframe.getAttribute("src") || iframe.src;
+            if (src && src !== "about:blank" && !src.startsWith("javascript:") && !src.startsWith("data:")) {
+              data.push({ src, index });
+            }
+          });
+          return data;
+        });
+
+        if (iframeData.length === 0) return;
+
+        // Process iframes in reverse order so that replacing earlier iframes
+        // doesn't shift the indices of later ones
+        iframeData.reverse();
+        for (const { src, index } of iframeData) {
+          try {
+            const resolvedUrl = await page.evaluate((s: string) => {
+              try { return new URL(s, document.baseURI).href; } catch { return s; }
+            }, src);
+
+            // Open a new page for this iframe's content
+            const iframePage = await browser.newPage();
+            try {
+              await iframePage.setViewport({ width: 1280, height: 800 });
+              await iframePage.goto(resolvedUrl, { waitUntil: "networkidle2", timeout: iframeTimeout });
+              iframePage.setDefaultTimeout(iframeTimeout);
+
+              // Recursively process any nested iframes first
+              await captureIframesRecursively(iframePage, browser, depth + 1, maxDepth, iframeTimeout);
+
+              // Capture the iframe page content
+              const iframeHtml = await iframePage.evaluate(inlineCaptureScript);
+
+              // Inject the captured content back into the parent page, replacing the iframe
+              const scopeId = `iframe-inline-${depth}-${index}`;
+              await page.evaluate((params: { iframeIndex: number; capturedHtml: string; scopeId: string }) => {
+                const iframes = document.querySelectorAll("iframe");
+                const iframe = iframes[params.iframeIndex];
+                if (!iframe) return;
+
+                // Parse the captured HTML to extract body and styles
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(params.capturedHtml, "text/html");
+
+                // Create a scoped container
+                const container = document.createElement("div");
+                container.setAttribute("data-iframe-inline", params.scopeId);
+                container.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
+
+                // Preserve iframe dimensions
+                const width = iframe.getAttribute("width") || iframe.style.width || "100%";
+                const height = iframe.getAttribute("height") || iframe.style.height || "auto";
+                container.style.width = typeof width === "string" && width.includes("%") ? width : `${width}px`;
+                container.style.height = height === "auto" ? "auto" : (typeof height === "string" && height.includes("%") ? height : `${height}px`);
+                container.style.overflow = "hidden";
+                container.style.position = "relative";
+
+                // Scope all styles from the iframe to prevent bleed
+                const iframeStyles = doc.querySelectorAll("style");
+                const scopeSelector = `[data-iframe-inline="${params.scopeId}"]`;
+                for (const style of iframeStyles) {
+                  let css = style.textContent || "";
+                  // Prefix each CSS rule with the scope selector
+                  css = css.replace(
+                    /([^{}]+)\{/g,
+                    (match, selectors: string) => {
+                      // Don't scope @-rules (media queries, keyframes, font-face, etc.)
+                      if (selectors.trim().startsWith("@")) return match;
+                      const scopedSelectors = selectors.split(",").map((sel: string) => {
+                        const trimmed = sel.trim();
+                        if (!trimmed) return sel;
+                        // Replace html/body selectors with the container itself
+                        if (trimmed === "html" || trimmed === "body" || trimmed === ":root") {
+                          return `${scopeSelector}`;
+                        }
+                        return `${scopeSelector} ${trimmed}`;
+                      }).join(",");
+                      return `${scopedSelectors}{`;
+                    }
+                  );
+                  const scopedStyle = document.createElement("style");
+                  scopedStyle.textContent = css;
+                  container.appendChild(scopedStyle);
+                }
+
+                // Copy body content
+                const bodyContent = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
+                const contentWrapper = document.createElement("div");
+                contentWrapper.innerHTML = bodyContent;
+                container.appendChild(contentWrapper);
+
+                // Replace the iframe with our container
+                iframe.replaceWith(container);
+              }, { iframeIndex: index, capturedHtml: iframeHtml, scopeId });
+            } catch {
+              // On failure, replace iframe with a placeholder
+              await page.evaluate((iframeIndex: number) => {
+                const iframes = document.querySelectorAll("iframe");
+                const iframe = iframes[iframeIndex];
+                if (!iframe) return;
+                const placeholder = document.createElement("div");
+                placeholder.setAttribute("data-iframe-failed", "true");
+                placeholder.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
+                placeholder.style.border = "1px dashed #ccc";
+                placeholder.style.padding = "1em";
+                placeholder.style.textAlign = "center";
+                placeholder.style.color = "#999";
+                placeholder.textContent = `[iframe content could not be captured: ${iframe.getAttribute("src") || "unknown"}]`;
+                iframe.replaceWith(placeholder);
+              }, index);
+            } finally {
+              await iframePage.close();
+            }
+          } catch {
+            // Skip this iframe entirely on error
+          }
+        }
+      }
+
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
@@ -608,125 +866,10 @@ app.on("ready", () => {
         // Increase timeout for evaluate since font inlining can take time
         page.setDefaultTimeout(60000);
 
-        const html = await page.evaluate(async () => {
-          // Helper: resolve and inline font URLs in CSS text relative to a base URL
-          async function inlineFontUrls(cssText: string, baseUrl: string): Promise<string> {
-            const fontFaceRegex = /@font-face\s*\{[^}]*\}/gi;
-            const fontFaces = [...cssText.matchAll(fontFaceRegex)];
-            for (const faceMatch of fontFaces) {
-              let faceBlock = faceMatch[0];
-              const urlRegex = /url\(["']?([^"')]+?)["']?\)\s*format\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\)/gi;
-              const urlMatches = [...faceBlock.matchAll(urlRegex)];
-              for (const match of urlMatches) {
-                const fontUrl = match[1];
-                if (fontUrl.startsWith("data:")) continue;
-                try {
-                  const resolvedUrl = new URL(fontUrl, baseUrl).href;
-                  const res = await fetch(resolvedUrl);
-                  if (res.ok) {
-                    const blob = await res.blob();
-                    const dataUri = await new Promise<string>((resolve) => {
-                      const reader = new FileReader();
-                      reader.onloadend = () => resolve(reader.result as string);
-                      reader.readAsDataURL(blob);
-                    });
-                    faceBlock = faceBlock.replace(match[0], `url("${dataUri}") format("${match[2]}")`);
-                  }
-                } catch {
-                  // Skip fonts that can't be fetched
-                }
-              }
-              // Also try URLs without format() hint
-              const simpleUrlRegex = /url\(["']?([^"')]+\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\)/gi;
-              const simpleMatches = [...faceBlock.matchAll(simpleUrlRegex)];
-              for (const match of simpleMatches) {
-                const fontUrl = match[1];
-                if (fontUrl.startsWith("data:")) continue;
-                try {
-                  const resolvedUrl = new URL(fontUrl, baseUrl).href;
-                  const res = await fetch(resolvedUrl);
-                  if (res.ok) {
-                    const blob = await res.blob();
-                    const dataUri = await new Promise<string>((resolve) => {
-                      const reader = new FileReader();
-                      reader.onloadend = () => resolve(reader.result as string);
-                      reader.readAsDataURL(blob);
-                    });
-                    faceBlock = faceBlock.replace(match[0], `url("${dataUri}")`);
-                  }
-                } catch {
-                  // Skip fonts that can't be fetched
-                }
-              }
-              cssText = cssText.replace(faceMatch[0], faceBlock);
-            }
-            return cssText;
-          }
+        // Recursively capture and inline all iframes before processing the main page
+        await captureIframesRecursively(page, browser);
 
-          // Inline external stylesheets (resolve font URLs relative to stylesheet origin)
-          const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
-          for (const link of stylesheets) {
-            try {
-              const href = (link as HTMLLinkElement).href;
-              const res = await fetch(href);
-              let css = await res.text();
-              // Resolve @font-face URLs relative to the stylesheet's URL
-              css = await inlineFontUrls(css, href);
-              const style = document.createElement("style");
-              style.textContent = css;
-              link.replaceWith(style);
-            } catch {
-              // Skip failed stylesheets
-            }
-          }
-
-          // Also process any pre-existing <style> tags (resolve relative to document)
-          const inlineStyles = document.querySelectorAll("style");
-          for (const style of inlineStyles) {
-            style.textContent = await inlineFontUrls(style.textContent || "", document.baseURI);
-          }
-
-          // Convert same-origin images to data URIs (cross-origin will be handled server-side)
-          const images = document.querySelectorAll("img");
-          for (const img of images) {
-            try {
-              const canvas = document.createElement("canvas");
-              canvas.width = img.naturalWidth || img.width || 300;
-              canvas.height = img.naturalHeight || img.height || 200;
-              const ctx = canvas.getContext("2d");
-              if (ctx && img.complete && img.naturalWidth > 0) {
-                ctx.drawImage(img, 0, 0);
-                img.src = canvas.toDataURL("image/png");
-              }
-            } catch {
-              // CORS images will be downloaded server-side after capture
-            }
-          }
-
-          // Remove scripts
-          document.querySelectorAll("script").forEach((s) => s.remove());
-
-          // Remove HTML comments
-          const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
-          const comments: Comment[] = [];
-          while (walker.nextNode()) comments.push(walker.currentNode as Comment);
-          comments.forEach((c) => c.remove());
-
-          // Remove hidden elements and empty attributes
-          document.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach((el) => el.remove());
-
-          // Collapse whitespace-only text nodes
-          const textWalker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT);
-          const textNodes: Text[] = [];
-          while (textWalker.nextNode()) textNodes.push(textWalker.currentNode as Text);
-          textNodes.forEach((t) => {
-            if (t.textContent && /^\s+$/.test(t.textContent)) {
-              t.textContent = "\n";
-            }
-          });
-
-          return document.documentElement.outerHTML;
-        });
+        const html = await page.evaluate(inlineCaptureScript);
 
         // Get the page title before closing
         const pageTitle = await page.title();
