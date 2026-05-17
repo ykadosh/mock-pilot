@@ -931,8 +931,9 @@ app.on("ready", () => {
       const wc = webContents.fromId(webContentsId);
       if (!wc) return { success: false, error: "WebContents not found" };
 
-      // Wait for all frames to settle (have non-empty URLs after navigation/redirects)
-      // Poll up to 10 seconds, checking every 500ms
+      // Wait for all frames to settle (have navigated past about:blank)
+      // Poll up to 15 seconds, checking every 500ms
+      // Use executeJavaScript to get real URLs since frame.url can be empty for cross-origin frames
       let allFrames: Electron.WebFrameMain[] = [];
       const collectFrames = (frame: Electron.WebFrameMain) => {
         for (const child of frame.frames) {
@@ -941,7 +942,7 @@ app.on("ready", () => {
         }
       };
 
-      for (let attempt = 0; attempt < 20; attempt++) {
+      for (let attempt = 0; attempt < 30; attempt++) {
         await new Promise(resolve => setTimeout(resolve, 500));
         allFrames = [];
         try {
@@ -949,19 +950,25 @@ app.on("ready", () => {
         } catch {
           continue;
         }
-        // Check if all frames have URLs (not empty, not about:blank during navigation)
-        const validFrames = allFrames.filter(f => {
-          const url = f.url;
-          return url && url !== "about:blank" && !url.startsWith("data:") && !url.startsWith("javascript:");
-        });
-        if (validFrames.length > 0) {
-          // Check if any frame still has an empty URL (still navigating)
-          const emptyUrlFrames = allFrames.filter(f => !f.url);
-          if (emptyUrlFrames.length === 0) {
-            // All frames have URLs — they've settled
-            break;
+        if (allFrames.length === 0) continue;
+
+        // Check actual URLs inside frames (frame.url is unreliable for cross-origin)
+        // Only check frames with empty frame.url — those are still navigating
+        // Frames with frame.url set (even "about:blank") have already settled
+        let allSettled = true;
+        for (const f of allFrames) {
+          if (f.url) continue; // frame.url is set — already settled
+          try {
+            const realUrl: string = await f.executeJavaScript(`document.location.href`);
+            if (!realUrl || realUrl === "about:blank") {
+              allSettled = false;
+              break;
+            }
+          } catch {
+            // Frame not accessible — treat as settled (will be skipped later)
           }
         }
+        if (allSettled) break;
       }
 
       if (allFrames.length === 0) {
@@ -971,8 +978,12 @@ app.on("ready", () => {
       console.log(`[Capture] Found ${allFrames.length} frame(s) in webview (recursive)`);
       const frameLog: string[] = [`Found ${allFrames.length} frames`];
       for (const frame of allFrames) {
-        console.log(`[Capture] Frame URL: ${frame.url}`);
-        frameLog.push(`Frame: ${frame.url}`);
+        let realUrl = frame.url;
+        if (!realUrl) {
+          try { realUrl = await frame.executeJavaScript(`document.location.href`); } catch { realUrl = "(inaccessible)"; }
+        }
+        console.log(`[Capture] Frame URL: ${frame.url} | real: ${realUrl}`);
+        frameLog.push(`Frame: ${frame.url} | real: ${realUrl}`);
       }
 
       const captureScript = `
