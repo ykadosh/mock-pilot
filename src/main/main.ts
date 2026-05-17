@@ -931,95 +931,154 @@ app.on("ready", () => {
       const wc = webContents.fromId(webContentsId);
       if (!wc) return { success: false, error: "WebContents not found" };
 
-      // Use Chrome DevTools Protocol to enumerate all frames and capture their content.
-      // webFrameMain.frames is unreliable for cross-origin redirected frames (URL stays empty).
       const frameLog: string[] = [];
 
-      // First, still collect webFrameMain frames for capturing
-      let allFrames: Electron.WebFrameMain[] = [];
+      // Cross-origin iframes run as Out-Of-Process Iframes (OOPIF) in Electron.
+      // Each OOPIF has its own webContents, so webFrameMain.frames shows them
+      // with empty URLs and executeJavaScript runs in the wrong context.
+      // To capture them, we find all webContents and filter for those that are
+      // iframes within our webview.
+
+      // Collect in-process frames via webFrameMain
+      const inProcessFrames: Electron.WebFrameMain[] = [];
       const collectFrames = (frame: Electron.WebFrameMain) => {
         for (const child of frame.frames) {
-          allFrames.push(child);
+          inProcessFrames.push(child);
           collectFrames(child);
         }
       };
+      try { collectFrames(wc.mainFrame); } catch {}
+
+      frameLog.push(`In-process frames: ${inProcessFrames.length}`);
+      for (const f of inProcessFrames) {
+        frameLog.push(`  webFrameMain: url="${f.url}" processId=${f.processId} routingId=${f.routingId}`);
+      }
+
+      // Find OOPIF webContents by checking all webContents
+      // An OOPIF's webContents has type "webview" or its hostWebContents matches our wc,
+      // or we can detect it by checking if it's a frame-type webContents.
+      const allWc = webContents.getAllWebContents();
+      frameLog.push(`Total webContents: ${allWc.length}`);
+      for (const awc of allWc) {
+        frameLog.push(`  wc id=${awc.id} type=${awc.getType()} url=${awc.getURL().substring(0, 100)}`);
+      }
+
+      // Strategy: capture all frames (in-process + OOPIF)
+      // For in-process: use webFrameMain.executeJavaScript
+      // For OOPIF: use their own webContents.executeJavaScript
+      type FrameCapture = { executeJavaScript: (code: string) => Promise<unknown>; url: string };
+      const framesToCapture: FrameCapture[] = [];
+
+      // Add in-process frames with valid URLs
+      for (const f of inProcessFrames) {
+        if (f.url && f.url !== "about:blank" && !f.url.startsWith("data:") && !f.url.startsWith("javascript:")) {
+          framesToCapture.push({ executeJavaScript: (code) => f.executeJavaScript(code), url: f.url });
+        }
+      }
+
+      // Find OOPIF webContents (type "webview" iframes that aren't the main webview)
+      // OR any webContents whose URL matches an iframe src we know about
+      // First, get the iframe srcs from the main frame and any in-process iframe
+      const knownIframeSrcs: string[] = [];
       try {
-        collectFrames(wc.mainFrame);
+        const mainSrcs = await wc.mainFrame.executeJavaScript(`
+          (function() {
+            var srcs = [];
+            document.querySelectorAll("iframe").forEach(function(f) {
+              var s = f.src || f.getAttribute("src") || "";
+              if (s) srcs.push(s);
+            });
+            return srcs;
+          })()
+        `);
+        knownIframeSrcs.push(...mainSrcs);
       } catch {}
 
-      // Also use CDP to get the real frame tree (shows actual URLs after redirects)
-      let cdpFrames: { frameId: string; url: string; name: string; parentId?: string }[] = [];
-      try {
-        wc.debugger.attach("1.3");
-        const result = await wc.debugger.sendCommand("Page.getFrameTree");
-        const extractFrames = (node: { frame: { id: string; url: string; name: string; parentId?: string }; childFrames?: unknown[] }) => {
-          cdpFrames.push(node.frame);
-          if (node.childFrames) {
-            for (const child of node.childFrames as typeof node[]) {
-              extractFrames(child);
+      for (const f of inProcessFrames) {
+        if (!f.url || f.url === "about:blank") continue;
+        try {
+          const childSrcs = await f.executeJavaScript(`
+            (function() {
+              var srcs = [];
+              document.querySelectorAll("iframe").forEach(function(f) {
+                var s = f.src || f.getAttribute("src") || "";
+                if (s) srcs.push(s);
+              });
+              return srcs;
+            })()
+          `);
+          knownIframeSrcs.push(...childSrcs);
+        } catch {}
+      }
+
+      frameLog.push(`Known iframe srcs: ${knownIframeSrcs.map(s => s.substring(0, 80)).join(", ")}`);
+
+      // Now look for webContents that might be OOPIFs
+      const mainUrl = wc.getURL();
+      const capturedUrls = new Set(framesToCapture.map(f => f.url));
+      capturedUrls.add(mainUrl);
+
+      for (const otherWc of allWc) {
+        if (otherWc.id === wc.id) continue; // skip the main webview
+        const otherUrl = otherWc.getURL();
+        if (!otherUrl || otherUrl === "about:blank" || capturedUrls.has(otherUrl)) continue;
+
+        // Check if this webContents' URL matches any known iframe src (exact or path-based)
+        let isIframe = false;
+        for (const src of knownIframeSrcs) {
+          try {
+            const srcUrl = new URL(src);
+            const otherUrlObj = new URL(otherUrl);
+            // Exact match or path-based match (handles domain redirects)
+            if (src === otherUrl || srcUrl.pathname === otherUrlObj.pathname) {
+              isIframe = true;
+              break;
             }
-          }
-        };
-        extractFrames(result.frameTree);
-        wc.debugger.detach();
-      } catch (e) {
-        frameLog.push(`CDP error: ${e instanceof Error ? e.message : String(e)}`);
-        try { wc.debugger.detach(); } catch {}
-      }
-
-      frameLog.push(`webFrameMain frames: ${allFrames.length}`);
-      frameLog.push(`CDP frames: ${cdpFrames.length}`);
-      for (const cf of cdpFrames) {
-        frameLog.push(`CDP frame: ${cf.url} (id=${cf.frameId}, name=${cf.name})`);
-      }
-
-      // Build a map of frame URL (from CDP) to webFrameMain object
-      // CDP gives us reliable URLs; webFrameMain gives us executeJavaScript
-      // Match by: frameId, or by position in the tree
-      for (const frame of allFrames) {
-        let realUrl = frame.url;
-        if (!realUrl) {
-          // Try to find this frame's real URL from CDP data
-          // Match by trying executeJavaScript in the frame to get its frameId
-          try { realUrl = await frame.executeJavaScript(`document.location.href`); } catch { realUrl = "(inaccessible)"; }
+          } catch {}
         }
-        frameLog.push(`webFrameMain: ${frame.url} | real: ${realUrl}`);
-      }
 
-      // For frames with empty webFrameMain.url, try to match them with CDP frames
-      // that have real URLs, and use executeJavaScript on them
-      const framesToCapture: { frame: Electron.WebFrameMain; url: string }[] = [];
-      const usedCdpUrls = new Set<string>();
-
-      for (const frame of allFrames) {
-        if (frame.url && frame.url !== "about:blank" && !frame.url.startsWith("data:") && !frame.url.startsWith("javascript:")) {
-          framesToCapture.push({ frame, url: frame.url });
-          usedCdpUrls.add(frame.url);
-        } else {
-          // Empty URL frame — try document.location.href
-          let realUrl = "";
-          try { realUrl = await frame.executeJavaScript(`document.location.href`); } catch {}
-          if (realUrl && realUrl !== "about:blank" && !realUrl.startsWith("data:")) {
-            framesToCapture.push({ frame, url: realUrl });
-            usedCdpUrls.add(realUrl);
-          } else {
-            // Still about:blank — try to find a CDP frame that doesn't match any known frame
-            // This handles cross-origin redirected frames where even location.href is wrong
-            const unmatchedCdp = cdpFrames.filter(cf =>
-              cf.url && cf.url !== "about:blank" && !cf.url.startsWith("data:") &&
-              !usedCdpUrls.has(cf.url) &&
-              // Skip the main frame
-              cf.url !== wc.mainFrame.url
-            );
-            if (unmatchedCdp.length > 0) {
-              // This frame likely corresponds to the unmatched CDP frame
-              framesToCapture.push({ frame, url: unmatchedCdp[0].url });
-              usedCdpUrls.add(unmatchedCdp[0].url);
-              frameLog.push(`Matched empty-URL frame to CDP: ${unmatchedCdp[0].url}`);
-            } else {
-              frameLog.push(`Skipped: ${frame.url} (real: ${realUrl})`);
+        // Also check if it's a guest webContents (webview-internal frame)
+        if (!isIframe) {
+          try {
+            // Check if the opener or hostWebContents is related
+            if (otherWc.getType() === "webview" || otherWc.getType() === "browserView") {
+              // Could be an OOPIF — check if its URL domain matches any iframe src domain
+              const otherHost = new URL(otherUrl).hostname;
+              for (const src of knownIframeSrcs) {
+                try {
+                  if (new URL(src).hostname === otherHost) { isIframe = true; break; }
+                } catch {}
+              }
             }
-          }
+          } catch {}
+        }
+
+        if (isIframe) {
+          frameLog.push(`Found OOPIF webContents: id=${otherWc.id} url=${otherUrl}`);
+          framesToCapture.push({
+            executeJavaScript: (code) => otherWc.executeJavaScript(code),
+            url: otherUrl
+          });
+          capturedUrls.add(otherUrl);
+
+          // Also check for nested frames in this OOPIF
+          try {
+            const nestedFrames: Electron.WebFrameMain[] = [];
+            const collectNested = (frame: Electron.WebFrameMain) => {
+              for (const child of frame.frames) {
+                nestedFrames.push(child);
+                collectNested(child);
+              }
+            };
+            collectNested(otherWc.mainFrame);
+            for (const nf of nestedFrames) {
+              if (nf.url && nf.url !== "about:blank" && !capturedUrls.has(nf.url)) {
+                framesToCapture.push({ executeJavaScript: (code) => nf.executeJavaScript(code), url: nf.url });
+                capturedUrls.add(nf.url);
+                frameLog.push(`Found nested frame in OOPIF: ${nf.url}`);
+              }
+            }
+          } catch {}
         }
       }
 
@@ -1105,12 +1164,12 @@ app.on("ready", () => {
 
       // Process frames in reverse order (leaf frames first) so that capturing
       // a parent frame doesn't destroy child frames before they're captured
-      for (const { frame, url: frameUrl } of [...framesToCapture].reverse()) {
+      for (const { executeJavaScript: execJs, url: frameUrl } of [...framesToCapture].reverse()) {
         try {
           // Before capture, get the iframe src URLs inside this frame
           let childIframeSrcs: string[] = [];
           try {
-            childIframeSrcs = await frame.executeJavaScript(`
+            childIframeSrcs = await execJs(`
               (function() {
                 var iframes = document.querySelectorAll("iframe");
                 var srcs = [];
@@ -1119,6 +1178,7 @@ app.on("ready", () => {
                 }
                 return srcs;
               })()
+            `) as string[];
             `);
             frameLog.push(`Frame ${frameUrl.substring(0, 80)} has ${childIframeSrcs.length} child iframe(s): ${childIframeSrcs.map(s => s.substring(0, 80)).join(", ")}`);
           } catch (e) {
@@ -1126,7 +1186,7 @@ app.on("ready", () => {
           }
           
           console.log(`[Capture] Capturing frame: ${frameUrl.substring(0, 80)}`);
-          const html = await frame.executeJavaScript(captureScript);
+          const html = await execJs(captureScript) as string;
           
           const remainingIframes = (html.match(/<iframe /g) || []).length;
           frameLog.push(`Captured: ${frameUrl} (${html.length} chars, ${remainingIframes} remaining iframes)`);
