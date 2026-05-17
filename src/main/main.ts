@@ -1089,7 +1089,7 @@ app.on("ready", () => {
         })()
       `;
 
-      const results: { url: string; html: string }[] = [];
+      const results: { url: string; html: string; childIframeSrcs: string[] }[] = [];
 
       for (const frame of allFrames) {
         try {
@@ -1099,10 +1099,34 @@ app.on("ready", () => {
             frameLog.push(`Skipped: ${frameUrl}`);
             continue;
           }
+          
+          // Before capture, get the iframe src URLs inside this frame
+          let childIframeSrcs: string[] = [];
+          try {
+            childIframeSrcs = await frame.executeJavaScript(`
+              (function() {
+                var iframes = document.querySelectorAll("iframe");
+                var srcs = [];
+                for (var i = 0; i < iframes.length; i++) {
+                  srcs.push(iframes[i].src || iframes[i].getAttribute("src") || "");
+                }
+                return srcs;
+              })()
+            `);
+            frameLog.push(`Frame ${frameUrl.substring(0, 80)} has ${childIframeSrcs.length} child iframe(s): ${childIframeSrcs.map(s => s.substring(0, 80)).join(", ")}`);
+          } catch (e) {
+            frameLog.push(`Could not get child iframes for ${frameUrl.substring(0, 80)}`);
+          }
+          
           console.log(`[Capture] Capturing frame: ${frameUrl.substring(0, 80)}`);
           const html = await frame.executeJavaScript(captureScript);
-          results.push({ url: frameUrl, html });
-          frameLog.push(`Captured: ${frameUrl} (${html.length} chars)`);
+          
+          // Check if child iframes were inlined vs remaining
+          const inlinedCount = (html.match(/data-inlined-child-iframe/g) || []).length;
+          const remainingIframes = (html.match(/<iframe /g) || []).length;
+          frameLog.push(`Captured: ${frameUrl} (${html.length} chars, ${inlinedCount} inlined, ${remainingIframes} remaining iframes)`);
+          
+          results.push({ url: frameUrl, html, childIframeSrcs });
           console.log(`[Capture] Frame captured: ${html.length} chars`);
         } catch (frameErr) {
           frameLog.push(`Failed: ${frameErr instanceof Error ? frameErr.message : String(frameErr)}`);

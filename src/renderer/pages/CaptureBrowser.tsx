@@ -225,14 +225,33 @@ export function CaptureBrowser() {
 
           // Replace iframes in the webview DOM. We pass ALL captured frames as JSON
           // so the injection script can recursively replace nested iframes too.
-          const capturedMap = JSON.stringify(
-            capturedFrames.iframes.reduce((acc: Record<string, string>, f: { url: string; html: string }) => {
-              acc[f.url] = f.html;
-              // Also index by normalized URL variants
-              acc[f.url.replace(/[#?].*$/, "").replace(/\/+$/, "")] = f.html;
-              return acc;
-            }, {})
-          );
+          // Also map child iframe src URLs to their captured content for nested matching.
+          const frameMap: Record<string, string> = {};
+          for (const f of capturedFrames.iframes) {
+            frameMap[f.url] = f.html;
+            frameMap[f.url.replace(/[#?].*$/, "").replace(/\/+$/, "")] = f.html;
+            // Map child iframe src URLs to their webFrameMain-captured content
+            // This helps match nested iframes where the src in HTML differs from the frame URL
+            if (f.childIframeSrcs) {
+              for (const childSrc of f.childIframeSrcs) {
+                if (childSrc) {
+                  // Find the captured frame whose URL matches this child src
+                  const childFrame = capturedFrames.iframes!.find(cf => {
+                    const normalize = (u: string) => u.replace(/[#?].*$/, "").replace(/\/+$/, "");
+                    return cf.url !== f.url && (
+                      normalize(cf.url) === normalize(childSrc) ||
+                      cf.url.includes(childSrc) || childSrc.includes(cf.url)
+                    );
+                  });
+                  if (childFrame) {
+                    frameMap[childSrc] = childFrame.html;
+                    frameMap[childSrc.replace(/[#?].*$/, "").replace(/\/+$/, "")] = childFrame.html;
+                  }
+                }
+              }
+            }
+          }
+          const capturedMap = JSON.stringify(frameMap);
 
           // Inject all captured frames at once and handle recursive replacement
           await wv.executeJavaScript(`

@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("api", {
   captureLog: (...args: unknown[]) => ipcRenderer.invoke("capture-log", ...args),
-  captureWebviewIframes: (webContentsId: number) => ipcRenderer.invoke("capture-webview-iframes", webContentsId) as Promise<{ success: boolean; iframes?: { url: string; html: string }[]; error?: string }>,
+  captureWebviewIframes: (webContentsId: number) => ipcRenderer.invoke("capture-webview-iframes", webContentsId) as Promise<{ success: boolean; iframes?: { url: string; html: string; childIframeSrcs: string[] }[]; error?: string }>,
   captureWebsite: (url: string) => ipcRenderer.invoke("capture-website", url),
   formatHtml: (rawHtml: string) => ipcRenderer.invoke("format-html", rawHtml),
   getWebviewPreloadPath: () => ipcRenderer.invoke("get-webview-preload-path") as Promise<string>,
