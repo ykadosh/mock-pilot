@@ -914,7 +914,7 @@ export function CaptureBrowser() {
               </div>
 
               {/* Frame Status Footer */}
-              <div className="h-8 bg-surface-container border-t border-outline-variant flex items-center justify-between px-4 shrink-0">
+              <div className="h-8 bg-surface-container border-t border-outline-variant flex items-center px-4 shrink-0 relative">
                 <div className="flex items-center gap-md">
                   <div className="flex items-center gap-1">
                     <span className={`w-2 h-2 rounded-full ${isLoading ? "bg-yellow-500 animate-pulse" : "bg-green-500"}`} />
@@ -923,6 +923,11 @@ export function CaptureBrowser() {
                     </span>
                   </div>
                 </div>
+                {hasNavigated && !isCapturing && (
+                  <span className="absolute left-1/2 -translate-x-1/2 text-[10px] font-label-caps text-on-surface-variant">
+                    Navigate to the desired state before capturing.
+                  </span>
+                )}
               </div>
             </>
           ) : (
@@ -944,12 +949,7 @@ export function CaptureBrowser() {
           )}
         </div>
 
-        {/* Floating instruction bar */}
-        {hasNavigated && !isCapturing && (
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-surface-container-highest border border-outline-variant px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 backdrop-blur-xl">
-            <span className="text-ui-small text-on-surface">Navigate to the desired state before capturing.</span>
-          </div>
-        )}
+
       </main>
 
       {/* Capture progress modal */}
