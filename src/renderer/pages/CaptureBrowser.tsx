@@ -215,85 +215,179 @@ export function CaptureBrowser() {
         if (capturedFrames.success && capturedFrames.iframes && capturedFrames.iframes.length > 0) {
           log(`Captured ${capturedFrames.iframes.length} frame(s) via webFrameMain`);
 
-          // Match captured frames to iframes by URL and inject in reverse order
-          for (const { src, index } of [...iframeData].reverse()) {
-            // Find the matching captured frame by URL
-            const captured = capturedFrames.iframes.find(f => {
-              // Normalize URLs for comparison (remove trailing slashes, fragments)
+          // Helper: find a captured frame matching a given URL
+          const findFrame = (url: string) => {
+            return capturedFrames.iframes!.find(f => {
               const normalize = (u: string) => u.replace(/[#?].*$/, "").replace(/\/+$/, "");
-              return normalize(f.url) === normalize(src) || f.url.includes(src) || src.includes(f.url);
+              return normalize(f.url) === normalize(url) || f.url.includes(url) || url.includes(f.url);
             });
+          };
 
-            if (captured) {
-              log(`Iframe ${index} matched frame (${captured.html.length} chars), injecting...`);
-              const escapedHtml = JSON.stringify(captured.html);
-              await wv.executeJavaScript(`
-                (function() {
-                  var iframe = document.querySelectorAll("iframe")[${index}];
-                  if (!iframe) return;
+          // Replace iframes in the webview DOM. We pass ALL captured frames as JSON
+          // so the injection script can recursively replace nested iframes too.
+          const capturedMap = JSON.stringify(
+            capturedFrames.iframes.reduce((acc: Record<string, string>, f: { url: string; html: string }) => {
+              acc[f.url] = f.html;
+              // Also index by normalized URL variants
+              acc[f.url.replace(/[#?].*$/, "").replace(/\/+$/, "")] = f.html;
+              return acc;
+            }, {})
+          );
 
-                  var scopeId = "iframe-inline-${index}";
-                  var doc = new DOMParser().parseFromString(${escapedHtml}, "text/html");
-                  var container = document.createElement("div");
-                  container.setAttribute("data-iframe-inline", scopeId);
-                  container.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
+          // Inject all captured frames at once and handle recursive replacement
+          await wv.executeJavaScript(`
+            (function() {
+              var capturedMap = ${capturedMap};
 
-                  var width = iframe.getAttribute("width") || iframe.style.width || "100%";
-                  var height = iframe.getAttribute("height") || iframe.style.height || "auto";
-                  container.style.width = (typeof width === "string" && width.indexOf("%") >= 0) ? width : width + "px";
-                  container.style.height = height === "auto" ? "auto" : (typeof height === "string" && height.indexOf("%") >= 0) ? height : height + "px";
-                  container.style.overflow = "hidden";
-                  container.style.position = "relative";
+              function findCapturedHtml(src) {
+                if (capturedMap[src]) return capturedMap[src];
+                // Try normalized
+                var normalized = src.replace(/[#?].*$/, "").replace(/\\/+$/, "");
+                if (capturedMap[normalized]) return capturedMap[normalized];
+                // Try partial match
+                var keys = Object.keys(capturedMap);
+                for (var i = 0; i < keys.length; i++) {
+                  if (keys[i].indexOf(src) >= 0 || src.indexOf(keys[i]) >= 0) return capturedMap[keys[i]];
+                }
+                return null;
+              }
 
-                  var scopeSelector = '[data-iframe-inline="' + scopeId + '"]';
-                  var iframeStyles = doc.querySelectorAll("style");
-                  for (var si = 0; si < iframeStyles.length; si++) {
-                    var css = iframeStyles[si].textContent || "";
-                    css = css.replace(/([^{}]+)\\{/g, function(match, selectors) {
-                      if (selectors.trim().charAt(0) === "@") return match;
-                      var parts = selectors.split(",").map(function(sel) {
-                        var trimmed = sel.trim();
-                        if (!trimmed) return sel;
-                        if (trimmed === "html" || trimmed === "body" || trimmed === ":root") return scopeSelector;
-                        return scopeSelector + " " + trimmed;
-                      });
-                      return parts.join(",") + "{";
-                    });
-                    var scopedStyle = document.createElement("style");
-                    scopedStyle.textContent = css;
-                    container.appendChild(scopedStyle);
+              function replaceIframe(iframe, scopeId) {
+                var src = iframe.getAttribute("src") || iframe.src;
+                try { src = new URL(src, document.baseURI).href; } catch(e) {}
+
+                var capturedHtml = findCapturedHtml(src);
+                if (!capturedHtml) return false;
+
+                var doc = new DOMParser().parseFromString(capturedHtml, "text/html");
+
+                // Remove trust/security warning banners from captured content
+                doc.querySelectorAll('#trust-warning, .trust-warning, [class*="trust-warning"], [class*="embed-warning"], #embed-trust, [class*="TrustWarning"], [data-testid*="trust"]').forEach(function(el) { el.remove(); });
+                doc.querySelectorAll('div, section, aside, p, span').forEach(function(el) {
+                  if (el.textContent && el.textContent.indexOf('Do not enter passwords') >= 0 && el.textContent.indexOf('CodePen') >= 0) {
+                    el.remove();
                   }
+                });
 
-                  var bodyContent = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
-                  var contentWrapper = document.createElement("div");
-                  contentWrapper.innerHTML = bodyContent;
-                  container.appendChild(contentWrapper);
+                // Recursively replace any nested iframes in the parsed doc
+                // Use the iframe's src as base URL for resolving relative URLs in nested iframes
+                var nestedIframes = doc.querySelectorAll("iframe");
+                for (var ni = nestedIframes.length - 1; ni >= 0; ni--) {
+                  replaceIframeInDoc(doc, nestedIframes[ni], scopeId + "-" + ni, src);
+                }
 
-                  iframe.replaceWith(container);
-                })()
-              `);
-              log(`Iframe ${index} inlined successfully`);
-            } else {
-              log(`Iframe ${index} (${src.substring(0, 60)}) - no matching frame found, replacing with placeholder`);
-              await wv.executeJavaScript(`
-                (function() {
-                  var iframe = document.querySelectorAll("iframe")[${index}];
-                  if (!iframe) return;
-                  var placeholder = document.createElement("div");
-                  placeholder.setAttribute("data-iframe-failed", "true");
-                  placeholder.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
-                  placeholder.style.border = "1px dashed #ccc";
-                  placeholder.style.padding = "1em";
-                  placeholder.style.textAlign = "center";
-                  placeholder.style.color = "#999";
-                  placeholder.textContent = "[iframe content could not be captured]";
-                  iframe.replaceWith(placeholder);
-                })()
-              `);
-            }
-          }
+                var container = document.createElement("div");
+                container.setAttribute("data-iframe-inline", scopeId);
+                container.setAttribute("data-iframe-src", iframe.getAttribute("src") || "");
+
+                var width = iframe.getAttribute("width") || iframe.style.width || "100%";
+                var height = iframe.getAttribute("height") || iframe.style.height || "auto";
+                container.style.width = (typeof width === "string" && width.indexOf("%") >= 0) ? width : width + "px";
+                container.style.height = height === "auto" ? "auto" : (typeof height === "string" && height.indexOf("%") >= 0) ? height : height + "px";
+                container.style.overflow = "hidden";
+                container.style.position = "relative";
+
+                // Scope and inject iframe CSS
+                var scopeSelector = '[data-iframe-inline="' + scopeId + '"]';
+                var iframeStyles = doc.querySelectorAll("style");
+                for (var si = 0; si < iframeStyles.length; si++) {
+                  var css = iframeStyles[si].textContent || "";
+                  css = css.replace(/([^{}]+)\\{/g, function(match, selectors) {
+                    if (selectors.trim().charAt(0) === "@") return match;
+                    var parts = selectors.split(",").map(function(sel) {
+                      var trimmed = sel.trim();
+                      if (!trimmed) return sel;
+                      if (trimmed === "html" || trimmed === "body" || trimmed === ":root") return scopeSelector;
+                      return scopeSelector + " " + trimmed;
+                    });
+                    return parts.join(",") + "{";
+                  });
+                  var scopedStyle = document.createElement("style");
+                  scopedStyle.textContent = css;
+                  container.appendChild(scopedStyle);
+                }
+
+                var bodyContent = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
+                var contentWrapper = document.createElement("div");
+                contentWrapper.innerHTML = bodyContent;
+                container.appendChild(contentWrapper);
+
+                iframe.replaceWith(container);
+                return true;
+              }
+
+              function replaceIframeInDoc(doc, iframe, scopeId, parentUrl) {
+                var src = iframe.getAttribute("src") || iframe.getAttribute("data-src") || "";
+                // Resolve relative URL against the PARENT iframe's URL, not the page's baseURI
+                try { src = new URL(src, parentUrl || document.baseURI).href; } catch(e) {}
+                console.log("[iframe-capture] Nested iframe src resolved to:", src);
+
+                var capturedHtml = findCapturedHtml(src);
+                if (!capturedHtml) {
+                  console.log("[iframe-capture] No match found for nested iframe:", src);
+                  console.log("[iframe-capture] Available keys:", Object.keys(capturedMap).map(function(k) { return k.substring(0, 80); }));
+                  // Remove unresolved iframes
+                  iframe.remove();
+                  return;
+                }
+                console.log("[iframe-capture] Matched nested iframe, injecting content");
+
+                var innerDoc = new DOMParser().parseFromString(capturedHtml, "text/html");
+
+                // Remove trust/security warnings
+                innerDoc.querySelectorAll('#trust-warning, .trust-warning, [class*="trust-warning"], [class*="embed-warning"], #embed-trust, [class*="TrustWarning"], [data-testid*="trust"]').forEach(function(el) { el.remove(); });
+                innerDoc.querySelectorAll('div, section, aside, p, span').forEach(function(el) {
+                  if (el.textContent && el.textContent.indexOf('Do not enter passwords') >= 0 && el.textContent.indexOf('CodePen') >= 0) {
+                    el.remove();
+                  }
+                });
+
+                var container = doc.createElement("div");
+                container.setAttribute("data-iframe-inline", scopeId);
+                container.style.width = iframe.getAttribute("width") || iframe.style.width || "100%";
+                container.style.height = iframe.getAttribute("height") || iframe.style.height || "100%";
+                container.style.overflow = "hidden";
+
+                // Add styles from nested iframe
+                var styles = innerDoc.querySelectorAll("style");
+                var nestedScope = '[data-iframe-inline="' + scopeId + '"]';
+                for (var si = 0; si < styles.length; si++) {
+                  var css = styles[si].textContent || "";
+                  css = css.replace(/([^{}]+)\\{/g, function(match, selectors) {
+                    if (selectors.trim().charAt(0) === "@") return match;
+                    var parts = selectors.split(",").map(function(sel) {
+                      var trimmed = sel.trim();
+                      if (!trimmed) return sel;
+                      if (trimmed === "html" || trimmed === "body" || trimmed === ":root") return nestedScope;
+                      return nestedScope + " " + trimmed;
+                    });
+                    return parts.join(",") + "{";
+                  });
+                  var scopedStyle = doc.createElement("style");
+                  scopedStyle.textContent = css;
+                  container.appendChild(scopedStyle);
+                }
+
+                var bodyContent = innerDoc.body ? innerDoc.body.innerHTML : innerDoc.documentElement.innerHTML;
+                var wrapper = doc.createElement("div");
+                wrapper.innerHTML = bodyContent;
+                container.appendChild(wrapper);
+                iframe.replaceWith(container);
+              }
+
+              // Process all iframes in reverse order
+              var iframes = document.querySelectorAll("iframe");
+              for (var i = iframes.length - 1; i >= 0; i--) {
+                var iframe = iframes[i];
+                var src = iframe.getAttribute("src") || iframe.src;
+                if (!src || src === "about:blank" || src.indexOf("javascript:") === 0 || src.indexOf("data:") === 0) continue;
+                replaceIframe(iframe, "iframe-inline-" + i);
+              }
+            })()
+          `);
+          log("Iframe replacement complete");
         } else {
-          log(`Frame capture failed or returned empty: ${capturedFrames.error || "no frames"}`);
+          log("Frame capture failed or returned empty: " + (capturedFrames.error || "no frames"));
           // Fallback: replace all iframes with placeholders
           for (const { index } of [...iframeData].reverse()) {
             await wv.executeJavaScript(`

@@ -931,14 +931,24 @@ app.on("ready", () => {
       const wc = webContents.fromId(webContentsId);
       if (!wc) return { success: false, error: "WebContents not found" };
 
-      const mainFrame = wc.mainFrame;
-      const childFrames = mainFrame.frames;
+      // Recursively collect ALL frames (not just direct children)
+      const allFrames: Electron.WebFrameMain[] = [];
+      const collectFrames = (frame: Electron.WebFrameMain) => {
+        for (const child of frame.frames) {
+          allFrames.push(child);
+          collectFrames(child);
+        }
+      };
+      collectFrames(wc.mainFrame);
 
-      if (childFrames.length === 0) {
+      if (allFrames.length === 0) {
         return { success: true, iframes: [] };
       }
 
-      console.log(`[Capture] Found ${childFrames.length} child frame(s) in webview`);
+      console.log(`[Capture] Found ${allFrames.length} frame(s) in webview (recursive)`);
+      for (const frame of allFrames) {
+        console.log(`[Capture] Frame URL: ${frame.url}`);
+      }
 
       const captureScript = `
         (async function() {
@@ -979,6 +989,15 @@ app.on("ready", () => {
           // Remove preload/prefetch links
           document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"], link[rel="icon"]').forEach(function(l) { l.remove(); });
 
+          // Remove trust/security warning banners (e.g., CodePen's "Do not enter passwords" warning)
+          document.querySelectorAll('#trust-warning, .trust-warning, [class*="trust-warning"], [class*="embed-warning"], #embed-trust, [class*="TrustWarning"], [data-testid*="trust"]').forEach(function(el) { el.remove(); });
+          // Also remove any element containing the specific CodePen trust warning text
+          document.querySelectorAll('div, section, aside, p, span').forEach(function(el) {
+            if (el.textContent && el.textContent.indexOf('Do not enter passwords') >= 0 && el.textContent.indexOf('CodePen') >= 0) {
+              el.remove();
+            }
+          });
+
           // Serialize CSSOM rules (captures CSS injected via insertRule)
           document.querySelectorAll("style").forEach(function(style) {
             try {
@@ -1002,7 +1021,7 @@ app.on("ready", () => {
 
       const results: { url: string; html: string }[] = [];
 
-      for (const frame of childFrames) {
+      for (const frame of allFrames) {
         try {
           const frameUrl = frame.url;
           // Skip about:blank and data: frames
