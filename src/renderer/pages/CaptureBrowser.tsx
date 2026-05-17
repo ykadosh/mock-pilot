@@ -346,7 +346,15 @@ export function CaptureBrowser() {
 
                 var bodyContent = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
                 var contentWrapper = document.createElement("div");
+                contentWrapper.style.height = "100%";
+                contentWrapper.style.width = "100%";
                 contentWrapper.innerHTML = bodyContent;
+                // Copy body-level classes and styles so layout CSS still applies
+                if (doc.body) {
+                  contentWrapper.className = doc.body.className;
+                  var bodyStyle = doc.body.getAttribute("style");
+                  if (bodyStyle) contentWrapper.setAttribute("style", "height:100%;width:100%;" + bodyStyle);
+                }
                 container.appendChild(contentWrapper);
 
                 iframe.replaceWith(container);
@@ -403,7 +411,14 @@ export function CaptureBrowser() {
 
                 var bodyContent = innerDoc.body ? innerDoc.body.innerHTML : innerDoc.documentElement.innerHTML;
                 var wrapper = doc.createElement("div");
+                wrapper.style.height = "100%";
+                wrapper.style.width = "100%";
                 wrapper.innerHTML = bodyContent;
+                if (innerDoc.body) {
+                  wrapper.className = innerDoc.body.className;
+                  var bodyStyle = innerDoc.body.getAttribute("style");
+                  if (bodyStyle) wrapper.setAttribute("style", "height:100%;width:100%;" + bodyStyle);
+                }
                 container.appendChild(wrapper);
                 iframe.replaceWith(container);
               }
