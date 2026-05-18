@@ -120,7 +120,7 @@ export function ProjectCard({
       <div className="relative overflow-hidden bg-surface-container-lowest h-40">
         {imageUrl ? (
           <img
-            className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover object-top opacity-50 group-hover:scale-105 transition-transform duration-500"
             src={imageUrl}
             alt={title}
           />

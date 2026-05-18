@@ -889,6 +889,9 @@ app.on("ready", () => {
         // Get the page title before closing
         const pageTitle = await page.title();
 
+        // Scroll to top before taking thumbnail screenshot
+        await page.evaluate(() => window.scrollTo(0, 0));
+
         // Take screenshot for thumbnail
         const screenshot = await page.screenshot({ type: "png", encoding: "base64" });
 

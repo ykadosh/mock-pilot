@@ -891,9 +891,11 @@ export function CaptureBrowser() {
 
       if (abortCaptureRef.current) throw new Error("Capture cancelled");
 
-      // Take a screenshot from the webview
+      // Scroll to top and take a screenshot from the webview
       advanceStep("screenshot");
       log("Taking screenshot...");
+      await wv.executeJavaScript("window.scrollTo(0, 0)");
+      await new Promise(resolve => setTimeout(resolve, 100));
       const nativeImage = await wv.capturePage();
       const thumbnailDataUrl = nativeImage.toDataURL();
 
