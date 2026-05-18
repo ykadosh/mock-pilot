@@ -13,6 +13,7 @@ const CAPTURE_STEPS: { key: string; label: string }[] = [
   { key: "fonts", label: "Converting fonts" },
   { key: "layout", label: "Adjusting layout" },
   { key: "cleanup", label: "Tidying up the HTML" },
+  { key: "assets", label: "Extracting assets" },
   { key: "screenshot", label: "Creating preview" },
   { key: "format", label: "Formatting the code" },
   { key: "save", label: "Saving your project" },
@@ -891,6 +892,84 @@ export function CaptureBrowser() {
 
       if (abortCaptureRef.current) throw new Error("Capture cancelled");
 
+      // Extract typography and color assets from the page
+      advanceStep("assets");
+      log("Extracting assets (typography & colors)...");
+      const extractedAssets = await wv.executeJavaScript(`
+        (function() {
+          var typographyMap = {};
+          var colorSet = { text: {}, background: {}, border: {} };
+
+          // Helper to convert rgb/rgba to hex
+          function rgbToHex(rgb) {
+            if (!rgb || rgb === "transparent" || rgb === "rgba(0, 0, 0, 0)") return null;
+            var match = rgb.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+            if (!match) return rgb.startsWith("#") ? rgb.toLowerCase() : null;
+            var r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+          }
+
+          // Walk all elements
+          var allElements = document.querySelectorAll("*");
+          for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            var cs = getComputedStyle(el);
+
+            // Skip invisible elements
+            if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") continue;
+
+            // Extract colors
+            var textColor = rgbToHex(cs.color);
+            if (textColor) colorSet.text[textColor] = true;
+
+            var bgColor = rgbToHex(cs.backgroundColor);
+            if (bgColor) colorSet.background[bgColor] = true;
+
+            var borderColor = rgbToHex(cs.borderColor);
+            if (borderColor && cs.borderWidth !== "0px") colorSet.border[borderColor] = true;
+
+            // Extract typography only from elements with text content
+            if (!el.textContent || !el.textContent.trim()) continue;
+            // Only consider elements that directly contain text (not just children)
+            var hasDirectText = false;
+            for (var c = 0; c < el.childNodes.length; c++) {
+              if (el.childNodes[c].nodeType === 3 && el.childNodes[c].textContent.trim()) {
+                hasDirectText = true;
+                break;
+              }
+            }
+            if (!hasDirectText) continue;
+
+            var key = cs.fontFamily.toLowerCase() + "|" + cs.fontSize + "|" + cs.fontWeight + "|" + cs.fontStyle + "|" + cs.letterSpacing + "|" + cs.textTransform;
+            if (!typographyMap[key]) {
+              typographyMap[key] = {
+                fontFamily: cs.fontFamily,
+                fontSize: cs.fontSize,
+                fontWeight: cs.fontWeight,
+                fontStyle: cs.fontStyle,
+                lineHeight: cs.lineHeight,
+                letterSpacing: cs.letterSpacing,
+                textTransform: cs.textTransform
+              };
+            }
+          }
+
+          // Build results
+          var typography = Object.values(typographyMap);
+          // Deduplicate colors across all contexts into a single unique set
+          var uniqueColors = {};
+          Object.keys(colorSet.text).forEach(function(c) { uniqueColors[c] = true; });
+          Object.keys(colorSet.background).forEach(function(c) { uniqueColors[c] = true; });
+          Object.keys(colorSet.border).forEach(function(c) { uniqueColors[c] = true; });
+          var colors = Object.keys(uniqueColors).map(function(c) { return { value: c }; });
+
+          return { typography: typography, colors: colors };
+        })()
+      `);
+      log("Extracted " + extractedAssets.typography.length + " typography styles and " + extractedAssets.colors.length + " colors");
+
+      if (abortCaptureRef.current) throw new Error("Capture cancelled");
+
       // Scroll to top and take a screenshot from the webview
       advanceStep("screenshot");
       log("Taking screenshot...");
@@ -932,6 +1011,24 @@ export function CaptureBrowser() {
         thumbnail: thumbnailDataUrl,
       });
       log("Project saved:", project.id);
+
+      // Save extracted assets
+      if (extractedAssets) {
+        const assetsToSave = {
+          typography: extractedAssets.typography.map((t: { fontFamily: string; fontSize: string; fontWeight: string; fontStyle: string; lineHeight: string; letterSpacing: string; textTransform: string }, i: number) => ({
+            id: "typo-" + i,
+            label: t.fontFamily.split(",")[0].replace(/['"]/g, "").trim() + " " + t.fontSize + " " + t.fontWeight,
+            ...t,
+          })),
+          colors: extractedAssets.colors.map((c: { value: string }, i: number) => ({
+            id: "color-" + i,
+            label: "",
+            value: c.value,
+          })),
+        };
+        await window.api.saveProjectAssets(project.id, assetsToSave);
+        log("Assets saved:", assetsToSave.typography.length, "typography,", assetsToSave.colors.length, "colors");
+      }
 
       // Mark all steps done
       setCaptureSteps(prev => prev.map(s => ({ ...s, status: "done" as const })));

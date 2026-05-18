@@ -8,6 +8,29 @@ interface ProjectMeta {
   updatedAt: string;
 }
 
+interface TypographyAsset {
+  id: string;
+  label: string;
+  fontFamily: string;
+  fontSize: string;
+  fontWeight: string;
+  fontStyle: string;
+  lineHeight: string;
+  letterSpacing: string;
+  textTransform: string;
+}
+
+interface ColorAsset {
+  id: string;
+  label: string;
+  value: string;
+}
+
+interface ProjectAssets {
+  typography: TypographyAsset[];
+  colors: ColorAsset[];
+}
+
 declare global {
   interface Window {
     api: {
@@ -104,6 +127,9 @@ declare global {
         success: boolean;
         error?: string;
       }>;
+      // Project assets
+      saveProjectAssets: (id: string, assets: ProjectAssets) => Promise<{ success: boolean }>;
+      loadProjectAssets: (id: string) => Promise<{ success: boolean; assets?: ProjectAssets }>;
     };
   }
 }

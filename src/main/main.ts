@@ -503,6 +503,31 @@ app.on("ready", () => {
     return { success: true };
   });
 
+  // Save project assets (typography, colors, etc.)
+  ipcMain.handle("save-project-assets", (_event, id: string, assets: { typography: unknown[]; colors: unknown[] }) => {
+    try {
+      const assetsPath = path.join(projectsDir, `${id}.assets.json`);
+      fs.writeFileSync(assetsPath, JSON.stringify(assets, null, 2), "utf-8");
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
+  });
+
+  // Load project assets
+  ipcMain.handle("load-project-assets", (_event, id: string) => {
+    try {
+      const assetsPath = path.join(projectsDir, `${id}.assets.json`);
+      if (!fs.existsSync(assetsPath)) {
+        return { success: true, assets: { typography: [], colors: [] } };
+      }
+      const assets = JSON.parse(fs.readFileSync(assetsPath, "utf-8"));
+      return { success: true, assets };
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
+  });
+
   // Save project history
   ipcMain.handle("save-project-history", (_event, id: string, data: { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] }) => {
     try {

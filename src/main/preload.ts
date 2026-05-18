@@ -44,4 +44,8 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("deploy-codesandbox", data),
   deployToStackblitz: (data: { html: string; css?: string; baseUrl?: string }) =>
     ipcRenderer.invoke("deploy-stackblitz", data),
+  // Project assets
+  saveProjectAssets: (id: string, assets: { typography: unknown[]; colors: unknown[] }) =>
+    ipcRenderer.invoke("save-project-assets", id, assets),
+  loadProjectAssets: (id: string) => ipcRenderer.invoke("load-project-assets", id),
 });
