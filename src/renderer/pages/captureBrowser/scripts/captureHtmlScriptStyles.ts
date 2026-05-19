@@ -1,0 +1,101 @@
+export const CAPTURE_HTML_SCRIPT_STYLES = `
+    _log("[step:scripts] Removing scripts...");
+    document.querySelectorAll("script").forEach((s) => s.remove());
+    document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"], link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').forEach((l) => l.remove());
+    _log("[step:cssom] Serializing CSSOM rules...");
+    var cssomCount = 0;
+    document.querySelectorAll("style").forEach(function(style) {
+      try {
+        var sheet = style.sheet;
+        if (sheet && sheet.cssRules && sheet.cssRules.length > 0) {
+          var rules = [];
+          for (var i = 0; i < sheet.cssRules.length; i++) rules.push(sheet.cssRules[i].cssText);
+          var serialized = rules.join("\n");
+          if (serialized !== (style.textContent || "").trim()) {
+            style.textContent = serialized;
+            cssomCount++;
+          }
+        }
+      } catch (e) {}
+    });
+    _log("Serialized CSSOM rules from " + cssomCount + " style tag(s)");
+    if (document.adoptedStyleSheets && document.adoptedStyleSheets.length > 0) {
+      _log("Serializing " + document.adoptedStyleSheets.length + " adopted stylesheet(s)...");
+      var adoptedCount = 0;
+      for (var asi = 0; asi < document.adoptedStyleSheets.length; asi++) {
+        try {
+          var adoptedSheet = document.adoptedStyleSheets[asi];
+          if (adoptedSheet.cssRules && adoptedSheet.cssRules.length > 0) {
+            var adoptedRules = [];
+            for (var ari = 0; ari < adoptedSheet.cssRules.length; ari++) adoptedRules.push(adoptedSheet.cssRules[ari].cssText);
+            var adoptedStyle = document.createElement("style");
+            adoptedStyle.setAttribute("data-adopted-stylesheet", "true");
+            adoptedStyle.textContent = adoptedRules.join("\n");
+            document.head.appendChild(adoptedStyle);
+            adoptedCount++;
+          }
+        } catch (e) { _log("Error serializing adopted stylesheet: " + e); }
+      }
+      _log("Serialized " + adoptedCount + " adopted stylesheet(s) into <style> tags");
+    }
+    const inlineStyles = [...document.querySelectorAll("style")];
+    const fontStyles = inlineStyles.filter(function(s) { return (s.textContent || "").indexOf("@font-face") !== -1; });
+    _log("[step:fonts] Processing " + fontStyles.length + " of " + inlineStyles.length + " inline style tag(s) that contain @font-face...");
+    await Promise.all(fontStyles.map(async function(style) {
+      style.textContent = await inlineFontUrls(style.textContent || "", document.baseURI);
+    }));
+    _log("Done processing inline style tags");
+    _log("[step:layout] Baking viewport-dependent dimensions...");
+    var bakeCount = 0;
+    document.querySelectorAll('*').forEach(function(el) {
+      var cs = getComputedStyle(el);
+      if (el.style.height && el.style.height.endsWith('px')) return;
+      var needsBake = false;
+      if ((cs.position === 'absolute' || cs.position === 'fixed') && cs.top !== 'auto' && cs.bottom !== 'auto') needsBake = true;
+      if (needsBake) {
+        var rect = el.getBoundingClientRect();
+        if (rect.height > 0) {
+          el.style.height = rect.height + 'px';
+          bakeCount++;
+        }
+      }
+    });
+    _log("Baked " + bakeCount + " viewport-dependent dimensions");
+    if (_heightMode !== 'keep-as-is') {
+      _log("Processing viewport-derived heights (mode: " + _heightMode + ")...");
+      var vpHeight = window.innerHeight;
+      var heightFixCount = 0;
+      document.querySelectorAll('*').forEach(function(el) {
+        if (!el.style.height || !el.style.height.endsWith('px')) return;
+        var h = parseFloat(el.style.height);
+        if (isNaN(h) || h <= 0) return;
+        var rect = el.getBoundingClientRect();
+        var bottomGap = Math.abs((rect.top + h) - vpHeight);
+        if (bottomGap < 30 && h > vpHeight * 0.3) {
+          var offset = Math.round(rect.top);
+          if (_heightMode === 'convert-vh') {
+            el.style.height = offset > 0 ? 'calc(100vh - ' + offset + 'px)' : '100vh';
+          } else {
+            el.style.removeProperty('height');
+          }
+          heightFixCount++;
+        }
+      });
+      _log("Fixed " + heightFixCount + " viewport-derived height(s)");
+    }
+    _log("Expanding scrollable containers...");
+    var expandCount = 0;
+    document.querySelectorAll('*').forEach(function(el) {
+      var cs = getComputedStyle(el);
+      if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') {
+        var extra = el.scrollHeight - el.clientHeight;
+        if (extra > 10) {
+          el.style.height = el.scrollHeight + 'px';
+          el.style.maxHeight = 'none';
+          el.style.overflowY = 'visible';
+          expandCount++;
+        }
+      }
+    });
+    _log("Expanded " + expandCount + " scrollable container(s)");
+`;
