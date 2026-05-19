@@ -17,8 +17,8 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
 
   return (
     <SidePanel title="ELEMENT PROPERTIES" onClose={onClose}>
-      <PropertiesPanelDetails element={element} selector={buildElementSelector(element)} />
       <PropertiesPanelModifier {...modifier} />
+      <PropertiesPanelDetails element={element} selector={buildElementSelector(element)} />
     </SidePanel>
   );
 }
