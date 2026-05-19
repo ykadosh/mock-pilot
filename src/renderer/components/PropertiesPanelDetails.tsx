@@ -2,7 +2,6 @@ import type { SelectedElement } from "../pages/Editor";
 
 interface PropertiesPanelDetailsProps {
   element: SelectedElement;
-  selector: string;
 }
 
 const layoutFields = [
@@ -21,15 +20,9 @@ const appearanceFields = [
   ["Position", "position", "static"],
 ] as const;
 
-export function PropertiesPanelDetails({ element, selector }: PropertiesPanelDetailsProps) {
+export function PropertiesPanelDetails({ element }: PropertiesPanelDetailsProps) {
   return (
     <>
-      <div className="p-sm border-b border-slate-800 bg-violet-900/20">
-        <div className="gap-sm flex items-center">
-          <span className="material-symbols-outlined text-sm text-violet-400">ads_click</span>
-          <span className="flex-1 truncate font-mono text-[11px] text-violet-300">{selector}</span>
-        </div>
-      </div>
       <div className="p-md border-b border-slate-800">
         <span className="font-label-caps text-label-caps mb-md block text-slate-500">LAYOUT</span>
         <div className="gap-sm grid grid-cols-2">

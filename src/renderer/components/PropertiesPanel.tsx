@@ -14,11 +14,18 @@ interface PropertiesPanelProps {
 
 export function PropertiesPanel({ element, onClose, onApplyModification, getElementHTML }: PropertiesPanelProps) {
   const modifier = usePropertiesPanelModifier({ element, onApplyModification, getElementHTML });
+  const selector = buildElementSelector(element);
 
   return (
     <SidePanel title="ELEMENT PROPERTIES" onClose={onClose}>
+      <div className="p-sm border-b border-slate-800 bg-violet-900/20">
+        <div className="gap-sm flex items-center">
+          <span className="material-symbols-outlined text-sm text-violet-400">ads_click</span>
+          <span className="flex-1 truncate font-mono text-[11px] text-violet-300">{selector}</span>
+        </div>
+      </div>
       <PropertiesPanelModifier {...modifier} />
-      <PropertiesPanelDetails element={element} selector={buildElementSelector(element)} />
+      <PropertiesPanelDetails element={element} />
     </SidePanel>
   );
 }
