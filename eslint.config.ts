@@ -25,50 +25,50 @@ export default tseslint.config(
     },
     rules: {
       // Downgrade base rules that conflict with Electron main process patterns
-      'no-empty': 'warn',
-      '@typescript-eslint/no-require-imports': 'warn',
+      'no-empty': 'error',
+      '@typescript-eslint/no-require-imports': 'error',
 
       // File size
-      'max-lines': ['warn', { max: 150, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['error', { max: 150, skipBlankLines: true, skipComments: true }],
 
       // Function size (React components will trigger this — that's intentional for phased cleanup)
-      'max-lines-per-function': ['warn', { max: 40, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['error', { max: 40, skipBlankLines: true, skipComments: true }],
 
       // Complexity
-      complexity: ['warn', 10],
-      'max-depth': ['warn', 3],
-      'max-params': ['warn', 3],
+      complexity: ['error', 10],
+      'max-depth': ['error', 3],
+      'max-params': ['error', 3],
 
       // General quality
-      'no-console': 'warn',
-      'prefer-const': 'warn',
-      'no-nested-ternary': 'warn',
+      'no-console': 'error',
+      'prefer-const': 'error',
+      'no-nested-ternary': 'error',
 
       // TypeScript
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 
       // React
-      'react/jsx-no-useless-fragment': 'warn',
-      'react-hooks/exhaustive-deps': 'warn',
+      'react/jsx-no-useless-fragment': 'error',
+      'react-hooks/exhaustive-deps': 'error',
       'react-hooks/rules-of-hooks': 'error',
 
       // Tailwind
-      'tailwindcss/classnames-order': 'warn',
-      'tailwindcss/no-contradicting-classname': 'warn',
-      'tailwindcss/no-unnecessary-arbitrary-value': 'warn',
-      'tailwindcss/enforces-shorthand': 'warn',
+      'tailwindcss/classnames-order': 'error',
+      'tailwindcss/no-contradicting-classname': 'error',
+      'tailwindcss/no-unnecessary-arbitrary-value': 'error',
+      'tailwindcss/enforces-shorthand': 'error',
       'tailwindcss/no-custom-classname': 'off', // Project uses custom theme utilities (Tailwind v4 CSS-based)
 
       // File naming conventions
-      'check-file/filename-naming-convention': ['warn', {
+      'check-file/filename-naming-convention': ['error', {
         'src/renderer/components/**/*.tsx': 'PASCAL_CASE',
         'src/renderer/pages/**/*.tsx': 'PASCAL_CASE',
         'src/**/*.hooks.ts': 'PASCAL_CASE',
         'src/**/*.utils.ts': 'PASCAL_CASE',
       }, { ignoreMiddleExtensions: true }],
-      'check-file/folder-naming-convention': ['warn', {
+      'check-file/folder-naming-convention': ['error', {
         'src/renderer/**': 'CAMEL_CASE',
       }],
     },
