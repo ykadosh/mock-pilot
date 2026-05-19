@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 interface AuthState {
@@ -17,22 +17,25 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function toAuthState(status: Omit<AuthState, "loading">): AuthState {
+  return { ...status, loading: false };
+}
+
+function useAuthStatus(setState: Dispatch<SetStateAction<AuthState>>) {
+  useEffect(() => {
+    window.api.authGetStatus().then((status) => {
+      setState(toAuthState(status));
+    });
+  }, [setState]);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     authenticated: false,
     loading: true,
   });
 
-  useEffect(() => {
-    window.api.authGetStatus().then((status) => {
-      setState({
-        authenticated: status.authenticated,
-        login: status.login,
-        avatar_url: status.avatar_url,
-        loading: false,
-      });
-    });
-  }, []);
+  useAuthStatus(setState);
 
   const startLogin = useCallback(async () => {
     const result = await window.api.authStartDeviceFlow();
@@ -45,12 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pollLogin = useCallback(async (deviceCode: string): Promise<boolean> => {
     const result = await window.api.authPollDeviceFlow(deviceCode);
     if (result.status === "success") {
-      setState({
-        authenticated: true,
-        login: result.login,
-        avatar_url: result.avatar_url,
-        loading: false,
-      });
+      setState(toAuthState({ authenticated: true, login: result.login, avatar_url: result.avatar_url }));
       return true;
     }
     if (result.status === "error") {
@@ -60,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setAuthenticated = useCallback((login: string, avatar_url?: string) => {
-    setState({ authenticated: true, login, avatar_url, loading: false });
+    setState(toAuthState({ authenticated: true, login, avatar_url }));
   }, []);
 
   const logout = useCallback(async () => {
