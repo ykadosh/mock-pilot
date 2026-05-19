@@ -9,6 +9,7 @@ export function registerCaptureHandlers() {
   ipcMain.handle("capture-website", handleCaptureWebsite);
   ipcMain.handle("get-webview-preload-path", () => path.join(__dirname, "webviewPreload.js"));
   ipcMain.handle("capture-log", (_event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => {
+    // eslint-disable-next-line no-console
     console.log("[Capture]", ...args);
   });
   ipcMain.handle("capture-webview-iframes", handleCaptureIframes);

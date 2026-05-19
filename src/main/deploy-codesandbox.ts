@@ -4,64 +4,54 @@ import fs from "fs";
 
 import { cleanHtmlForExport } from "./export";
 
-export async function handleDeployCodesandbox(
-  _event: Electron.IpcMainInvokeEvent,
-  data: { html: string; css?: string; baseUrl?: string }
-) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const LZString = require("lz-string");
+type DeployCodesandboxData = { html: string; css?: string; baseUrl?: string };
+type CodesandboxFiles = Record<string, { content: string }>;
 
-    let htmlContent = cleanHtmlForExport(data.html, data.baseUrl);
+function normalizeContent(content: string): string {
+  return content.replace(/<!--[\s\S]*?-->/g, "").replace(/\n\s*\n/g, "\n").replace(/^\s+/gm, "");
+}
 
-    htmlContent = htmlContent
-      .replace(/<!--[\s\S]*?-->/g, "")
-      .replace(/\n\s*\n/g, "\n")
-      .replace(/^\s+/gm, "");
+function validateCodesandboxSize(files: CodesandboxFiles): void {
+  const totalSize = Object.values(files).reduce((sum, file) => sum + file.content.length, 0);
+  if (totalSize <= 5 * 1024 * 1024) return;
 
-    const files: Record<string, { content: string }> = {};
+  const sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+  throw new Error(`Project is too large for CodeSandbox (${sizeMB} MB). Use "Download ZIP" and deploy manually instead.`);
+}
 
-    if (data.css) {
-      let css = data.css;
-      css = css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\n\s*\n/g, "\n").replace(/^\s+/gm, "");
-      files["styles.css"] = { content: css };
-      if (!htmlContent.includes('href="styles.css"')) {
-        htmlContent = htmlContent.replace(
-          /<\/head>/i,
-          '  <link rel="stylesheet" href="styles.css">\n</head>'
-        );
-      }
+function buildCodesandboxFiles(html: string, css?: string, baseUrl?: string): CodesandboxFiles {
+  let htmlContent = normalizeContent(cleanHtmlForExport(html, baseUrl));
+  const files: CodesandboxFiles = {};
+
+  if (css) {
+    const cleanedCss = normalizeContent(css.replace(/\/\*[\s\S]*?\*\//g, ""));
+    files["styles.css"] = { content: cleanedCss };
+    if (!htmlContent.includes('href="styles.css"')) {
+      htmlContent = htmlContent.replace(/<\/head>/i, '  <link rel="stylesheet" href="styles.css">\n</head>');
     }
+  }
 
-    files["index.html"] = { content: htmlContent };
-    files["package.json"] = {
-      content: JSON.stringify({
-        name: "mockpilot-export",
-        version: "1.0.0",
-        description: "Exported from MockPilot",
-        main: "index.html",
-      }, null, 2),
-    };
+  files["index.html"] = { content: htmlContent };
+  files["package.json"] = {
+    content: JSON.stringify({
+      name: "mockpilot-export",
+      version: "1.0.0",
+      description: "Exported from MockPilot",
+      main: "index.html",
+    }, null, 2),
+  };
+  validateCodesandboxSize(files);
+  return files;
+}
 
-    const totalSize = Object.values(files).reduce((sum, f) => sum + f.content.length, 0);
-    const sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
-    if (totalSize > 5 * 1024 * 1024) {
-      return {
-        success: false,
-        error: `Project is too large for CodeSandbox (${sizeMB} MB). Use "Download ZIP" and deploy manually instead.`,
-      };
-    }
+function buildDeployFilePath(fileName: string): string {
+  const deployDir = path.join(app.getPath("userData"), "mockpilot-deploy");
+  fs.mkdirSync(deployDir, { recursive: true });
+  return path.join(deployDir, fileName);
+}
 
-    const parameters = LZString.compressToBase64(JSON.stringify({ files }))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    const tmpDir = path.join(app.getPath("temp"), "mockpilot-deploy");
-    fs.mkdirSync(tmpDir, { recursive: true });
-    const tmpFile = path.join(tmpDir, "deploy.html");
-
-    const formHtml = `<!DOCTYPE html>
+async function openCodesandboxForm(parameters: string): Promise<void> {
+  const formHtml = `<!DOCTYPE html>
 <html>
 <head><title>Deploying to CodeSandbox...</title></head>
 <body style="background:#0b1326;color:#dae2fd;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
@@ -73,9 +63,25 @@ export async function handleDeployCodesandbox(
 </body>
 </html>`;
 
-    fs.writeFileSync(tmpFile, formHtml, "utf-8");
-    await shell.openExternal(`file://${tmpFile}`);
+  const formPath = buildDeployFilePath("codesandbox.html");
+  fs.writeFileSync(formPath, formHtml, "utf-8");
+  await shell.openExternal(`file://${formPath}`);
+}
 
+export async function handleDeployCodesandbox(
+  _event: Electron.IpcMainInvokeEvent,
+  data: DeployCodesandboxData
+) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const LZString = require("lz-string");
+    const files = buildCodesandboxFiles(data.html, data.css, data.baseUrl);
+    const parameters = LZString.compressToBase64(JSON.stringify({ files }))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    await openCodesandboxForm(parameters);
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";

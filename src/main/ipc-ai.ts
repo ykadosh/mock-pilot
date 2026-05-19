@@ -1,18 +1,9 @@
 import { ipcMain } from "electron";
 import fs from "fs";
-
 import { getToken, getCopilotToken } from "./auth";
 import { appSettingsPath } from "./projects";
 
-export function registerAiHandlers() {
-  ipcMain.handle("ai-modify-element", async (_event, data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => {
-    try {
-      const token = getToken();
-      if (!token) {
-        return { success: false, error: "Not authenticated. Please sign in with GitHub first." };
-      }
-
-      const systemPrompt = `You are an expert front-end developer. The user has selected an HTML element and wants to modify it.
+const AI_SYSTEM_PROMPT = `You are an expert front-end developer. The user has selected an HTML element and wants to modify it.
 You will receive the element's current HTML and computed CSS styles.
 Based on the user's instructions, return ONLY the modified HTML for that element.
 
@@ -25,80 +16,67 @@ Rules:
 - Keep the same tag type unless the user explicitly asks to change it.
 - IMPORTANT: Preserve any data-mp-id attribute exactly as-is. Do not remove or modify it.
 - If the user asks to remove/delete the element, return exactly the text: __REMOVE_ELEMENT__`;
+const PREMIUM_MODELS = ["claude-sonnet-4.5", "claude-sonnet-4.6", "claude-opus-4.5", "claude-opus-4.6", "claude-opus-4.7", "claude-haiku-4.5", "gpt-4.1", "gpt-4.1-mini", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5-mini"];
 
-      const userMessage = `Here is the selected element's HTML:
-\`\`\`html
-${data.outerHTML}
-\`\`\`
+type ModifyElementRequest = { prompt: string; outerHTML: string; computedStyle: Record<string, string> };
+type ChatResponse = { choices?: Array<{ message?: { content?: string }; delta?: { content?: string } }> };
 
-Here are its current computed styles:
-${Object.entries(data.computedStyle).map(([k, v]) => `${k}: ${v}`).join("\n")}
+function buildUserMessage(data: ModifyElementRequest) {
+  const styles = Object.entries(data.computedStyle).map(([key, value]) => `${key}: ${value}`).join("\n");
+  return `Here is the selected element's HTML:\n\`\`\`html\n${data.outerHTML}\n\`\`\`\n\nHere are its current computed styles:\n${styles}\n\nUser's requested modification: ${data.prompt}\n\nReturn only the modified HTML element:`;
+}
 
-User's requested modification: ${data.prompt}
+function getSelectedAiModel() {
+  try {
+    if (!fs.existsSync(appSettingsPath)) return "gpt-4o";
+    const settings = JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
+    return settings.aiModel || "gpt-4o";
+  } catch {
+    return "gpt-4o";
+  }
+}
 
-Return only the modified HTML element:`;
+async function getAiApiToken(aiModel: string, token: string) {
+  if (!PREMIUM_MODELS.includes(aiModel)) return token;
+  const copilotToken = await getCopilotToken();
+  if (copilotToken) return copilotToken;
+  throw new Error(`Model "${aiModel}" requires GitHub Copilot Pro/Business. Make sure your GitHub account has Copilot access, or select a Free model in Settings.`);
+}
 
-      // Load selected model from settings
-      let aiModel = "gpt-4o";
-      try {
-        if (fs.existsSync(appSettingsPath)) {
-          const settings = JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
-          if (settings.aiModel) aiModel = settings.aiModel;
-        }
-      } catch { /* use default */ }
+function extractResponseContent(result: ChatResponse) {
+  const choice = result.choices?.[0];
+  return choice?.message?.content ?? choice?.delta?.content ?? "";
+}
 
-      // Models that require gh CLI token (need full Copilot Pro/Business subscription)
-      const premiumModels = ["claude-sonnet-4.5", "claude-sonnet-4.6", "claude-opus-4.5", "claude-opus-4.6", "claude-opus-4.7", "claude-haiku-4.5", "gpt-4.1", "gpt-4.1-mini", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5-mini"];
-      const isPremiumModel = premiumModels.includes(aiModel);
+function normalizeModifiedHtml(result: ChatResponse) {
+  const modifiedHTML = extractResponseContent(result).trim().replace(/^```(?:html)?\n?/i, "").replace(/\n?```$/i, "").trim();
+  return modifiedHTML || "__REMOVE_ELEMENT__";
+}
 
-      // For premium models, we need the gh CLI token which has full Copilot access
-      let apiToken = token;
-      if (isPremiumModel) {
-        const copilotToken = await getCopilotToken();
-        if (!copilotToken) {
-          return { success: false, error: `Model "${aiModel}" requires GitHub Copilot Pro/Business. Make sure your GitHub account has Copilot access, or select a Free model in Settings.` };
-        }
-        apiToken = copilotToken;
-      }
-
-      // All models use the Copilot API with copilot-4-cli integration
-      const response = await fetch("https://api.githubcopilot.com/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiToken}`,
-          "Content-Type": "application/json",
-          "Copilot-Integration-Id": "copilot-4-cli",
-        },
-        body: JSON.stringify({
-          model: aiModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
-          temperature: 0.3,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return { success: false, error: `API error (${response.status}): ${errorText}` };
-      }
-
-      const result = await response.json();
-      let modifiedHTML = result.choices?.[0]?.message?.content?.trim() || "";
-
-      // Strip markdown code blocks if present
-      modifiedHTML = modifiedHTML.replace(/^```(?:html)?\n?/i, "").replace(/\n?```$/i, "").trim();
-
-      // Handle element removal
-      if (modifiedHTML === "__REMOVE_ELEMENT__" || modifiedHTML === "") {
-        return { success: true, html: "__REMOVE_ELEMENT__" };
-      }
-
-      return { success: true, html: modifiedHTML };
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return { success: false, error: message };
-    }
+async function requestModifiedHtml(aiModel: string, apiToken: string, userMessage: string) {
+  const response = await fetch("https://api.githubcopilot.com/chat/completions", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json", "Copilot-Integration-Id": "copilot-4-cli" },
+    body: JSON.stringify({ model: aiModel, messages: [{ role: "system", content: AI_SYSTEM_PROMPT }, { role: "user", content: userMessage }], temperature: 0.3 }),
   });
+  if (!response.ok) throw new Error(`API error (${response.status}): ${await response.text()}`);
+  return normalizeModifiedHtml(await response.json() as ChatResponse);
+}
+
+async function handleAiModifyElement(_event: Electron.IpcMainInvokeEvent, data: ModifyElementRequest) {
+  try {
+    const token = getToken();
+    if (!token) return { success: false, error: "Not authenticated. Please sign in with GitHub first." };
+    const aiModel = getSelectedAiModel();
+    const apiToken = await getAiApiToken(aiModel, token);
+    const html = await requestModifiedHtml(aiModel, apiToken, buildUserMessage(data));
+    return { success: true, html };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: message };
+  }
+}
+
+export function registerAiHandlers() {
+  ipcMain.handle("ai-modify-element", handleAiModifyElement);
 }
