@@ -46,7 +46,8 @@
     "eslint-plugin-tailwindcss": "^3.18.3",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.4"
+    "typescript-eslint": "^8.59.4",
+    "vite": "^8.0.13"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
