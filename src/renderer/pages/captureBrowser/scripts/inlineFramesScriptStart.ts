@@ -7,7 +7,7 @@ export const INLINE_FRAMES_SCRIPT_MIDDLE = `;
 
     function findCapturedHtml(src) {
       if (capturedMap[src]) return capturedMap[src];
-      var normalized = src.replace(/[#?].*$/, "").replace(/\/+$/, "");
+      var normalized = src.replace(/[#?].*$/, "").replace(/\\/+$/, "");
       if (capturedMap[normalized]) return capturedMap[normalized];
       var keys = Object.keys(capturedMap);
       for (var i = 0; i < keys.length; i++) {
@@ -15,11 +15,11 @@ export const INLINE_FRAMES_SCRIPT_MIDDLE = `;
       }
       try {
         var srcUrl = new URL(src);
-        var srcPath = srcUrl.pathname.replace(/\/+$/, "");
+        var srcPath = srcUrl.pathname.replace(/\\/+$/, "");
         for (var j = 0; j < keys.length; j++) {
           try {
             var keyUrl = new URL(keys[j]);
-            var keyPath = keyUrl.pathname.replace(/\/+$/, "");
+            var keyPath = keyUrl.pathname.replace(/\\/+$/, "");
             if (srcPath === keyPath && srcPath.length > 1) return capturedMap[keys[j]];
           } catch(e2) {}
         }
@@ -52,7 +52,7 @@ export const INLINE_FRAMES_SCRIPT_MIDDLE = `;
       var iframeStyles = doc.querySelectorAll("style");
       for (var si = 0; si < iframeStyles.length; si++) {
         var css = iframeStyles[si].textContent || "";
-        css = css.replace(/([^{}]+)\{/g, function(match, selectors) {
+        css = css.replace(/([^{}]+)\\{/g, function(match, selectors) {
           if (selectors.trim().charAt(0) === "@") return match;
           var parts = selectors.split(",").map(function(sel) {
             var trimmed = sel.trim();

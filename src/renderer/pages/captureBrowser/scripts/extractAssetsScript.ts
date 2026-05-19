@@ -5,7 +5,7 @@ export const EXTRACT_ASSETS_SCRIPT = `
     var colorSet = { text: {}, background: {}, border: {} };
     function rgbToHex(rgb) {
       if (!rgb || rgb === "transparent" || rgb === "rgba(0, 0, 0, 0)") return null;
-      var match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      var match = rgb.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
       if (!match) return rgb.startsWith("#") ? rgb.toLowerCase() : null;
       var r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
       return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);

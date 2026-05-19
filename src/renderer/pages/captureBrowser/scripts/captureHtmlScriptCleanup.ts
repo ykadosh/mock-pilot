@@ -12,13 +12,13 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
     const textNodes = [];
     while (textWalker.nextNode()) textNodes.push(textWalker.currentNode);
     textNodes.forEach((t) => {
-      if (t.textContent && /^\s+$/.test(t.textContent)) {
+      if (t.textContent && /^\\s+$/.test(t.textContent)) {
         var ancestor = t.parentElement;
         while (ancestor) {
           if (ancestor.tagName === "PRE") return;
           ancestor = ancestor.parentElement;
         }
-        t.textContent = "\n";
+        t.textContent = "\\n";
       }
     });
     _log("Flattening nested interactive elements...");

@@ -22,7 +22,7 @@ export const INLINE_FRAMES_SCRIPT_END = `
       var nestedScope = '[data-iframe-inline="' + scopeId + '"]';
       for (var si = 0; si < styles.length; si++) {
         var css = styles[si].textContent || "";
-        css = css.replace(/([^{}]+)\{/g, function(match, selectors) {
+        css = css.replace(/([^{}]+)\\{/g, function(match, selectors) {
           if (selectors.trim().charAt(0) === "@") return match;
           var parts = selectors.split(",").map(function(sel) {
             var trimmed = sel.trim();

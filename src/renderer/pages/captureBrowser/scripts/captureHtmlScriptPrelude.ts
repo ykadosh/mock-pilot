@@ -38,12 +38,12 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
       return null;
     }
     async function inlineFontUrls(cssText, baseUrl) {
-      const fontFaceRegex = /@font-face\s*\{[^}]*\}/gi;
+      const fontFaceRegex = /@font-face\\s*\\{[^}]*\\}/gi;
       const fontFaces = [...cssText.matchAll(fontFaceRegex)];
       _log("  Found " + fontFaces.length + " @font-face block(s) in CSS (" + cssText.length + " chars)");
       for (const faceMatch of fontFaces) {
         let faceBlock = faceMatch[0];
-        const urlRegex = /url\(["']?([^"')]+?)["']?\)\s*format\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\)/gi;
+        const urlRegex = /url\\(["']?([^"')]+?)["']?\\)\\s*format\\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\\)/gi;
         const urlMatches = [...faceBlock.matchAll(urlRegex)];
         for (const match of urlMatches) {
           const fontUrl = match[1];
@@ -52,7 +52,7 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
           const dataUri = await _fetchFontAsDataUri(resolvedUrl);
           if (dataUri) faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '") format("' + match[2] + '")');
         }
-        const simpleUrlRegex = /url\(["']?([^"')]+\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\)/gi;
+        const simpleUrlRegex = /url\\(["']?([^"')]+\\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\\)/gi;
         const simpleMatches = [...faceBlock.matchAll(simpleUrlRegex)];
         for (const match of simpleMatches) {
           const fontUrl = match[1];

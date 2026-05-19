@@ -10,7 +10,7 @@ export const CAPTURE_HTML_SCRIPT_STYLES = `
         if (sheet && sheet.cssRules && sheet.cssRules.length > 0) {
           var rules = [];
           for (var i = 0; i < sheet.cssRules.length; i++) rules.push(sheet.cssRules[i].cssText);
-          var serialized = rules.join("\n");
+          var serialized = rules.join("\\n");
           if (serialized !== (style.textContent || "").trim()) {
             style.textContent = serialized;
             cssomCount++;
@@ -30,7 +30,7 @@ export const CAPTURE_HTML_SCRIPT_STYLES = `
             for (var ari = 0; ari < adoptedSheet.cssRules.length; ari++) adoptedRules.push(adoptedSheet.cssRules[ari].cssText);
             var adoptedStyle = document.createElement("style");
             adoptedStyle.setAttribute("data-adopted-stylesheet", "true");
-            adoptedStyle.textContent = adoptedRules.join("\n");
+            adoptedStyle.textContent = adoptedRules.join("\\n");
             document.head.appendChild(adoptedStyle);
             adoptedCount++;
           }
