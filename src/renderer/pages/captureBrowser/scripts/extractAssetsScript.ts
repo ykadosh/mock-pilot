@@ -1,4 +1,4 @@
-/* eslint-disable no-useless-escape */
+ 
 export const EXTRACT_ASSETS_SCRIPT = `
   (function() {
     var typographyMap = {};

@@ -1,4 +1,4 @@
-/* eslint-disable no-useless-escape */
+ 
 export const CAPTURE_HTML_SCRIPT_PRELUDE = `
   (async () => {
     var _heightMode = __HEIGHT_MODE__;

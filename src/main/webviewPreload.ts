@@ -9,6 +9,7 @@
 // webFrame.executeJavaScript() to inject into the main world (world 0)
 // where the page's scripts and event listeners live.
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { webFrame } = require("electron");
 
 webFrame.executeJavaScript(`

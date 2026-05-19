@@ -1,4 +1,4 @@
-/* eslint-disable no-useless-escape */
+ 
 export const CAPTURE_HTML_SCRIPT_CLEANUP = `
     _log("[step:cleanup] Removing HTML comments...");
     const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);

@@ -1,4 +1,4 @@
-/* eslint-disable no-useless-escape */
+ 
 export const INLINE_FRAMES_SCRIPT_END = `
     function replaceIframeInDoc(doc, iframe, scopeId, parentUrl) {
       var src = iframe.getAttribute("src") || iframe.getAttribute("data-src") || "";

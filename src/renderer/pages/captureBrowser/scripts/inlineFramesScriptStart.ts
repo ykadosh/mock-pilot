@@ -1,4 +1,4 @@
-/* eslint-disable no-useless-escape */
+ 
 export const INLINE_FRAMES_SCRIPT_START = `
   (function() {
     var capturedMap = `;
