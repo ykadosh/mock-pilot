@@ -21,7 +21,7 @@ function ExportButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`py-2 px-lg bg-primary-container/80 text-on-primary-container text-ui-small font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`px-lg bg-primary-container/80 text-on-primary-container text-ui-small flex cursor-pointer items-center justify-center gap-2 py-2 font-bold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     >
       <span className="material-symbols-outlined text-[16px]">{icon}</span>
       {children}
@@ -221,9 +221,9 @@ export function Export() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden">
       <TopNav activeTab="export" projectId={projectId} />
-      <div className="flex flex-1 min-h-0">
+      <div className="flex min-h-0 flex-1">
         <PageLayout
           title="Export Project"
           subtitle={`Configure and generate production-ready assets from ${project?.title || "Project Alpha"}.`}
@@ -233,28 +233,28 @@ export function Export() {
               {!projectId ? "No project selected." : "Loading project…"}
             </p>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-md">
+            <div className="gap-md grid grid-cols-1 lg:grid-cols-12">
               {/* Section 1: Files Export */}
-              <SectionCard title="FILES" className="lg:col-span-4 flex flex-col justify-between">
+              <SectionCard title="FILES" className="flex flex-col justify-between lg:col-span-4">
                 <div>
                   <p className="text-body-main text-on-surface-variant mb-lg leading-relaxed">
                     Generate a production-ready package containing compiled HTML5, modular CSS, and optimized asset links.
                   </p>
                   <div className="space-y-sm mb-lg">
-                    <div className="flex items-center justify-between p-sm bg-surface-container-lowest border border-[#334155]">
-                      <div className="flex items-center gap-sm">
+                    <div className="p-sm bg-surface-container-lowest flex items-center justify-between border border-[#334155]">
+                      <div className="gap-sm flex items-center">
                         <span className="material-symbols-outlined text-outline text-[16px]">html</span>
                         <span className="text-ui-small font-code-block">index.html</span>
                       </div>
-                      <span className="text-[10px] text-outline font-mono">{formatSize(htmlSize)}</span>
+                      <span className="text-outline font-mono text-[10px]">{formatSize(htmlSize)}</span>
                     </div>
                     {cssSize > 0 && (
-                      <div className="flex items-center justify-between p-sm bg-surface-container-lowest border border-[#334155]">
-                        <div className="flex items-center gap-sm">
+                      <div className="p-sm bg-surface-container-lowest flex items-center justify-between border border-[#334155]">
+                        <div className="gap-sm flex items-center">
                           <span className="material-symbols-outlined text-outline text-[16px]">css</span>
                           <span className="text-ui-small font-code-block">styles.css</span>
                         </div>
-                        <span className="text-[10px] text-outline font-mono">{formatSize(cssSize)}</span>
+                        <span className="text-outline font-mono text-[10px]">{formatSize(cssSize)}</span>
                       </div>
                     )}
                   </div>
@@ -269,26 +269,26 @@ export function Export() {
                     {filesExporting ? "Exporting…" : "Download ZIP"}
                   </ExportButton>
                   {filesResult && (
-                    <p className="text-[10px] text-outline mt-sm text-center truncate">{filesResult}</p>
+                    <p className="text-outline mt-sm truncate text-center text-[10px]">{filesResult}</p>
                   )}
                 </div>
               </SectionCard>
 
               {/* Section 2: Image Render */}
               <SectionCard title="IMAGE RENDER" className="lg:col-span-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-lg h-[calc(100%-2rem)]">
+                <div className="gap-lg grid h-[calc(100%-2rem)] grid-cols-1 md:grid-cols-2">
                   <div className="space-y-lg">
                     <div>
-                      <span className="text-ui-small text-outline block mb-sm uppercase">DEVICE PRESETS</span>
-                      <div className="grid grid-cols-3 gap-xs">
+                      <span className="text-ui-small text-outline mb-sm block uppercase">DEVICE PRESETS</span>
+                      <div className="gap-xs grid grid-cols-3">
                         {(Object.entries(DEVICE_SIZES) as [DevicePreset, typeof DEVICE_SIZES[DevicePreset]][]).map(([key, preset]) => (
                           <button
                             key={key}
                             onClick={() => setDevice(key)}
-                            className={`flex flex-col items-center justify-center py-4 border transition-all cursor-pointer ${
+                            className={`flex cursor-pointer flex-col items-center justify-center border py-4 transition-all ${
                               device === key
-                                ? "border-[#7C3AED] bg-primary-container/10 text-primary"
-                                : "border-[#334155] hover:border-outline text-outline"
+                                ? "bg-primary-container/10 text-primary border-[#7C3AED]"
+                                : "hover:border-outline text-outline border-[#334155]"
                             }`}
                           >
                             <span className="material-symbols-outlined mb-1">{preset.icon}</span>
@@ -298,24 +298,24 @@ export function Export() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-ui-small text-outline block mb-sm uppercase">CUSTOM DIMENSIONS</span>
-                      <div className="flex gap-sm">
+                      <span className="text-ui-small text-outline mb-sm block uppercase">CUSTOM DIMENSIONS</span>
+                      <div className="gap-sm flex">
                         <div className="flex-1">
-                          <label className="text-[10px] text-outline block uppercase mb-1">Width (px)</label>
+                          <label className="text-outline mb-1 block text-[10px] uppercase">Width (px)</label>
                           <input
                             type="number"
                             value={customWidth}
                             onChange={(e) => setCustomWidth(Number(e.target.value) || 0)}
-                            className="w-full bg-surface-container-lowest border border-[#334155] text-ui-small p-2 focus:ring-1 focus:ring-primary focus:outline-none text-on-surface"
+                            className="bg-surface-container-lowest text-ui-small focus:ring-primary text-on-surface w-full border border-[#334155] p-2 focus:ring-1 focus:outline-none"
                           />
                         </div>
                         <div className="flex-1">
-                          <label className="text-[10px] text-outline block uppercase mb-1">Height (px)</label>
+                          <label className="text-outline mb-1 block text-[10px] uppercase">Height (px)</label>
                           <input
                             type="number"
                             value={customHeight}
                             onChange={(e) => setCustomHeight(Number(e.target.value) || 0)}
-                            className="w-full bg-surface-container-lowest border border-[#334155] text-ui-small p-2 focus:ring-1 focus:ring-primary focus:outline-none text-on-surface"
+                            className="bg-surface-container-lowest text-ui-small focus:ring-primary text-on-surface w-full border border-[#334155] p-2 focus:ring-1 focus:outline-none"
                           />
                         </div>
                       </div>
@@ -329,20 +329,20 @@ export function Export() {
                       {imageExporting ? "Rendering…" : "Export as PNG"}
                     </ExportButton>
                     {imageResult && (
-                      <p className="text-[10px] text-outline text-center truncate">{imageResult}</p>
+                      <p className="text-outline truncate text-center text-[10px]">{imageResult}</p>
                     )}
                   </div>
 
                   {/* Preview thumbnail */}
                   <div
                     ref={previewContainerRef}
-                    className="relative group bg-surface-container-lowest border border-[#334155] overflow-hidden flex items-start justify-center cursor-pointer min-h-[200px] mt-lg"
+                    className="group bg-surface-container-lowest mt-lg relative flex min-h-[200px] cursor-pointer items-start justify-center overflow-hidden border border-[#334155]"
                     onClick={() => html && setShowPreview(true)}
                   >
                     {showPreview && previewHtml ? (
                       <iframe
                         srcDoc={previewHtml}
-                        className="absolute border-0 pointer-events-none"
+                        className="pointer-events-none absolute border-0"
                         sandbox="allow-same-origin"
                         style={{
                           width: `${customWidth}px`,
@@ -356,11 +356,11 @@ export function Export() {
                       />
                     ) : (
                       <>
-                        <div className="absolute inset-0 bg-gradient-to-br from-surface-container-lowest to-surface-container opacity-60" />
+                        <div className="from-surface-container-lowest to-surface-container absolute inset-0 bg-gradient-to-br opacity-60" />
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="bg-[#0F172A]/80 backdrop-blur-sm border border-outline/20 px-3 py-1.5 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[16px] text-primary">zoom_in</span>
-                            <span className="text-[10px] font-bold text-on-surface tracking-widest uppercase">Preview Render</span>
+                          <div className="border-outline/20 flex items-center gap-2 border bg-[#0F172A]/80 px-3 py-1.5 backdrop-blur-sm">
+                            <span className="material-symbols-outlined text-primary text-[16px]">zoom_in</span>
+                            <span className="text-on-surface text-[10px] font-bold tracking-widest uppercase">Preview Render</span>
                           </div>
                         </div>
                       </>
@@ -370,9 +370,9 @@ export function Export() {
               </SectionCard>
 
               {/* Section 3: Open in Browser */}
-              <SectionCard className="lg:col-span-12 flex flex-col md:flex-row items-center justify-between gap-md">
-                <div className="flex items-center gap-lg min-w-0 flex-1">
-                  <div className="w-12 h-12 bg-[#334155] flex items-center justify-center shrink-0">
+              <SectionCard className="gap-md flex flex-col items-center justify-between md:flex-row lg:col-span-12">
+                <div className="gap-lg flex min-w-0 flex-1 items-center">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-[#334155]">
                     <span className="material-symbols-outlined text-secondary text-2xl">open_in_browser</span>
                   </div>
                   <div className="min-w-0">
@@ -382,7 +382,7 @@ export function Export() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-sm shrink-0">
+                <div className="gap-sm flex shrink-0">
                   <ExportButton
                     onClick={() => projectId && window.api.openProjectInBrowser(projectId)}
                     icon="open_in_browser"
@@ -393,9 +393,9 @@ export function Export() {
               </SectionCard>
 
               {/* Section 4: Deployment */}
-              <SectionCard className="lg:col-span-12 flex flex-col md:flex-row items-center justify-between gap-md">
-                <div className="flex items-center gap-lg min-w-0 flex-1">
-                  <div className="w-12 h-12 bg-[#334155] flex items-center justify-center shrink-0">
+              <SectionCard className="gap-md flex flex-col items-center justify-between md:flex-row lg:col-span-12">
+                <div className="gap-lg flex min-w-0 flex-1 items-center">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-[#334155]">
                     <span className="material-symbols-outlined text-secondary text-2xl">cloud_sync</span>
                   </div>
                   <div className="min-w-0">
@@ -405,7 +405,7 @@ export function Export() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-sm shrink-0">
+                <div className="gap-sm flex shrink-0">
                   <ExportButton
                     onClick={handleDeployCodesandbox}
                     disabled={!!deploying}
@@ -424,20 +424,20 @@ export function Export() {
               </SectionCard>
 
               {/* Deploy Status */}
-              <section className={`lg:col-span-12 bg-surface-container-low border p-sm ${deployError ? 'border-error/20' : 'border-[#334155]'}`}>
-                <div className="flex items-center gap-md">
-                  <span className={`text-[10px] font-mono uppercase tracking-widest ${deployError ? 'text-error' : 'text-outline'}`}>Deploy Status</span>
+              <section className={`bg-surface-container-low p-sm border lg:col-span-12 ${deployError ? 'border-error/20' : 'border-[#334155]'}`}>
+                <div className="gap-md flex items-center">
+                  <span className={`font-mono text-[10px] tracking-widest uppercase ${deployError ? 'text-error' : 'text-outline'}`}>Deploy Status</span>
                   {deploying ? (
-                    <span className="text-[10px] font-mono text-on-surface">Deploying to {deploying === "codesandbox" ? "CodeSandbox" : "StackBlitz"}…</span>
+                    <span className="text-on-surface font-mono text-[10px]">Deploying to {deploying === "codesandbox" ? "CodeSandbox" : "StackBlitz"}…</span>
                   ) : deployError ? (
-                    <span className="text-[10px] font-mono text-on-surface">{deployError}</span>
+                    <span className="text-on-surface font-mono text-[10px]">{deployError}</span>
                   ) : deployUrl ? (
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-                      <span className="text-[10px] font-mono text-on-surface">Opened in {deployUrl === "codesandbox" ? "CodeSandbox" : "StackBlitz"}</span>
+                      <span className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                      <span className="text-on-surface font-mono text-[10px]">Opened in {deployUrl === "codesandbox" ? "CodeSandbox" : "StackBlitz"}</span>
                     </div>
                   ) : (
-                    <span className="text-[10px] font-mono text-outline">Deploy to CodeSandbox or StackBlitz to publish</span>
+                    <span className="text-outline font-mono text-[10px]">Deploy to CodeSandbox or StackBlitz to publish</span>
                   )}
                 </div>
               </section>

@@ -55,7 +55,7 @@ export function FontsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="mx-auto max-w-5xl">
       <header className="mb-lg flex items-center justify-between">
         <div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">
@@ -67,7 +67,7 @@ export function FontsPage() {
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="px-4 py-2 bg-primary text-on-primary rounded-md text-ui-small font-medium hover:opacity-90"
+          className="bg-primary text-on-primary text-ui-small rounded-md px-4 py-2 font-medium hover:opacity-90"
         >
           + Add Typography
         </button>
@@ -86,7 +86,7 @@ export function FontsPage() {
 
       <div className="space-y-3">
         {typography.map(t => (
-          <div key={t.id} className="border border-outline/20 rounded-lg p-4 bg-surface">
+          <div key={t.id} className="border-outline/20 bg-surface rounded-lg border p-4">
             {editingId === t.id ? (
               <TypographyForm
                 initial={t}
@@ -95,9 +95,9 @@ export function FontsPage() {
               />
             ) : (
               <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <p
-                    className="truncate mb-1 text-on-surface"
+                    className="text-on-surface mb-1 truncate"
                     style={{
                       fontFamily: t.fontFamily,
                       fontSize: t.fontSize,
@@ -115,7 +115,7 @@ export function FontsPage() {
                     {t.fontStyle !== "normal" && ` · ${t.fontStyle}`}
                   </p>
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="ml-4 flex gap-2">
                   <button
                     onClick={() => setEditingId(t.id)}
                     className="text-ui-small text-outline hover:text-on-surface"
@@ -162,42 +162,42 @@ function TypographyForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border border-outline/20 rounded-lg p-4 bg-surface mb-3 space-y-3">
+    <form onSubmit={handleSubmit} className="border-outline/20 bg-surface mb-3 space-y-3 rounded-lg border p-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-ui-small text-outline mb-1">Label</label>
-          <input value={label} onChange={e => setLabel(e.target.value)} className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small" />
+          <label className="text-ui-small text-outline mb-1 block">Label</label>
+          <input value={label} onChange={e => setLabel(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1" />
         </div>
         <div>
-          <label className="block text-ui-small text-outline mb-1">Font Family</label>
-          <input value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small" />
+          <label className="text-ui-small text-outline mb-1 block">Font Family</label>
+          <input value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1" />
         </div>
         <div>
-          <label className="block text-ui-small text-outline mb-1">Font Size</label>
-          <input value={fontSize} onChange={e => setFontSize(e.target.value)} className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small" />
+          <label className="text-ui-small text-outline mb-1 block">Font Size</label>
+          <input value={fontSize} onChange={e => setFontSize(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1" />
         </div>
         <div>
-          <label className="block text-ui-small text-outline mb-1">Font Weight</label>
-          <input value={fontWeight} onChange={e => setFontWeight(e.target.value)} className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small" />
+          <label className="text-ui-small text-outline mb-1 block">Font Weight</label>
+          <input value={fontWeight} onChange={e => setFontWeight(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1" />
         </div>
         <div>
-          <label className="block text-ui-small text-outline mb-1">Font Style</label>
-          <select value={fontStyle} onChange={e => setFontStyle(e.target.value)} className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small">
+          <label className="text-ui-small text-outline mb-1 block">Font Style</label>
+          <select value={fontStyle} onChange={e => setFontStyle(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1">
             <option value="normal">Normal</option>
             <option value="italic">Italic</option>
           </select>
         </div>
         <div>
-          <label className="block text-ui-small text-outline mb-1">Line Height</label>
-          <input value={lineHeight} onChange={e => setLineHeight(e.target.value)} className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small" />
+          <label className="text-ui-small text-outline mb-1 block">Line Height</label>
+          <input value={lineHeight} onChange={e => setLineHeight(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1" />
         </div>
         <div>
-          <label className="block text-ui-small text-outline mb-1">Letter Spacing</label>
-          <input value={letterSpacing} onChange={e => setLetterSpacing(e.target.value)} className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small" />
+          <label className="text-ui-small text-outline mb-1 block">Letter Spacing</label>
+          <input value={letterSpacing} onChange={e => setLetterSpacing(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1" />
         </div>
         <div>
-          <label className="block text-ui-small text-outline mb-1">Text Transform</label>
-          <select value={textTransform} onChange={e => setTextTransform(e.target.value)} className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small">
+          <label className="text-ui-small text-outline mb-1 block">Text Transform</label>
+          <select value={textTransform} onChange={e => setTextTransform(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1">
             <option value="none">None</option>
             <option value="uppercase">Uppercase</option>
             <option value="lowercase">Lowercase</option>
@@ -205,9 +205,9 @@ function TypographyForm({
           </select>
         </div>
       </div>
-      <div className="flex gap-2 justify-end">
-        <button type="button" onClick={onCancel} className="px-3 py-1.5 text-ui-small text-outline hover:text-on-surface">Cancel</button>
-        <button type="submit" className="px-3 py-1.5 bg-primary text-on-primary rounded text-ui-small font-medium hover:opacity-90">Save</button>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="text-ui-small text-outline hover:text-on-surface px-3 py-1.5">Cancel</button>
+        <button type="submit" className="bg-primary text-on-primary text-ui-small rounded px-3 py-1.5 font-medium hover:opacity-90">Save</button>
       </div>
     </form>
   );

@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { setCapturedHtml } from "../lib/store";
-import { CaptureProgressModal, CaptureStep } from "../components/CaptureProgressModal";
+import type { CaptureStep } from "../components/CaptureProgressModal";
+import { CaptureProgressModal } from "../components/CaptureProgressModal";
 
 type HeightMode = "convert-vh" | "remove" | "keep-as-is";
 
@@ -1091,23 +1092,23 @@ export function CaptureBrowser() {
   }, [captureSettingsOpen]);
 
   return (
-    <div className="bg-background text-on-surface font-body-main antialiased overflow-hidden h-screen flex flex-col">
+    <div className="bg-background text-on-surface font-body-main flex h-screen flex-col overflow-hidden antialiased">
       {/* Top Nav Bar */}
-      <header onMouseDown={preventFocusSteal} className="bg-slate-900 border-b border-slate-700 flex justify-between items-center pl-20 pr-4 h-12 w-full z-50 [-webkit-app-region:drag]">
-        <div className="flex items-center gap-md [-webkit-app-region:no-drag]">
+      <header onMouseDown={preventFocusSteal} className="z-50 flex h-12 w-full items-center justify-between border-b border-slate-700 bg-slate-900 pr-4 pl-20 [-webkit-app-region:drag]">
+        <div className="gap-md flex items-center [-webkit-app-region:no-drag]">
           <span
             onClick={() => navigate("/")}
-            className="text-lg font-bold tracking-tighter text-slate-50 cursor-pointer font-headline-md"
+            className="font-headline-md cursor-pointer text-lg font-bold tracking-tighter text-slate-50"
           >
             MockPilot
           </span>
           <div className="h-4 w-px bg-slate-700" />
           <span className="font-ui-small text-slate-400">Capture Browser</span>
         </div>
-        <div className="flex items-center gap-md [-webkit-app-region:no-drag]">
+        <div className="gap-md flex items-center [-webkit-app-region:no-drag]">
           <button
             onClick={() => navigate("/")}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer font-ui-small flex items-center gap-xs"
+            className="font-ui-small gap-xs flex cursor-pointer items-center text-slate-400 transition-colors hover:text-white"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
             Cancel
@@ -1116,27 +1117,27 @@ export function CaptureBrowser() {
       </header>
 
       {/* Browser Controls Bar */}
-      <section onMouseDown={preventFocusSteal} className="h-14 bg-surface-container-low flex items-center px-4 gap-md border-b border-outline-variant shrink-0">
+      <section onMouseDown={preventFocusSteal} className="bg-surface-container-low gap-md border-outline-variant flex h-14 shrink-0 items-center border-b px-4">
         {/* Navigation buttons */}
-        <div className="flex items-center gap-xs">
+        <div className="gap-xs flex items-center">
           <button
             onClick={handleBack}
             disabled={!canGoBack}
-            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded disabled:opacity-30 disabled:cursor-default cursor-pointer"
+            className="text-on-surface-variant hover:bg-surface-container-highest flex h-8 w-8 cursor-pointer items-center justify-center rounded transition-colors disabled:cursor-default disabled:opacity-30"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           </button>
           <button
             onClick={handleForward}
             disabled={!canGoForward}
-            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded disabled:opacity-30 disabled:cursor-default cursor-pointer"
+            className="text-on-surface-variant hover:bg-surface-container-highest flex h-8 w-8 cursor-pointer items-center justify-center rounded transition-colors disabled:cursor-default disabled:opacity-30"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
           </button>
           <button
             onClick={handleRefresh}
             disabled={!hasNavigated}
-            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded disabled:opacity-30 disabled:cursor-default cursor-pointer"
+            className="text-on-surface-variant hover:bg-surface-container-highest flex h-8 w-8 cursor-pointer items-center justify-center rounded transition-colors disabled:cursor-default disabled:opacity-30"
           >
             <span className="material-symbols-outlined text-[18px]">
               {isLoading ? "close" : "refresh"}
@@ -1145,9 +1146,9 @@ export function CaptureBrowser() {
         </div>
 
         {/* Address bar */}
-        <div className="flex-1 flex items-center bg-surface-container-lowest border border-outline-variant rounded px-3 h-9 gap-sm">
+        <div className="bg-surface-container-lowest border-outline-variant gap-sm flex h-9 flex-1 items-center rounded border px-3">
           {isSecure && (
-            <span className="material-symbols-outlined text-[16px] text-primary">lock</span>
+            <span className="material-symbols-outlined text-primary text-[16px]">lock</span>
           )}
           <input
             type="text"
@@ -1156,17 +1157,17 @@ export function CaptureBrowser() {
             onKeyDown={handleAddressBarKeyDown}
             onFocus={(e) => e.target.select()}
             placeholder="Enter a URL and press Enter"
-            className="bg-transparent border-none p-0 text-ui-small text-on-surface-variant focus:ring-0 w-full font-code-block focus:outline-none"
+            className="text-ui-small text-on-surface-variant font-code-block w-full border-none bg-transparent p-0 focus:ring-0 focus:outline-none"
             autoFocus
           />
         </div>
 
         {/* Capture settings + button */}
-        <div className="relative flex items-center gap-xs">
+        <div className="gap-xs relative flex items-center">
           <button
             ref={settingsButtonRef}
             onClick={() => setCaptureSettingsOpen(prev => !prev)}
-            className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded cursor-pointer"
+            className="text-on-surface-variant hover:bg-surface-container-highest flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-colors"
             title="Capture settings"
           >
             <span className="material-symbols-outlined text-[18px]">tune</span>
@@ -1175,37 +1176,37 @@ export function CaptureBrowser() {
           {/* Settings modal */}
           {captureSettingsOpen && (
             <div
-              className="fixed inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center p-md"
+              className="bg-background/60 p-md fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
               onMouseDown={(e) => { if (e.target === e.currentTarget) setCaptureSettingsOpen(false); }}
             >
-              <div className="w-[420px] bg-surface-container-high rounded shadow-2xl border border-outline-variant overflow-hidden flex flex-col">
+              <div className="bg-surface-container-high border-outline-variant flex w-[420px] flex-col overflow-hidden rounded border shadow-2xl">
                 {/* Modal Header */}
-                <div className="px-md py-sm bg-surface-container-highest border-b border-outline-variant flex justify-between items-center">
-                  <div className="flex items-center gap-sm">
+                <div className="px-md py-sm bg-surface-container-highest border-outline-variant flex items-center justify-between border-b">
+                  <div className="gap-sm flex items-center">
                     <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>settings_overscan</span>
                     <span className="font-label-caps text-label-caps text-on-surface">Capture Settings</span>
                   </div>
                   <button
                     onClick={() => setCaptureSettingsOpen(false)}
-                    className="text-outline hover:text-on-surface transition-colors cursor-pointer"
+                    className="text-outline hover:text-on-surface cursor-pointer transition-colors"
                   >
                     <span className="material-symbols-outlined">close</span>
                   </button>
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-md space-y-md overflow-y-auto max-h-[70vh]">
+                <div className="p-md space-y-md max-h-[70vh] overflow-y-auto">
                   <section className="space-y-sm">
-                    <div className="flex justify-between items-center border-b border-outline-variant pb-xs">
+                    <div className="border-outline-variant pb-xs flex items-center justify-between border-b">
                       <label className="font-label-caps text-label-caps text-on-surface-variant">Height Handling</label>
-                      <span className="relative group cursor-help">
+                      <span className="group relative cursor-help">
                         <span className="material-symbols-outlined text-outline text-[14px]">info</span>
-                        <span className="pointer-events-none absolute right-0 top-full mt-1 w-56 rounded bg-surface-container-highest border border-outline-variant px-sm py-xs text-[11px] text-on-surface-variant leading-relaxed shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <span className="bg-surface-container-highest border-outline-variant px-sm py-xs text-on-surface-variant pointer-events-none absolute top-full right-0 z-10 mt-1 w-56 rounded border text-[11px] leading-relaxed opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                           How to handle JS-set pixel heights that track the viewport.
                         </span>
                       </span>
                     </div>
-                    <div className="flex flex-col gap-gutter">
+                    <div className="gap-gutter flex flex-col">
                       {([
                         { value: "convert-vh" as HeightMode, label: "Convert to viewport-relative", desc: "Replace frozen heights with dynamic calc(100vh − …)", icon: "swap_vert" },
                         { value: "remove" as HeightMode, label: "Remove hardcoded heights", desc: "Strip matching heights, let CSS rules take over", icon: "delete_sweep" },
@@ -1213,29 +1214,29 @@ export function CaptureBrowser() {
                       ]).map(opt => (
                         <label
                           key={opt.value}
-                          className="flex items-center justify-between p-sm bg-surface-container-lowest border border-outline-variant cursor-pointer group"
+                          className="p-sm bg-surface-container-lowest border-outline-variant group flex cursor-pointer items-center justify-between border"
                         >
-                          <div className="flex items-center gap-sm">
+                          <div className="gap-sm flex items-center">
                             <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">{opt.icon}</span>
                             <div>
                               <span className="text-ui-small text-on-surface">
                                 {opt.label}
                                 {opt.value === "convert-vh" && (
-                                  <span className="ml-1 text-[10px] text-primary font-bold uppercase">Recommended</span>
+                                  <span className="text-primary ml-1 text-[10px] font-bold uppercase">Recommended</span>
                                 )}
                               </span>
-                              <p className="text-[11px] text-on-surface-variant/70 mt-0.5">{opt.desc}</p>
+                              <p className="text-on-surface-variant/70 mt-0.5 text-[11px]">{opt.desc}</p>
                             </div>
                           </div>
                           <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
                               heightMode === opt.value
                                 ? "border-primary-container bg-primary-container"
                                 : "border-outline-variant"
                             }`}
                             onClick={() => setHeightMode(opt.value)}
                           >
-                            {heightMode === opt.value && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                            {heightMode === opt.value && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                           </div>
                           <input
                             type="radio"
@@ -1252,10 +1253,10 @@ export function CaptureBrowser() {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="px-md py-sm bg-surface-container-highest border-t border-outline-variant flex justify-end gap-sm">
+                <div className="px-md py-sm bg-surface-container-highest border-outline-variant gap-sm flex justify-end border-t">
                   <button
                     onClick={() => setCaptureSettingsOpen(false)}
-                    className="bg-surface-container-low border border-outline-variant text-on-surface px-md py-1.5 rounded-sm text-ui-small font-semibold hover:bg-surface-variant transition-colors cursor-pointer"
+                    className="bg-surface-container-low border-outline-variant text-on-surface px-md text-ui-small hover:bg-surface-variant cursor-pointer rounded-sm border py-1.5 font-semibold transition-colors"
                   >
                     Close
                   </button>
@@ -1267,10 +1268,10 @@ export function CaptureBrowser() {
           <button
             onClick={handleCapture}
             disabled={!hasNavigated || isCapturing || isLoading}
-            className="bg-primary-container text-on-primary-container px-4 h-9 flex items-center gap-sm font-ui-small font-semibold rounded hover:brightness-110 active:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="bg-primary-container text-on-primary-container gap-sm font-ui-small flex h-9 cursor-pointer items-center rounded px-4 font-semibold transition-all hover:brightness-110 active:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isCapturing ? (
-              <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+              <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
             ) : (
               <span className="material-symbols-outlined text-[18px]">screenshot_region</span>
             )}
@@ -1280,40 +1281,40 @@ export function CaptureBrowser() {
       </section>
 
       {/* Main Content */}
-      <main onMouseDown={preventFocusSteal} className="flex-1 relative bg-background overflow-hidden p-md">
-        <div className="w-full h-full bg-surface rounded-lg border border-outline-variant shadow-2xl relative overflow-hidden flex flex-col">
+      <main onMouseDown={preventFocusSteal} className="bg-background p-md relative flex-1 overflow-hidden">
+        <div className="bg-surface border-outline-variant relative flex h-full w-full flex-col overflow-hidden rounded-lg border shadow-2xl">
           {hasNavigated && webviewPreloadPath ? (
             <>
               {/* Webview */}
-              <div className="flex-1 relative">
+              <div className="relative flex-1">
                 <webview
                   ref={webviewRef as React.LegacyRef<Electron.WebviewTag>}
                   src={pendingUrl}
                   preload={`file://${webviewPreloadPath}`}
-                  className="w-full h-full"
+                  className="h-full w-full"
                   allowpopups={"true" as unknown as boolean}
                 />
                 {/* Loading overlay */}
                 {isLoading && (
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary/20">
-                    <div className="h-full bg-primary animate-pulse w-1/2" />
+                  <div className="bg-primary/20 absolute top-0 right-0 left-0 h-0.5">
+                    <div className="bg-primary h-full w-1/2 animate-pulse" />
                   </div>
                 )}
 
               </div>
 
               {/* Frame Status Footer */}
-              <div className="h-8 bg-surface-container border-t border-outline-variant flex items-center px-4 shrink-0 relative">
-                <div className="flex items-center gap-md">
+              <div className="bg-surface-container border-outline-variant relative flex h-8 shrink-0 items-center border-t px-4">
+                <div className="gap-md flex items-center">
                   <div className="flex items-center gap-1">
-                    <span className={`w-2 h-2 rounded-full ${isLoading ? "bg-yellow-500 animate-pulse" : "bg-green-500"}`} />
-                    <span className="text-[10px] font-label-caps text-on-surface-variant">
+                    <span className={`h-2 w-2 rounded-full ${isLoading ? "animate-pulse bg-yellow-500" : "bg-green-500"}`} />
+                    <span className="font-label-caps text-on-surface-variant text-[10px]">
                       {isLoading ? "Loading" : "Live"}
                     </span>
                   </div>
                 </div>
                 {hasNavigated && !isCapturing && (
-                  <span className="absolute left-1/2 -translate-x-1/2 text-[10px] font-label-caps text-on-surface-variant">
+                  <span className="font-label-caps text-on-surface-variant absolute left-1/2 -translate-x-1/2 text-[10px]">
                     Navigate to the desired state before capturing.
                   </span>
                 )}
@@ -1321,9 +1322,9 @@ export function CaptureBrowser() {
             </>
           ) : (
             /* Empty state - no URL entered yet */
-            <div className="flex-1 flex items-center justify-center text-center w-full min-w-0">
+            <div className="flex w-full min-w-0 flex-1 items-center justify-center text-center">
               <div className="flex flex-col items-center gap-6 px-8" style={{ width: '100%', maxWidth: '480px' }}>
-                <span className="material-symbols-outlined text-[64px] text-outline-variant/60">language</span>
+                <span className="material-symbols-outlined text-outline-variant/60 text-[64px]">language</span>
                 <div className="space-y-2">
                   <h2 className="font-headline-md text-headline-md text-on-surface">
                     Enter a URL to get started

@@ -78,11 +78,11 @@ export function Dashboard() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden">
       <TopNav />
-      <main className="flex-1 overflow-y-auto p-lg bg-[#020617]">
+      <main className="p-lg flex-1 overflow-y-auto bg-[#020617]">
       {/* Dashboard Header */}
-      <section className="flex justify-between items-end mb-xl">
+      <section className="mb-xl flex items-end justify-between">
         <div className="space-y-xs">
           <h1 className="font-headline-lg text-headline-lg text-on-surface">
             Recent Projects
@@ -93,7 +93,7 @@ export function Dashboard() {
         </div>
         <button
           onClick={() => navigate("/capture")}
-          className="bg-primary hover:bg-surface-tint text-on-primary-fixed flex items-center gap-sm px-lg py-md rounded transition-all font-ui-small font-bold shadow-lg shadow-primary/10"
+          className="bg-primary hover:bg-surface-tint text-on-primary-fixed gap-sm px-lg py-md font-ui-small shadow-primary/10 flex items-center rounded font-bold shadow-lg transition-all"
         >
           <span className="material-symbols-outlined">add_circle</span>
           New Project
@@ -101,7 +101,7 @@ export function Dashboard() {
       </section>
 
       {/* Project Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+      <div className="gap-md grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {savedProjects.map((project, i) => (
           <ProjectCard
             key={project.id}
@@ -128,17 +128,17 @@ export function Dashboard() {
           value={renameValue}
           onChange={(e) => setRenameValue(e.target.value)}
           placeholder="Project name"
-          className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary transition-colors mb-sm"
+          className="bg-surface-container-lowest border-outline-variant/50 px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:border-primary mb-sm w-full rounded-lg border transition-colors focus:outline-none"
           autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter" && renameValue.trim()) handleRenameSubmit();
           }}
         />
-        <div className="flex justify-end mt-md">
+        <div className="mt-md flex justify-end">
           <button
             onClick={handleRenameSubmit}
             disabled={!renameValue.trim()}
-            className="bg-primary-container text-on-primary-container px-lg py-sm font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="bg-primary-container text-on-primary-container px-lg py-sm font-ui-small text-ui-small cursor-pointer rounded-lg transition-all active:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Rename
           </button>

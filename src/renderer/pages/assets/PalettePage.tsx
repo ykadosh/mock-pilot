@@ -49,7 +49,7 @@ export function PalettePage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="mx-auto max-w-5xl">
       <header className="mb-lg flex items-center justify-between">
         <div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">
@@ -61,7 +61,7 @@ export function PalettePage() {
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="px-4 py-2 bg-primary text-on-primary rounded-md text-ui-small font-medium hover:opacity-90"
+          className="bg-primary text-on-primary text-ui-small rounded-md px-4 py-2 font-medium hover:opacity-90"
         >
           + Add Color
         </button>
@@ -78,9 +78,9 @@ export function PalettePage() {
         <p className="text-outline text-ui-small">No colors yet. Capture a website or add one manually.</p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {colors.map(c => (
-          <div key={c.id} className="border border-outline/20 rounded-lg overflow-hidden bg-surface">
+          <div key={c.id} className="border-outline/20 bg-surface overflow-hidden rounded-lg border">
             {editingId === c.id ? (
               <ColorForm
                 initial={c}
@@ -90,13 +90,13 @@ export function PalettePage() {
             ) : (
               <div>
                 <div
-                  className="w-full h-16 border-b border-outline/20"
+                  className="border-outline/20 h-16 w-full border-b"
                   style={{ backgroundColor: c.value }}
                 />
                 <div className="p-2">
-                  <p className="text-ui-small text-on-surface font-mono truncate">{c.value}</p>
+                  <p className="text-ui-small text-on-surface truncate font-mono">{c.value}</p>
                   {c.label && <p className="text-ui-small text-outline truncate">{c.label}</p>}
-                  <div className="flex gap-2 mt-1">
+                  <div className="mt-1 flex gap-2">
                     <button
                       onClick={() => setEditingId(c.id)}
                       className="text-ui-small text-outline hover:text-on-surface"
@@ -138,21 +138,21 @@ function ColorForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-3 space-y-2">
+    <form onSubmit={handleSubmit} className="space-y-2 p-3">
       <div>
-        <label className="block text-ui-small text-outline mb-1">Color</label>
-        <div className="flex gap-2 items-center">
-          <input type="color" value={value} onChange={e => setValue(e.target.value)} className="w-8 h-8 rounded border-none cursor-pointer" />
-          <input value={value} onChange={e => setValue(e.target.value)} className="flex-1 px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small font-mono" />
+        <label className="text-ui-small text-outline mb-1 block">Color</label>
+        <div className="flex items-center gap-2">
+          <input type="color" value={value} onChange={e => setValue(e.target.value)} className="h-8 w-8 cursor-pointer rounded border-none" />
+          <input value={value} onChange={e => setValue(e.target.value)} className="border-outline/30 bg-background text-on-surface text-ui-small flex-1 rounded border px-2 py-1 font-mono" />
         </div>
       </div>
       <div>
-        <label className="block text-ui-small text-outline mb-1">Label</label>
-        <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Optional name" className="w-full px-2 py-1 rounded border border-outline/30 bg-background text-on-surface text-ui-small" />
+        <label className="text-ui-small text-outline mb-1 block">Label</label>
+        <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Optional name" className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1" />
       </div>
-      <div className="flex gap-2 justify-end">
-        <button type="button" onClick={onCancel} className="px-3 py-1.5 text-ui-small text-outline hover:text-on-surface">Cancel</button>
-        <button type="submit" className="px-3 py-1.5 bg-primary text-on-primary rounded text-ui-small font-medium hover:opacity-90">Save</button>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="text-ui-small text-outline hover:text-on-surface px-3 py-1.5">Cancel</button>
+        <button type="submit" className="bg-primary text-on-primary text-ui-small rounded px-3 py-1.5 font-medium hover:opacity-90">Save</button>
       </div>
     </form>
   );

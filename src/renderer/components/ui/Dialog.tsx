@@ -1,4 +1,5 @@
-import { ReactNode, useEffect } from "react";
+import type { ReactNode} from "react";
+import { useEffect } from "react";
 
 interface DialogProps {
   open: boolean;
@@ -25,7 +26,7 @@ export function Dialog({ open, onClose, children }: DialogProps) {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
       {/* Content */}
-      <div className="relative bg-surface-container border border-outline-variant/40 rounded-xl shadow-2xl p-lg w-[28rem] max-w-[calc(100vw-2rem)]">
+      <div className="bg-surface-container border-outline-variant/40 p-lg relative w-[28rem] max-w-[calc(100vw-2rem)] rounded-xl border shadow-2xl">
         {children}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface SectionCardProps {
   title?: string;
@@ -10,9 +10,9 @@ interface SectionCardProps {
 export function SectionCard({ title, children, className = "", variant = "default" }: SectionCardProps) {
   if (variant === "danger") {
     return (
-      <section className={`bg-surface-container border border-error-container p-md ${className}`}>
+      <section className={`bg-surface-container border-error-container p-md border ${className}`}>
         {title && (
-          <h2 className="font-label-caps text-label-caps text-error mb-md flex items-center gap-xs">
+          <h2 className="font-label-caps text-label-caps text-error mb-md gap-xs flex items-center">
             <span className="material-symbols-outlined text-[16px]">warning</span>
             {title}
           </h2>
@@ -23,7 +23,7 @@ export function SectionCard({ title, children, className = "", variant = "defaul
   }
 
   return (
-    <section className={`bg-surface-container border border-[#334155] p-md ${className}`}>
+    <section className={`bg-surface-container p-md border border-[#334155] ${className}`}>
       {title && <h2 className="font-label-caps text-label-caps text-secondary mb-md">{title}</h2>}
       {children}
     </section>

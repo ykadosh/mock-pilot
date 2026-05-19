@@ -95,14 +95,14 @@ export function Settings() {
       <button
         onClick={handleDiscard}
         disabled={!hasChanges}
-        className="px-md py-sm text-ui-small font-bold text-on-surface border border-outline hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        className="px-md py-sm text-ui-small text-on-surface border-outline hover:bg-surface-container-high cursor-pointer border font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
       >
         Discard
       </button>
       <button
         onClick={handleRename}
         disabled={!hasChanges}
-        className="px-md py-sm text-ui-small font-bold text-white bg-primary-container hover:opacity-90 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        className="px-md py-sm text-ui-small bg-primary-container cursor-pointer font-bold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {nameSaved ? "Saved ✓" : "Save Changes"}
       </button>
@@ -110,16 +110,16 @@ export function Settings() {
   );
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden">
       <TopNav activeTab="settings" projectId={projectId} />
-      <div className="flex flex-1 min-h-0">
+      <div className="flex min-h-0 flex-1">
         <PageLayout
           title="General Settings"
           subtitle="Manage your project core configuration."
           headerActions={headerActions}
         >
             {project ? (
-              <div className="grid grid-cols-12 gap-md">
+              <div className="gap-md grid grid-cols-12">
                 {/* Project Name Card */}
                 <SectionCard title="PROJECT NAME" className="col-span-12">
                   <input
@@ -129,7 +129,7 @@ export function Settings() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleRename();
                     }}
-                    className="w-full bg-surface-container-lowest border border-[#334155] focus:border-primary-container focus:ring-1 focus:ring-primary-container text-on-surface font-body-main px-md py-md transition-all outline-none"
+                    className="bg-surface-container-lowest focus:border-primary-container focus:ring-primary-container text-on-surface font-body-main px-md py-md w-full border border-[#334155] transition-all outline-none focus:ring-1"
                   />
                   <p className="mt-sm text-ui-small text-outline">
                     The display name for this project.
@@ -138,16 +138,16 @@ export function Settings() {
 
                 {/* Technical Metadata Section */}
                 <SectionCard title="TECHNICAL INFORMATION" className="col-span-12">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
+                  <div className="gap-lg grid grid-cols-1 md:grid-cols-3">
                     {/* Source URL */}
                     <div className="space-y-xs">
                       <span className="text-label-caps font-label-caps text-outline block">
                         Source URL
                       </span>
-                      <div className="flex items-center gap-xs font-code-block text-code-block text-on-surface bg-surface-container-lowest px-sm py-xs border border-[#334155] overflow-hidden">
-                        <span className="truncate flex-1">{project.url}</span>
+                      <div className="gap-xs font-code-block text-code-block text-on-surface bg-surface-container-lowest px-sm py-xs flex items-center overflow-hidden border border-[#334155]">
+                        <span className="flex-1 truncate">{project.url}</span>
                         <span
-                          className="material-symbols-outlined text-sm cursor-pointer hover:text-primary shrink-0"
+                          className="material-symbols-outlined hover:text-primary shrink-0 cursor-pointer text-sm"
                           onClick={handleCopyUrl}
                           title={urlCopied ? "Copied!" : "Copy URL"}
                         >
@@ -188,7 +188,7 @@ export function Settings() {
                       <span className="text-label-caps font-label-caps text-outline block">
                         Storage Consumption
                       </span>
-                      <div className="flex items-end gap-xs">
+                      <div className="gap-xs flex items-end">
                         <span className="font-headline-md text-headline-md text-on-surface">
                           {storage ? storage.value : "—"}
                         </span>
@@ -204,8 +204,8 @@ export function Settings() {
 
                 {/* Last Activity */}
                 <SectionCard title="LAST ACTIVITY" className="col-span-12">
-                  <div className="flex items-center gap-md">
-                    <div className="text-4xl font-bold text-on-surface-variant opacity-20">
+                  <div className="gap-md flex items-center">
+                    <div className="text-on-surface-variant text-4xl font-bold opacity-20">
                       {timeSinceUpdate ?? "—"}
                     </div>
                     <div className="font-body-main text-on-surface">
@@ -226,15 +226,15 @@ export function Settings() {
                 </SectionCard>
 
                 {/* Danger Zone */}
-                <SectionCard title="DANGER ZONE" variant="danger" className="col-span-12 mt-lg">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-md">
+                <SectionCard title="DANGER ZONE" variant="danger" className="mt-lg col-span-12">
+                  <div className="gap-md flex flex-col justify-between md:flex-row md:items-center">
                     <p className="font-body-main text-on-surface">
                       Permanently remove this project and all its associated
                       data. This action is irreversible.
                     </p>
                     <button
                       onClick={() => setShowDeleteDialog(true)}
-                      className="bg-error-container text-on-error-container px-lg py-sm font-bold text-ui-small hover:bg-error transition-colors flex items-center gap-sm cursor-pointer shrink-0"
+                      className="bg-error-container text-on-error-container px-lg py-sm text-ui-small hover:bg-error gap-sm flex shrink-0 cursor-pointer items-center font-bold transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">
                         delete_forever
@@ -264,16 +264,16 @@ export function Settings() {
                 </span>
                 ? This action cannot be undone.
               </p>
-              <div className="flex justify-end gap-sm">
+              <div className="gap-sm flex justify-end">
                 <button
                   onClick={() => setShowDeleteDialog(false)}
-                  className="px-md py-sm text-ui-small text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                  className="px-md py-sm text-ui-small text-on-surface-variant hover:text-on-surface cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="bg-error-container text-on-error-container px-md py-sm font-ui-small text-ui-small rounded-lg cursor-pointer active:opacity-80 transition-all"
+                  className="bg-error-container text-on-error-container px-md py-sm font-ui-small text-ui-small cursor-pointer rounded-lg transition-all active:opacity-80"
                 >
                   Delete
                 </button>

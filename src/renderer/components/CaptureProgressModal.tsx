@@ -33,12 +33,12 @@ export function CaptureProgressModal({ steps, percentage, url, onCancel }: Captu
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-[2px]">
-      <div className="w-[480px] bg-surface-container border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="bg-background/80 fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-[2px]">
+      <div className="bg-surface-container border-outline-variant flex w-[480px] flex-col overflow-hidden rounded-xl border shadow-2xl">
         {/* Header */}
-        <div className="p-lg border-b border-outline-variant flex items-center justify-between">
-          <div className="flex items-center gap-md">
-            <div className="w-10 h-10 rounded-lg bg-primary-container/20 border border-primary-container/40 flex items-center justify-center">
+        <div className="p-lg border-outline-variant flex items-center justify-between border-b">
+          <div className="gap-md flex items-center">
+            <div className="bg-primary-container/20 border-primary-container/40 flex h-10 w-10 items-center justify-center rounded-lg border">
               <span
                 className="material-symbols-outlined text-primary text-[24px]"
                 style={{ fontVariationSettings: "'FILL' 1" }}
@@ -57,12 +57,12 @@ export function CaptureProgressModal({ steps, percentage, url, onCancel }: Captu
         {/* Body */}
         <div className="p-lg space-y-lg">
           {/* Progress bar */}
-          <div className="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+          <div className="bg-surface-container-highest h-1.5 w-full overflow-hidden rounded-full">
             <div
-              className="h-full bg-primary-container rounded-full relative transition-all duration-300"
+              className="bg-primary-container relative h-full rounded-full transition-all duration-300"
               style={{ width: `${percentage}%` }}
             >
-              <div className="absolute inset-0 bg-white/20 animate-pulse" />
+              <div className="absolute inset-0 animate-pulse bg-white/20" />
             </div>
           </div>
 
@@ -73,13 +73,13 @@ export function CaptureProgressModal({ steps, percentage, url, onCancel }: Captu
             </label>
             <div
               ref={logRef}
-              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-md font-code-block text-ui-small h-48 overflow-y-auto space-y-sm"
+              className="bg-surface-container-lowest border-outline-variant p-md font-code-block text-ui-small space-y-sm h-48 overflow-y-auto rounded-lg border"
             >
               {steps.map((step, i) => (
                 <div
                   key={i}
                   data-active={step.status === "in-progress" ? "" : undefined}
-                  className={`flex items-center gap-md ${
+                  className={`gap-md flex items-center ${
                     step.status === "done"
                       ? "text-secondary"
                       : step.status === "in-progress"
@@ -96,7 +96,7 @@ export function CaptureProgressModal({ steps, percentage, url, onCancel }: Captu
                       check_circle
                     </span>
                   ) : step.status === "in-progress" ? (
-                    <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                    <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
                   ) : (
                     <span className="material-symbols-outlined text-[16px]">pending</span>
                   )}
@@ -119,10 +119,10 @@ export function CaptureProgressModal({ steps, percentage, url, onCancel }: Captu
         </div>
 
         {/* Footer */}
-        <div className="p-md bg-surface-container-low border-t border-outline-variant flex justify-end gap-md">
+        <div className="p-md bg-surface-container-low border-outline-variant gap-md flex justify-end border-t">
           <button
             onClick={onCancel}
-            className="px-lg py-2 rounded border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-colors font-ui-small cursor-pointer"
+            className="px-lg border-outline-variant text-on-surface hover:bg-surface-container-highest font-ui-small cursor-pointer rounded border py-2 transition-colors"
           >
             Cancel
           </button>

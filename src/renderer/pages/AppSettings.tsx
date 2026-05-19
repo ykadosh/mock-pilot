@@ -85,24 +85,24 @@ export function AppSettings() {
   return (
     <div className="h-full overflow-hidden">
       <TopNav />
-      <main className="absolute top-12 bottom-0 left-0 right-0 bg-surface-container-lowest overflow-y-auto p-lg">
-        <div className="max-w-4xl mx-auto space-y-lg">
+      <main className="bg-surface-container-lowest p-lg absolute top-12 right-0 bottom-0 left-0 overflow-y-auto">
+        <div className="space-y-lg mx-auto max-w-4xl">
             {/* Connectivity Status */}
             <section className="space-y-md">
-              <div className="border-b border-outline-variant pb-xs">
+              <div className="border-outline-variant pb-xs border-b">
                 <h2 className="font-headline-md text-headline-md text-on-surface">Connectivity</h2>
               </div>
-              <div className="border border-outline-variant bg-surface-container divide-y divide-outline-variant/50 rounded">
+              <div className="border-outline-variant bg-surface-container divide-outline-variant/50 divide-y rounded border">
                 {/* GitHub OAuth status */}
-                <div className="flex items-center gap-md px-md py-sm">
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${auth.authenticated ? "bg-green-400" : "bg-slate-500"}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-sm">
+                <div className="gap-md px-md py-sm flex items-center">
+                  <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${auth.authenticated ? "bg-green-400" : "bg-slate-500"}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="gap-sm flex items-center">
                       <span className="text-body-main text-on-surface font-medium">GitHub Account</span>
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded text-green-400 bg-green-400/10`}>Free models</span>
-                      <div className="relative group">
-                        <span className="material-symbols-outlined text-sm text-on-surface-variant cursor-help">help</span>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-surface-container-highest text-on-surface text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                      <span className={`rounded bg-green-400/10 px-1.5 py-0.5 font-mono text-[10px] text-green-400`}>Free models</span>
+                      <div className="group relative">
+                        <span className="material-symbols-outlined text-on-surface-variant cursor-help text-sm">help</span>
+                        <div className="bg-surface-container-highest text-on-surface pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded px-3 py-2 text-xs whitespace-nowrap opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                           Sign in via the user icon in the top bar. Gives access to Free tier models (GPT-4o).
                         </div>
                       </div>
@@ -113,15 +113,15 @@ export function AppSettings() {
                   </div>
                 </div>
                 {/* gh CLI status */}
-                <div className="flex items-center gap-md px-md py-sm">
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${ghCliStatus?.connected ? "bg-green-400" : "bg-slate-500"}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-sm">
+                <div className="gap-md px-md py-sm flex items-center">
+                  <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${ghCliStatus?.connected ? "bg-green-400" : "bg-slate-500"}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="gap-sm flex items-center">
                       <span className="text-body-main text-on-surface font-medium">GitHub Copilot (gh CLI)</span>
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded text-violet-400 bg-violet-400/10`}>Pro models</span>
-                      <div className="relative group">
-                        <span className="material-symbols-outlined text-sm text-on-surface-variant cursor-help">help</span>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-surface-container-highest text-on-surface text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity w-72 z-50">
+                      <span className={`rounded bg-violet-400/10 px-1.5 py-0.5 font-mono text-[10px] text-violet-400`}>Pro models</span>
+                      <div className="group relative">
+                        <span className="material-symbols-outlined text-on-surface-variant cursor-help text-sm">help</span>
+                        <div className="bg-surface-container-highest text-on-surface pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-72 -translate-x-1/2 rounded px-3 py-2 text-xs opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                           {ghCliStatus?.connected
                             ? "Connected via gh CLI. You have access to Pro models (Claude, GPT-4.1, GPT-5)."
                             : "Install the GitHub CLI (gh) and run \"gh auth login\" in your terminal to unlock Pro models like Claude and GPT-5."
@@ -139,10 +139,10 @@ export function AppSettings() {
 
             {/* AI Model Selection */}
             <section className="space-y-md">
-              <div className="flex items-center justify-between border-b border-outline-variant pb-xs">
+              <div className="border-outline-variant pb-xs flex items-center justify-between border-b">
                 <h2 className="font-headline-md text-headline-md text-on-surface">AI Model Configuration</h2>
                 {saved && (
-                  <span className="text-ui-small text-green-400 font-mono bg-green-400/10 px-2 py-0.5 rounded">
+                  <span className="text-ui-small rounded bg-green-400/10 px-2 py-0.5 font-mono text-green-400">
                     Saved ✓
                   </span>
                 )}
@@ -159,11 +159,11 @@ export function AppSettings() {
                 ).map(([publisher, models]) => (
                   <div key={publisher}>
                     <h3 className="font-label-caps text-label-caps text-on-surface-variant mb-xs">{publisher}</h3>
-                    <div className="border border-outline-variant bg-surface-container divide-y divide-outline-variant/50 rounded">
+                    <div className="border-outline-variant bg-surface-container divide-outline-variant/50 divide-y rounded border">
                       {models.map((model) => (
                         <label
                           key={model.id}
-                          className={`flex items-center gap-md px-md py-sm cursor-pointer transition-colors hover:bg-surface-container-high ${
+                          className={`gap-md px-md py-sm hover:bg-surface-container-high flex cursor-pointer items-center transition-colors ${
                             settings.aiModel === model.id ? "bg-surface-container-high" : ""
                           }`}
                         >
@@ -174,18 +174,18 @@ export function AppSettings() {
                             onChange={() => handleModelChange(model.id)}
                             className="sr-only"
                           />
-                          <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${
+                          <div className={`h-3 w-3 flex-shrink-0 rounded-full border-2 ${
                             settings.aiModel === model.id
                               ? "border-primary bg-primary"
                               : "border-outline"
                           }`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-sm">
+                          <div className="min-w-0 flex-1">
+                            <div className="gap-sm flex items-center">
                               <span className="text-body-main text-on-surface font-medium">{model.name}</span>
-                              <span className="text-[10px] font-mono text-on-surface-variant bg-surface-container-highest px-1.5 py-0.5 rounded">{model.context}</span>
-                              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                                model.tier === "Free" ? "text-green-400 bg-green-400/10" :
-                                "text-violet-400 bg-violet-400/10"
+                              <span className="text-on-surface-variant bg-surface-container-highest rounded px-1.5 py-0.5 font-mono text-[10px]">{model.context}</span>
+                              <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                                model.tier === "Free" ? "bg-green-400/10 text-green-400" :
+                                "bg-violet-400/10 text-violet-400"
                               }`}>{model.tier}</span>
                             </div>
                             <div className="text-ui-small text-on-surface-variant truncate">{model.description}</div>
@@ -198,22 +198,22 @@ export function AppSettings() {
               </div>
             </section>
             <section className="space-y-md">
-              <div className="flex items-center justify-between border-b border-outline-variant pb-xs">
+              <div className="border-outline-variant pb-xs flex items-center justify-between border-b">
                 <h2 className="font-headline-md text-headline-md text-on-surface">Storage</h2>
               </div>
-              <div className="border border-outline-variant bg-surface-container p-md">
-                <div className="flex items-center justify-between mb-md">
-                  <div className="flex items-center gap-sm">
+              <div className="border-outline-variant bg-surface-container p-md border">
+                <div className="mb-md flex items-center justify-between">
+                  <div className="gap-sm flex items-center">
                     <span className="material-symbols-outlined text-on-surface-variant">cloud_queue</span>
                     <span className="font-label-caps text-label-caps text-on-surface-variant">Storage Utilization</span>
                   </div>
                   {storage && (
-                    <span className="text-ui-small font-mono text-on-surface">{formatBytes(storage.totalBytes)}</span>
+                    <span className="text-ui-small text-on-surface font-mono">{formatBytes(storage.totalBytes)}</span>
                   )}
                 </div>
                 {storage && (
                   <>
-                    <div className="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden mb-sm">
+                    <div className="bg-surface-container-highest mb-sm h-2 w-full overflow-hidden rounded-full">
                       <div
                         className="bg-primary h-full rounded-full shadow-[0_0_8px_rgba(210,187,255,0.4)]"
                         style={{ width: `${Math.min(100, (storage.totalBytes / (1024 * 1024 * 1024)) * 100)}%` }}
@@ -229,13 +229,13 @@ export function AppSettings() {
 
             {/* Updates */}
             <section className="space-y-md">
-              <div className="flex items-center justify-between border-b border-outline-variant pb-xs">
+              <div className="border-outline-variant pb-xs flex items-center justify-between border-b">
                 <h2 className="font-headline-md text-headline-md text-on-surface">Updates</h2>
                 {appVersion && (
                   <span className="text-ui-small text-on-surface-variant font-mono">v{appVersion}</span>
                 )}
               </div>
-              <div className="border border-outline-variant bg-surface-container p-md">
+              <div className="border-outline-variant bg-surface-container p-md border">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-body-main text-on-surface">
@@ -251,11 +251,11 @@ export function AppSettings() {
                       <p className="text-ui-small text-error mt-xs">{updateStatus.error}</p>
                     )}
                   </div>
-                  <div className="flex gap-sm">
+                  <div className="gap-sm flex">
                     {updateStatus.updateAvailable && (
                       <button
                         onClick={handleDownloadUpdate}
-                        className="bg-primary text-on-primary font-semibold text-ui-small px-md py-sm rounded hover:brightness-110 transition-all"
+                        className="bg-primary text-on-primary text-ui-small px-md py-sm rounded font-semibold transition-all hover:brightness-110"
                       >
                         Download Update
                       </button>
@@ -263,7 +263,7 @@ export function AppSettings() {
                     <button
                       onClick={handleCheckForUpdates}
                       disabled={updateStatus.checking}
-                      className="border border-outline text-on-surface text-ui-small font-semibold px-md py-sm rounded hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                      className="border-outline text-on-surface text-ui-small px-md py-sm hover:bg-surface-container-high rounded border font-semibold transition-colors disabled:opacity-50"
                     >
                       {updateStatus.checking ? "Checking..." : "Check for Updates"}
                     </button>

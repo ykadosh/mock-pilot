@@ -55,11 +55,11 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
     <SidePanel title="ELEMENT PROPERTIES" onClose={onClose}>
       {/* Selected element indicator */}
       <div className="p-sm border-b border-slate-800 bg-violet-900/20">
-        <div className="flex items-center gap-sm">
+        <div className="gap-sm flex items-center">
           <span className="material-symbols-outlined text-sm text-violet-400">
             ads_click
           </span>
-          <span className="text-[11px] font-mono text-violet-300 truncate flex-1">
+          <span className="flex-1 truncate font-mono text-[11px] text-violet-300">
             {selector}
           </span>
         </div>
@@ -67,7 +67,7 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
 
       {/* AI Modifier */}
       <div className="p-md border-b border-slate-800">
-        <h3 className="font-label-caps text-label-caps text-slate-500 mb-sm">
+        <h3 className="font-label-caps text-label-caps mb-sm text-slate-500">
           AI MODIFIER
         </h3>
         <textarea
@@ -75,7 +75,7 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           disabled={loading}
-          className="w-full bg-[#020617] border border-[#334155] rounded p-sm text-ui-small font-body-main text-on-surface focus:outline-none focus:border-primary-container h-32 resize-none placeholder-slate-600 mb-sm disabled:opacity-50"
+          className="p-sm text-ui-small font-body-main text-on-surface focus:border-primary-container mb-sm h-32 w-full resize-none rounded border border-[#334155] bg-[#020617] placeholder-slate-600 focus:outline-none disabled:opacity-50"
           placeholder="Describe changes to the selected element..."
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && prompt.trim() && !loading) {
@@ -85,12 +85,12 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
           }}
         />
         {error && (
-          <p className="text-[10px] text-error mb-sm">{error}</p>
+          <p className="text-error mb-sm text-[10px]">{error}</p>
         )}
         <button
           onClick={handleApply}
           disabled={!prompt.trim() || loading}
-          className="w-full bg-violet-600 hover:bg-violet-700 text-white font-ui-small text-ui-small py-1.5 rounded transition-colors flex items-center justify-center gap-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          className="font-ui-small text-ui-small gap-xs flex w-full cursor-pointer items-center justify-center rounded bg-violet-600 py-1.5 text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? (
             <>
@@ -108,62 +108,62 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
 
       {/* Layout */}
       <div className="p-md border-b border-slate-800">
-        <div className="flex justify-between items-center mb-md">
+        <div className="mb-md flex items-center justify-between">
           <span className="font-label-caps text-label-caps text-slate-500">
             LAYOUT
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-sm">
+        <div className="gap-sm grid grid-cols-2">
           <div className="space-y-1">
-            <label className="text-[10px] text-slate-500 uppercase font-bold">Width</label>
-            <input className="w-full bg-[#020617] border border-[#334155] rounded px-2 py-1 text-xs font-mono text-slate-300" type="text" value={element.computedStyle.width || "auto"} readOnly />
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Width</label>
+            <input className="w-full rounded border border-[#334155] bg-[#020617] px-2 py-1 font-mono text-xs text-slate-300" type="text" value={element.computedStyle.width || "auto"} readOnly />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] text-slate-500 uppercase font-bold">Height</label>
-            <input className="w-full bg-[#020617] border border-[#334155] rounded px-2 py-1 text-xs font-mono text-slate-300" type="text" value={element.computedStyle.height || "auto"} readOnly />
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Height</label>
+            <input className="w-full rounded border border-[#334155] bg-[#020617] px-2 py-1 font-mono text-xs text-slate-300" type="text" value={element.computedStyle.height || "auto"} readOnly />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] text-slate-500 uppercase font-bold">Padding</label>
-            <input className="w-full bg-[#020617] border border-[#334155] rounded px-2 py-1 text-xs font-mono text-slate-300" type="text" value={element.computedStyle.padding || "0"} readOnly />
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Padding</label>
+            <input className="w-full rounded border border-[#334155] bg-[#020617] px-2 py-1 font-mono text-xs text-slate-300" type="text" value={element.computedStyle.padding || "0"} readOnly />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] text-slate-500 uppercase font-bold">Margin</label>
-            <input className="w-full bg-[#020617] border border-[#334155] rounded px-2 py-1 text-xs font-mono text-slate-300" type="text" value={element.computedStyle.margin || "0"} readOnly />
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Margin</label>
+            <input className="w-full rounded border border-[#334155] bg-[#020617] px-2 py-1 font-mono text-xs text-slate-300" type="text" value={element.computedStyle.margin || "0"} readOnly />
           </div>
         </div>
       </div>
 
       {/* Appearance */}
       <div className="p-md border-b border-slate-800">
-        <div className="flex justify-between items-center mb-md">
+        <div className="mb-md flex items-center justify-between">
           <span className="font-label-caps text-label-caps text-slate-500">
             APPEARANCE
           </span>
         </div>
         <div className="space-y-md">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Background</span>
-            <span className="text-[10px] font-mono text-slate-500">{element.computedStyle["background-color"] || "transparent"}</span>
+            <span className="font-mono text-[10px] text-slate-500">{element.computedStyle["background-color"] || "transparent"}</span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Color</span>
-            <span className="text-[10px] font-mono text-slate-500">{element.computedStyle.color || "inherit"}</span>
+            <span className="font-mono text-[10px] text-slate-500">{element.computedStyle.color || "inherit"}</span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Font Size</span>
-            <span className="text-[10px] font-mono text-slate-500">{element.computedStyle["font-size"] || "inherit"}</span>
+            <span className="font-mono text-[10px] text-slate-500">{element.computedStyle["font-size"] || "inherit"}</span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Border Radius</span>
-            <span className="text-[10px] font-mono text-slate-500">{element.computedStyle["border-radius"] || "0"}</span>
+            <span className="font-mono text-[10px] text-slate-500">{element.computedStyle["border-radius"] || "0"}</span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Display</span>
-            <span className="text-[10px] font-mono text-slate-500">{element.computedStyle.display || "block"}</span>
+            <span className="font-mono text-[10px] text-slate-500">{element.computedStyle.display || "block"}</span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Position</span>
-            <span className="text-[10px] font-mono text-slate-500">{element.computedStyle.position || "static"}</span>
+            <span className="font-mono text-[10px] text-slate-500">{element.computedStyle.position || "static"}</span>
           </div>
         </div>
       </div>

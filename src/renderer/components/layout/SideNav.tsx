@@ -10,15 +10,15 @@ function ToolButton({ icon, label, active, onClick }: ToolButtonProps) {
     <div className="group relative">
       <button
         onClick={onClick}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+        className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition-all ${
           active
-            ? "text-violet-400 bg-slate-700/50"
-            : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+            ? "bg-slate-700/50 text-violet-400"
+            : "text-slate-400 hover:bg-slate-700/50 hover:text-white"
         }`}
       >
         <span className="material-symbols-outlined">{icon}</span>
       </button>
-      <div className="absolute left-14 top-1/2 -translate-y-1/2 px-2 py-1 bg-slate-900 text-white text-[10px] rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap pointer-events-none border border-slate-700 shadow-lg z-50">
+      <div className="pointer-events-none invisible absolute top-1/2 left-14 z-50 -translate-y-1/2 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] whitespace-nowrap text-white opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
         {label}
       </div>
     </div>
@@ -33,7 +33,7 @@ interface SideNavProps {
 export function SideNav({ activeTool, onToolClick }: SideNavProps) {
   return (
     <div
-      className="fixed left-4 top-1/2 -translate-y-1/2 z-[60] flex flex-col gap-2 p-2 rounded-xl border border-slate-700/50 shadow-2xl"
+      className="fixed top-1/2 left-4 z-[60] flex -translate-y-1/2 flex-col gap-2 rounded-xl border border-slate-700/50 p-2 shadow-2xl"
       style={{ backdropFilter: "blur(12px)", background: "rgba(15, 23, 42, 0.7)" }}
     >
       <ToolButton icon="ads_click" label="Element Picker" active={activeTool === "Element Picker"} onClick={() => onToolClick?.("Element Picker")} />

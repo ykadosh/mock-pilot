@@ -2,10 +2,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { TopNav } from "../components/layout/TopNav";
 import { SideNav } from "../components/layout/SideNav";
-import { CanvasPreview, CanvasPreviewHandle } from "../components/CanvasPreview";
+import type { CanvasPreviewHandle } from "../components/CanvasPreview";
+import { CanvasPreview } from "../components/CanvasPreview";
 import { PropertiesPanel } from "../components/PropertiesPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
-import { CodeEditor, CodeEditorHandle } from "../components/CodeEditor";
+import type { CodeEditorHandle } from "../components/CodeEditor";
+import { CodeEditor } from "../components/CodeEditor";
 import { useHistory } from "../hooks/useHistory";
 import { getCapturedHtml, getAssetsBasePath } from "../lib/store";
 
@@ -160,7 +162,7 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
   const { width: deviceWidth, height: deviceHeight } = DEVICE_SIZES[device];
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden select-none">
+    <div className="flex h-screen flex-col overflow-hidden select-none">
       <TopNav
         activeTab={codeEditorOpen ? "code-editor" : "editor"}
         projectId={projectId}
@@ -171,30 +173,30 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
           onToolClick={handleToolClick}
         />
       )}
-      <div className="flex flex-1 min-h-0">
-        <main className="flex-1 min-w-0 bg-background flex flex-col h-full relative">
+      <div className="flex min-h-0 flex-1">
+        <main className="bg-background relative flex h-full min-w-0 flex-1 flex-col">
           {/* Toolbar */}
-          <div className="h-10 border-b border-[#334155] flex items-center justify-between px-md bg-surface-container relative z-10">
+          <div className="px-md bg-surface-container relative z-10 flex h-10 items-center justify-between border-b border-[#334155]">
             {codeEditorOpen ? (
               <>
                 {/* Code editor tabs */}
                 <div className="flex items-center self-stretch">
                   <button
                     onClick={() => setCodeTab("html")}
-                    className={`px-3 text-xs font-mono cursor-pointer transition-colors self-stretch flex items-center border-b-2 ${
+                    className={`flex cursor-pointer items-center self-stretch border-b-2 px-3 font-mono text-xs transition-colors ${
                       codeTab === "html"
-                        ? "text-violet-400 border-violet-400 bg-slate-800"
-                        : "text-slate-500 hover:text-slate-300 border-transparent"
+                        ? "border-violet-400 bg-slate-800 text-violet-400"
+                        : "border-transparent text-slate-500 hover:text-slate-300"
                     }`}
                   >
                     HTML
                   </button>
                   <button
                     onClick={() => setCodeTab("css")}
-                    className={`px-3 text-xs font-mono cursor-pointer transition-colors self-stretch flex items-center border-b-2 ml-1 ${
+                    className={`ml-1 flex cursor-pointer items-center self-stretch border-b-2 px-3 font-mono text-xs transition-colors ${
                       codeTab === "css"
-                        ? "text-violet-400 border-violet-400 bg-slate-800"
-                        : "text-slate-500 hover:text-slate-300 border-transparent"
+                        ? "border-violet-400 bg-slate-800 text-violet-400"
+                        : "border-transparent text-slate-500 hover:text-slate-300"
                     }`}
                   >
                     CSS
@@ -202,59 +204,59 @@ export function Editor({ codeEditorDefault = false }: { codeEditorDefault?: bool
                 </div>
                 <button
                   onClick={() => codeEditorRef.current?.update()}
-                  className="px-3 py-1 text-xs font-mono bg-violet-600 hover:bg-violet-500 text-white rounded cursor-pointer transition-colors relative"
+                  className="relative cursor-pointer rounded bg-violet-600 px-3 py-1 font-mono text-xs text-white transition-colors hover:bg-violet-500"
                 >
                   Save
                   {codeDirty && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-on-primary-container" />
+                    <span className="bg-on-primary-container absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full" />
                   )}
                 </button>
               </>
             ) : (
               <>
                 {/* Device buttons lip — absolutely positioned */}
-                <div className="absolute top-0 bottom-[-5px] left-md flex items-center bg-background rounded-b-lg px-1 border border-t-0 border-[#334155]">
+                <div className="left-md bg-background absolute top-0 bottom-[-5px] flex items-center rounded-b-lg border border-t-0 border-[#334155] px-1">
                   <button
                     onClick={() => setDevice("desktop")}
-                    className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                    className={`flex cursor-pointer items-center justify-center rounded p-1.5 px-2.5 ${device === "desktop" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
                   >
                     <span className="material-symbols-outlined text-lg leading-none">desktop_windows</span>
                   </button>
                   <button
                     onClick={() => setDevice("tablet")}
-                    className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                    className={`flex cursor-pointer items-center justify-center rounded p-1.5 px-2.5 ${device === "tablet" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
                   >
                     <span className="material-symbols-outlined text-lg leading-none">tablet_mac</span>
                   </button>
                   <button
                     onClick={() => setDevice("phone")}
-                    className={`p-1.5 px-2.5 flex items-center justify-center cursor-pointer rounded ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
+                    className={`flex cursor-pointer items-center justify-center rounded p-1.5 px-2.5 ${device === "phone" ? "text-primary-container" : "text-slate-500 hover:text-slate-300"}`}
                   >
                     <span className="material-symbols-outlined text-lg leading-none">smartphone</span>
                   </button>
                 </div>
-                <span className="text-ui-small font-body-main text-slate-400 mx-auto">
+                <span className="text-ui-small font-body-main mx-auto text-slate-400">
                   {deviceWidth} x {deviceHeight} ({zoom}%)
                 </span>
-                <div className="flex items-center gap-sm">
-                  <button onClick={zoomIn} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
+                <div className="gap-sm flex items-center">
+                  <button onClick={zoomIn} className="material-symbols-outlined cursor-pointer text-slate-500 hover:text-white">
                     zoom_in
                   </button>
-                  <button onClick={zoomOut} className="material-symbols-outlined text-slate-500 hover:text-white cursor-pointer">
+                  <button onClick={zoomOut} className="material-symbols-outlined cursor-pointer text-slate-500 hover:text-white">
                     zoom_out
                   </button>
-                  <div className="w-px h-4 bg-slate-700 mx-2" />
+                  <div className="mx-2 h-4 w-px bg-slate-700" />
                   <button
                     onClick={history.undo}
                     disabled={!history.canUndo}
-                    className={`material-symbols-outlined cursor-pointer ${history.canUndo ? "text-slate-500 hover:text-white" : "text-slate-700 cursor-not-allowed"}`}
+                    className={`material-symbols-outlined cursor-pointer ${history.canUndo ? "text-slate-500 hover:text-white" : "cursor-not-allowed text-slate-700"}`}
                   >
                     undo
                   </button>
                   <button
                     onClick={history.redo}
                     disabled={!history.canRedo}
-                    className={`material-symbols-outlined cursor-pointer ${history.canRedo ? "text-slate-500 hover:text-white" : "text-slate-700 cursor-not-allowed"}`}
+                    className={`material-symbols-outlined cursor-pointer ${history.canRedo ? "text-slate-500 hover:text-white" : "cursor-not-allowed text-slate-700"}`}
                   >
                     redo
                   </button>

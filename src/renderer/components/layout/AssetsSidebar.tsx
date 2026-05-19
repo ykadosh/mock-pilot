@@ -15,22 +15,22 @@ interface AssetsSidebarProps {
 
 export function AssetsSidebar({ activeSection, onSectionChange }: AssetsSidebarProps) {
   return (
-    <aside className="flex flex-col h-full w-[220px] border-r border-outline-variant bg-surface-container-low shrink-0">
+    <aside className="border-outline-variant bg-surface-container-low flex h-full w-[220px] shrink-0 flex-col border-r">
       <div className="px-md pt-md pb-sm">
-        <span className="font-label-caps text-label-caps text-outline uppercase tracking-widest">
+        <span className="font-label-caps text-label-caps text-outline tracking-widest uppercase">
           Resources
         </span>
       </div>
-      <nav className="flex-1 flex flex-col gap-px py-xs">
+      <nav className="py-xs flex flex-1 flex-col gap-px">
         {sidebarItems.map((item) => {
           const isActive = item.key === activeSection;
           return (
             <button
               key={item.key}
               onClick={() => onSectionChange(item.key)}
-              className={`flex items-center gap-md px-md py-sm text-left transition-all duration-150 cursor-pointer ${
+              className={`gap-md px-md py-sm flex cursor-pointer items-center text-left transition-all duration-150 ${
                 isActive
-                  ? "bg-primary-container text-on-primary-container border-l-2 border-primary"
+                  ? "bg-primary-container text-on-primary-container border-primary border-l-2"
                   : "text-on-surface-variant hover:bg-surface-container-high border-l-2 border-transparent"
               }`}
             >

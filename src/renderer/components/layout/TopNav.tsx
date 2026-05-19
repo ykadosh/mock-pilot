@@ -1,4 +1,5 @@
-import { ReactNode, useState, useEffect, useRef } from "react";
+import type { ReactNode} from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -105,25 +106,25 @@ export function TopNav({ children, activeTab, projectId }: TopNavProps) {
 
   return (
     <>
-      <header className="bg-slate-900 border-b border-slate-700 flex items-center pl-20 pr-4 h-12 w-full z-50 text-sm tracking-tight [-webkit-app-region:drag] shrink-0 relative">
-        <div className="flex items-center gap-md [-webkit-app-region:no-drag]">
+      <header className="relative z-50 flex h-12 w-full shrink-0 items-center border-b border-slate-700 bg-slate-900 pr-4 pl-20 text-sm tracking-tight [-webkit-app-region:drag]">
+        <div className="gap-md flex items-center [-webkit-app-region:no-drag]">
           <span
             onClick={() => navigate("/")}
-            className="text-lg font-bold tracking-tighter text-slate-50 cursor-pointer"
+            className="cursor-pointer text-lg font-bold tracking-tighter text-slate-50"
           >
             MockPilot
           </span>
         </div>
         {activeTab && (
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 [-webkit-app-region:no-drag]">
+          <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1 [-webkit-app-region:no-drag]">
             {pageTabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => navigate(getTabRoute(tab))}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-colors cursor-pointer ${
+                className={`flex cursor-pointer items-center gap-1 rounded px-2.5 py-1.5 text-[10px] font-semibold tracking-wider uppercase transition-colors ${
                   tab.key === activeTab
                     ? "bg-slate-800 text-violet-400"
-                    : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                    : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
                 }`}
               >
                 <span className="material-symbols-outlined leading-none" style={{ fontSize: 18 }}>{tab.icon}</span>
@@ -132,41 +133,41 @@ export function TopNav({ children, activeTab, projectId }: TopNavProps) {
             ))}
           </div>
         )}
-        <div className="ml-auto flex items-center gap-md [-webkit-app-region:no-drag]">
+        <div className="gap-md ml-auto flex items-center [-webkit-app-region:no-drag]">
           {children}
-          <div className="flex items-center gap-sm">
+          <div className="gap-sm flex items-center">
             <button
               onClick={() => navigate("/app-settings")}
-              className="material-symbols-outlined text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="material-symbols-outlined cursor-pointer text-slate-400 transition-colors hover:text-white"
             >
               settings
             </button>
             <div className="relative" ref={menuRef}>
               <button
                 onClick={handleLoginClick}
-                className="flex items-center cursor-pointer"
+                className="flex cursor-pointer items-center"
               >
                 {auth.authenticated && auth.avatar_url ? (
                   <img
                     src={auth.avatar_url}
                     alt={auth.login}
-                    className="w-6 h-6 border-2 border-green-500"
+                    className="h-6 w-6 border-2 border-green-500"
                     style={{ borderRadius: "50%" }}
                   />
                 ) : auth.authenticated ? (
                   <span className="material-symbols-outlined text-green-400">account_circle</span>
                 ) : (
-                  <span className="material-symbols-outlined text-slate-400 hover:text-white transition-colors">account_circle</span>
+                  <span className="material-symbols-outlined text-slate-400 transition-colors hover:text-white">account_circle</span>
                 )}
               </button>
               {showUserMenu && auth.authenticated && (
-                <div className="absolute right-0 top-10 z-50 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-2 px-3">
-                  <div className="flex items-center gap-2 pb-2 border-b border-slate-700 mb-2">
+                <div className="absolute top-10 right-0 z-50 w-48 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 shadow-xl">
+                  <div className="mb-2 flex items-center gap-2 border-b border-slate-700 pb-2">
                     {auth.avatar_url && (
-                      <img src={auth.avatar_url} alt="" className="w-8 h-8 rounded-full" />
+                      <img src={auth.avatar_url} alt="" className="h-8 w-8 rounded-full" />
                     )}
                     <div className="min-w-0">
-                      <p className="text-xs text-slate-200 font-medium truncate">{auth.login}</p>
+                      <p className="truncate text-xs font-medium text-slate-200">{auth.login}</p>
                       <p className="text-[10px] text-green-400">Connected</p>
                     </div>
                   </div>
@@ -175,7 +176,7 @@ export function TopNav({ children, activeTab, projectId }: TopNavProps) {
                       await auth.logout();
                       setShowUserMenu(false);
                     }}
-                    className="w-full text-left text-xs text-red-400 hover:bg-slate-700 px-2 py-1.5 rounded cursor-pointer"
+                    className="w-full cursor-pointer rounded px-2 py-1.5 text-left text-xs text-red-400 hover:bg-slate-700"
                   >
                     Sign out
                   </button>
@@ -189,33 +190,33 @@ export function TopNav({ children, activeTab, projectId }: TopNavProps) {
       {/* Login flow modal */}
       {showLoginFlow && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 w-80 text-center shadow-2xl">
-            <span className="material-symbols-outlined text-4xl text-violet-400 mb-3 block">key</span>
-            <h3 className="text-lg font-bold text-white mb-2">Sign in with GitHub</h3>
+          <div className="w-80 rounded-xl border border-slate-700 bg-slate-800 p-6 text-center shadow-2xl">
+            <span className="material-symbols-outlined mb-3 block text-4xl text-violet-400">key</span>
+            <h3 className="mb-2 text-lg font-bold text-white">Sign in with GitHub</h3>
             {loginError ? (
               <>
-                <p className="text-sm text-red-400 mb-4">{loginError}</p>
+                <p className="mb-4 text-sm text-red-400">{loginError}</p>
                 <button
                   onClick={() => {
                     setShowLoginFlow(false);
                     setLoginError("");
                   }}
-                  className="text-xs text-slate-500 hover:text-slate-300 cursor-pointer"
+                  className="cursor-pointer text-xs text-slate-500 hover:text-slate-300"
                 >
                   Close
                 </button>
               </>
             ) : (
               <>
-                <p className="text-sm text-slate-400 mb-4">
+                <p className="mb-4 text-sm text-slate-400">
                   Enter this code on GitHub:
                 </p>
-                <div className="bg-slate-900 rounded-lg px-4 py-3 mb-4">
-                  <code className="text-2xl font-mono font-bold text-violet-300 tracking-widest select-all">
+                <div className="mb-4 rounded-lg bg-slate-900 px-4 py-3">
+                  <code className="font-mono text-2xl font-bold tracking-widest text-violet-300 select-all">
                     {userCode}
                   </code>
                 </div>
-                <p className="text-xs text-slate-500 mb-4">
+                <p className="mb-4 text-xs text-slate-500">
                   A browser window has been opened. Paste the code above to complete sign-in.
                 </p>
                 <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
@@ -227,7 +228,7 @@ export function TopNav({ children, activeTab, projectId }: TopNavProps) {
                     setShowLoginFlow(false);
                     setPolling(false);
                   }}
-                  className="mt-4 text-xs text-slate-500 hover:text-slate-300 cursor-pointer"
+                  className="mt-4 cursor-pointer text-xs text-slate-500 hover:text-slate-300"
                 >
                   Cancel
                 </button>

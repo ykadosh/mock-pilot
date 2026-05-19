@@ -688,12 +688,12 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   };
 
   return (
-    <div ref={scrollContainerRef} className={`flex-1 p-xl overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]${panActive ? (isPanning ? " cursor-grabbing" : " cursor-grab") : ""}${rectSelectorActive ? " cursor-crosshair" : ""}`}>
+    <div ref={scrollContainerRef} className={`p-xl flex-1 overflow-auto bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]${panActive ? (isPanning ? " cursor-grabbing" : " cursor-grab") : ""}${rectSelectorActive ? " cursor-crosshair" : ""}`}>
       <div data-canvas-wrapper className="relative mx-auto" style={{ width: `${viewportWidth * scale}px` }}>
         {/* Floating toolbar for selected element */}
         {selectedMpId && selectedRect && (
           <div
-            className="absolute z-20 flex items-center bg-[#7c3aed] text-white text-[10px] font-mono px-2 py-1 rounded shadow-lg whitespace-nowrap"
+            className="absolute z-20 flex items-center rounded bg-[#7c3aed] px-2 py-1 font-mono text-[10px] whitespace-nowrap text-white shadow-lg"
             style={{
               top: `${Math.max(0, selectedRect.top * scale - 28)}px`,
               left: `${selectedRect.left * scale}px`,
@@ -701,19 +701,19 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
           >
             <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>ads_click</span>
             <span className="ml-1">{selectedSelector || "Element"}</span>
-            <div className="flex items-center gap-0.5 ml-2 pl-2 border-l border-white/30">
-              <button onClick={() => sendPickerAction("picker-action-duplicate")} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Duplicate">content_copy</button>
-              <button onClick={handleToolbarDelete} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Delete">delete</button>
-              <button onClick={() => sendPickerAction("picker-action-move-up")} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Move up">arrow_upward</button>
-              <button onClick={() => sendPickerAction("picker-action-move-down")} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Move down">arrow_downward</button>
-              <button onClick={() => onElementDeselected?.()} className="material-symbols-outlined cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors" style={{ fontSize: '16px' }} title="Deselect">close</button>
+            <div className="ml-2 flex items-center gap-0.5 border-l border-white/30 pl-2">
+              <button onClick={() => sendPickerAction("picker-action-duplicate")} className="material-symbols-outlined cursor-pointer rounded p-0.5 transition-colors hover:bg-white/20" style={{ fontSize: '16px' }} title="Duplicate">content_copy</button>
+              <button onClick={handleToolbarDelete} className="material-symbols-outlined cursor-pointer rounded p-0.5 transition-colors hover:bg-white/20" style={{ fontSize: '16px' }} title="Delete">delete</button>
+              <button onClick={() => sendPickerAction("picker-action-move-up")} className="material-symbols-outlined cursor-pointer rounded p-0.5 transition-colors hover:bg-white/20" style={{ fontSize: '16px' }} title="Move up">arrow_upward</button>
+              <button onClick={() => sendPickerAction("picker-action-move-down")} className="material-symbols-outlined cursor-pointer rounded p-0.5 transition-colors hover:bg-white/20" style={{ fontSize: '16px' }} title="Move down">arrow_downward</button>
+              <button onClick={() => onElementDeselected?.()} className="material-symbols-outlined cursor-pointer rounded p-0.5 transition-colors hover:bg-white/20" style={{ fontSize: '16px' }} title="Deselect">close</button>
             </div>
           </div>
         )}
         {/* Rectangle selection marquee */}
         {selectionRect && (
           <div
-            className="absolute pointer-events-none z-30"
+            className="pointer-events-none absolute z-30"
             style={{
               top: `${selectionRect.y * scale}px`,
               left: `${selectionRect.x * scale}px`,
@@ -727,7 +727,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         )}
         {/* Canvas container */}
         <div
-          className="bg-white shadow-2xl overflow-hidden rounded-lg relative"
+          className="relative overflow-hidden rounded-lg bg-white shadow-2xl"
           style={{
             width: `${viewportWidth * scale}px`,
             height: `${iframeHeight * scale}px`,
@@ -746,7 +746,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
                   }
                   return `<base href="${basePath}" data-mp-injected="true">` + html;
                 })()}
-                className="border-none origin-top-left"
+                className="origin-top-left border-none"
                 style={{
                   width: `${viewportWidth}px`,
                   height: `${iframeHeight}px`,
@@ -762,12 +762,12 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
-              <span className="material-symbols-outlined text-4xl mb-md">
+            <div className="flex h-[400px] flex-col items-center justify-center text-slate-400">
+              <span className="material-symbols-outlined mb-md text-4xl">
                 web
               </span>
               <p className="text-sm">No website captured yet</p>
-              <p className="text-xs text-slate-500 mt-xs">
+              <p className="mt-xs text-xs text-slate-500">
                 Create a new project to capture a website
               </p>
             </div>
