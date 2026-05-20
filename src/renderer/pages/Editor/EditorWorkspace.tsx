@@ -1,7 +1,7 @@
-import { CanvasPreview } from "../components/CanvasPreview";
-import { CodeEditor } from "../components/CodeEditor";
-import { HistoryPanel } from "../components/HistoryPanel";
-import { PropertiesPanel } from "../components/PropertiesPanel";
+import { CanvasPreview } from "../../components/CanvasPreview";
+import { CodeEditor } from "../../components/CodeEditor";
+import { HistoryPanel } from "../../components/HistoryPanel";
+import { PropertiesPanel } from "../../components/PropertiesPanel";
 import { buildSelectedSelector } from "./Editor.utils";
 import type { EditorState } from "./Editor.hooks";
 

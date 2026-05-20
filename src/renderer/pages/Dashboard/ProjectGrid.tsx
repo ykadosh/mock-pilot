@@ -1,4 +1,4 @@
-import { NewProjectCard, ProjectCard } from "../components/ProjectCard";
+import { NewProjectCard, ProjectCard } from "../../components/ProjectCard";
 import type { SavedProject } from "./Dashboard.types";
 
 interface ProjectGridProps {

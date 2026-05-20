@@ -1,10 +1,10 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { PageLayout } from "../components/layout/PageLayout";
-import { TopNav } from "../components/layout/TopNav";
-import { DeleteProjectDialog } from "./settings/DeleteProjectDialog";
-import { ProjectSettingsContent } from "./settings/ProjectSettingsContent";
-import { SettingsHeaderActions } from "./settings/SettingsHeaderActions";
-import { useSettingsController } from "./settings/Settings.hooks";
+import { PageLayout } from "../../components/layout/PageLayout";
+import { TopNav } from "../../components/layout/TopNav";
+import { DeleteProjectDialog } from "./DeleteProjectDialog";
+import { ProjectSettingsContent } from "./ProjectSettingsContent";
+import { SettingsHeaderActions } from "./SettingsHeaderActions";
+import { useSettingsController } from "./Settings.hooks";
 
 function SettingsPageBody({ settings }: { settings: ReturnType<typeof useSettingsController> }) {
   return (

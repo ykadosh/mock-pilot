@@ -1,4 +1,4 @@
-import { TopNav } from "../components/layout/TopNav";
+import { TopNav } from "../../components/layout/TopNav";
 import { useAppSettingsState } from "./AppSettings.hooks";
 import { ModelConfigurationSection } from "./AppSettingsModelSection";
 import { ConnectivitySection, StorageSection, UpdatesSection } from "./AppSettingsStatusSections";

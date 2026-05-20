@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { TopNav } from "../components/layout/TopNav";
-import { AssetsSidebar } from "../components/layout/AssetsSidebar";
-import { FontsPage } from "./assets/FontsPage";
-import { ComponentsPage } from "./assets/ComponentsPage";
-import { IconsPage } from "./assets/IconsPage";
-import { GraphicsPage } from "./assets/GraphicsPage";
-import { PalettePage } from "./assets/PalettePage";
+import { TopNav } from "../../components/layout/TopNav";
+import { AssetsSidebar } from "../../components/layout/AssetsSidebar";
+import { FontsPage } from "./FontsPage";
+import { ComponentsPage } from "./ComponentsPage";
+import { IconsPage } from "./IconsPage";
+import { GraphicsPage } from "./GraphicsPage";
+import { PalettePage } from "./PalettePage";
 
 export type AssetSection = "fonts" | "components" | "icons" | "graphics" | "palette";
 

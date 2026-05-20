@@ -69,7 +69,14 @@ export default tseslint.config(
         'src/**/*.utils.ts': 'PASCAL_CASE',
       }, { ignoreMiddleExtensions: true }],
       'check-file/folder-naming-convention': ['error', {
-        'src/renderer/**': 'CAMEL_CASE',
+        'src/renderer/pages/*/': 'PASCAL_CASE',
+        'src/renderer/components/**/': 'CAMEL_CASE',
+        'src/renderer/hooks/**/': 'CAMEL_CASE',
+        'src/renderer/lib/**/': 'CAMEL_CASE',
+      }],
+      // Enforce that page component files live inside page folders, not loose in pages/
+      'check-file/filename-blocklist': ['error', {
+        'src/renderer/pages/*.{ts,tsx}': '*',
       }],
     },
   },

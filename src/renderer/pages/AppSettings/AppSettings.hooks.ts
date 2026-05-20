@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../../hooks/useAuth";
 import type { AppSettingsData, GhCliStatus, StorageInfo, UpdateStatus } from "./AppSettings.utils";
 
 interface AppSettingsController {

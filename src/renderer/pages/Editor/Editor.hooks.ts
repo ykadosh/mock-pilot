@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { CanvasPreviewHandle } from "../components/CanvasPreview";
-import type { CodeEditorHandle } from "../components/CodeEditor";
-import { useHistory } from "../hooks/useHistory";
-import { getAssetsBasePath, getCapturedHtml } from "../lib/store";
+import type { CanvasPreviewHandle } from "../../components/CanvasPreview";
+import type { CodeEditorHandle } from "../../components/CodeEditor";
+import { useHistory } from "../../hooks/useHistory";
+import { getAssetsBasePath, getCapturedHtml } from "../../lib/store";
 import type { SelectedElement } from "./Editor";
 import { DEVICE_SIZES, getEditorRoute, type DevicePreset, type EditorTool } from "./Editor.utils";
 

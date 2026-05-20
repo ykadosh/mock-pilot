@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { CaptureProgressModal } from "../components/CaptureProgressModal";
-import { CaptureBrowserHeader } from "./captureBrowser/components/CaptureBrowserHeader";
-import { CaptureBrowserToolbar } from "./captureBrowser/components/CaptureBrowserToolbar";
-import { CaptureBrowserViewport } from "./captureBrowser/components/CaptureBrowserViewport";
-import { useCaptureBrowserCapture } from "./captureBrowser/useCaptureBrowserCapture";
-import { useCaptureBrowserState } from "./captureBrowser/useCaptureBrowserState";
+import { CaptureProgressModal } from "../../components/CaptureProgressModal";
+import { CaptureBrowserHeader } from "./components/CaptureBrowserHeader";
+import { CaptureBrowserToolbar } from "./components/CaptureBrowserToolbar";
+import { CaptureBrowserViewport } from "./components/CaptureBrowserViewport";
+import { useCaptureBrowserCapture } from "./useCaptureBrowserCapture";
+import { useCaptureBrowserState } from "./useCaptureBrowserState";
 
 export function CaptureBrowser() {
   const navigate = useNavigate();

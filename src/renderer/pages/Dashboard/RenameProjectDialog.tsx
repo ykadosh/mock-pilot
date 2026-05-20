@@ -1,4 +1,4 @@
-import { Dialog } from "../components/ui/Dialog";
+import { Dialog } from "../../components/ui/Dialog";
 import type { SavedProject } from "./Dashboard.types";
 
 interface RenameProjectDialogProps {

@@ -1,5 +1,5 @@
-import { TopNav } from "../components/layout/TopNav";
-import { SideNav } from "../components/layout/SideNav";
+import { TopNav } from "../../components/layout/TopNav";
+import { SideNav } from "../../components/layout/SideNav";
 import { useEditorState } from "./Editor.hooks";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorWorkspace } from "./EditorWorkspace";

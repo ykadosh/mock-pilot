@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { TopNav } from "../components/layout/TopNav";
-import { setCapturedHtml } from "../lib/store";
+import { TopNav } from "../../components/layout/TopNav";
+import { setCapturedHtml } from "../../lib/store";
 import { DashboardHeader } from "./DashboardHeader";
 import type { SavedProject } from "./Dashboard.types";
 import { ProjectGrid } from "./ProjectGrid";
