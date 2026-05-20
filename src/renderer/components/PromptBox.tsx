@@ -81,7 +81,7 @@ function PromptInput({ handleApply, handleFileSelect, handlePaste, handlePromptK
           disabled={!prompt.trim() || loading}
           className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <span className="material-symbols-outlined text-lg">{loading ? "progress_activity" : "bolt"}</span>
+          <span className="material-symbols-outlined text-lg">bolt</span>
         </button>
       </div>
     </div>
@@ -91,20 +91,22 @@ function PromptInput({ handleApply, handleFileSelect, handlePaste, handlePromptK
 export function PromptBox(props: PromptBoxProps) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-70 flex justify-center px-4">
-      <div className="pointer-events-auto w-full max-w-2xl rounded-2xl border border-slate-600/20 bg-[rgba(15,23,42,0.85)] p-3 shadow-2xl backdrop-blur-xl">
-        <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} />
-        {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
-        <PromptInput
-          handleApply={props.handleApply}
-          handleFileSelect={props.handleFileSelect}
-          handlePaste={props.handlePaste}
-          handlePromptKeyDown={props.handlePromptKeyDown}
-          loading={props.loading}
-          prompt={props.prompt}
-          setPrompt={props.setPrompt}
-          textareaRef={props.textareaRef}
-        />
-        <input ref={props.fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={props.handleFileChange} />
+      <div className={`pointer-events-auto w-full max-w-2xl rounded-2xl shadow-2xl ${props.loading ? "prompt-box-loading" : "border border-slate-600/20 bg-[rgba(15,23,42,0.85)] backdrop-blur-xl"}`}>
+        <div className={`rounded-2xl p-3 ${props.loading ? "prompt-box-inner backdrop-blur-xl" : ""}`}>
+          <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} />
+          {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
+          <PromptInput
+            handleApply={props.handleApply}
+            handleFileSelect={props.handleFileSelect}
+            handlePaste={props.handlePaste}
+            handlePromptKeyDown={props.handlePromptKeyDown}
+            loading={props.loading}
+            prompt={props.prompt}
+            setPrompt={props.setPrompt}
+            textareaRef={props.textareaRef}
+          />
+          <input ref={props.fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={props.handleFileChange} />
+        </div>
       </div>
     </div>
   );

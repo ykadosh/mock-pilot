@@ -146,3 +146,27 @@
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 
+/* Rotating gradient border for prompt box loading state */
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-gradient {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+.prompt-box-loading {
+  background: conic-gradient(from var(--gradient-angle), #7c3aed, #d2bbff, #89ceff, #7c3aed);
+  animation: rotate-gradient 2s linear infinite;
+  padding: 1.5px;
+}
+
+.prompt-box-loading > .prompt-box-inner {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: inherit;
+}
+
