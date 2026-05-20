@@ -5,7 +5,8 @@ import { setCapturedHtml } from "../../lib/store";
 import { captureAndInlineIframes } from "./iframeCapture";
 import { createCaptureHtmlScript } from "./scripts/captureHtmlScript";
 import { EXTRACT_ASSETS_SCRIPT } from "./scripts/extractAssetsScript";
-import type { ExtractedAssets, HeightMode } from "./types";
+import { EXTRACT_ICONS_SCRIPT } from "./scripts/extractIconsScript";
+import type { ExtractedAssets, ExtractedIcons, HeightMode } from "./types";
 import { advanceCaptureStep, buildProjectAssets, ensureCaptureNotAborted, initializeCaptureProgress, resolveCaptureTitle } from "./utils";
 
 interface CaptureArgs {
@@ -100,6 +101,10 @@ async function extractAssets(
   await log("Extracting assets (typography & colors)...");
   const extractedAssets = await webview.executeJavaScript(EXTRACT_ASSETS_SCRIPT) as ExtractedAssets;
   await log("Extracted " + extractedAssets.typography.length + " typography styles and " + extractedAssets.colors.length + " colors");
+  await log("Detecting icon libraries...");
+  const extractedIcons = await webview.executeJavaScript(EXTRACT_ICONS_SCRIPT) as ExtractedIcons;
+  await log("Detected icon libraries: " + (extractedIcons.libraries.length > 0 ? extractedIcons.libraries.join(", ") : "none"));
+  extractedAssets.icons = extractedIcons;
   return extractedAssets;
 }
 

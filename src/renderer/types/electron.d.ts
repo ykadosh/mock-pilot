@@ -36,6 +36,7 @@ interface ProjectAssets {
   typography: TypographyAsset[];
   colors: ColorAsset[];
   fontFaceCss?: string;
+  icons?: { libraries: string[] };
 }
 
 declare global {

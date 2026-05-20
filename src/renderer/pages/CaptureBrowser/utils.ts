@@ -49,5 +49,6 @@ export function buildProjectAssets(extractedAssets: ExtractedAssets) {
       ...asset,
     })),
     colors: extractedAssets.colors.map((asset, index) => ({ id: `color-${index}`, label: "", value: asset.value })),
+    icons: extractedAssets.icons,
   };
 }

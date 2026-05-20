@@ -6,6 +6,7 @@ import { registerAiHandlers } from "./ipc/ai";
 import { registerAuthHandlers } from "./ipc/auth";
 import { registerCaptureHandlers } from "./ipc/capture";
 import { registerExportHandlers } from "./ipc/export";
+import { registerGraphicsHandlers } from "./ipc/graphics";
 import { registerProjectHandlers } from "./ipc/projects";
 import { registerSettingsHandlers } from "./ipc/settings";
 import { ensureProjectsDir, projectsDir } from "./projects";
@@ -53,6 +54,7 @@ app.on("ready", () => {
   registerAiHandlers();
   registerSettingsHandlers();
   registerExportHandlers();
+  registerGraphicsHandlers();
 
   createWindow();
 });

@@ -22,9 +22,14 @@ export interface ExtractedColor {
   value: string;
 }
 
+export interface ExtractedIcons {
+  libraries: string[];
+}
+
 export interface ExtractedAssets {
   typography: ExtractedTypography[];
   colors: ExtractedColor[];
+  icons?: ExtractedIcons;
 }
 
 export interface CaptureProgressState {
