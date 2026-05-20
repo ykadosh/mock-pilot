@@ -14,8 +14,17 @@ export function ProjectGrid({
   onOpenProject,
   onRenameProject,
 }: ProjectGridProps) {
+  if (projects.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <NewProjectCard />
+      </div>
+    );
+  }
+
   return (
     <div className="gap-md grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <NewProjectCard />
       {projects.map((project, index) => (
         <ProjectCard
           key={project.id}
@@ -23,13 +32,11 @@ export function ProjectGrid({
           url={project.url}
           imageUrl={project.thumbnail}
           lastEdit={formatProjectDate(project.updatedAt)}
-          isHero={index === 0}
           onClick={() => onOpenProject(project)}
           onDelete={() => onDeleteProject(project)}
           onRename={() => onRenameProject(project)}
         />
       ))}
-      <NewProjectCard />
     </div>
   );
 }

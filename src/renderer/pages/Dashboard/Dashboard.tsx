@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { TopNav } from "../../components/layout/TopNav";
 import { setCapturedHtml } from "../../lib/store";
-import { DashboardHeader } from "./DashboardHeader";
 import type { SavedProject } from "./Dashboard.types";
 import { ProjectGrid } from "./ProjectGrid";
 import { RenameProjectDialog } from "./RenameProjectDialog";
@@ -30,8 +29,7 @@ export function Dashboard() {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <TopNav />
-      <main className="p-lg flex-1 overflow-y-auto bg-[#020617]">
-        <DashboardHeader onCreateProject={() => navigate("/capture")} />
+      <main className="p-lg flex flex-1 flex-col overflow-y-auto bg-[#020617]">
         <ProjectGrid
           projects={savedProjects}
           onOpenProject={handleOpenProject}
