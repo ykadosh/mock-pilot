@@ -26,9 +26,16 @@ interface ColorAsset {
   value: string;
 }
 
+interface GraphicAsset {
+  filename: string;
+  extension: string;
+  sizeBytes: number;
+}
+
 interface ProjectAssets {
   typography: TypographyAsset[];
   colors: ColorAsset[];
+  fontFaceCss?: string;
 }
 
 declare global {
@@ -50,7 +57,7 @@ declare global {
       }>;
       getWebviewPreloadPath: () => Promise<string>;
       listProjects: () => Promise<ProjectMeta[]>;
-      saveProject: (data: { url: string; title: string; html: string; thumbnail?: string }) => Promise<ProjectMeta>;
+      saveProject: (data: { url: string; title: string; html: string; thumbnail?: string }) => Promise<ProjectMeta & { fontFaceCss?: string | null }>;
       loadProject: (id: string) => Promise<{
         success: boolean;
         html?: string;
@@ -130,6 +137,7 @@ declare global {
       // Project assets
       saveProjectAssets: (id: string, assets: ProjectAssets) => Promise<{ success: boolean }>;
       loadProjectAssets: (id: string) => Promise<{ success: boolean; assets?: ProjectAssets }>;
+      listProjectGraphics: (id: string) => Promise<{ success: boolean; graphics?: GraphicAsset[] }>;
     };
   }
 }

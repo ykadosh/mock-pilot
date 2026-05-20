@@ -2,10 +2,12 @@ import { useParams } from "react-router-dom";
 
 import { TypographyCard } from "./TypographyCard";
 import { TypographyForm } from "./TypographyForm";
+import { useProjectFonts } from "./UseProjectFonts.hooks";
 import { useTypographyAssets } from "./UseTypographyAssets.hooks";
 
 export function FontsPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  useProjectFonts(projectId);
   const { typography, editingId, showAddForm, setEditingId, setShowAddForm, handleAdd, handleDelete, handleSave } = useTypographyAssets(projectId);
 
   return (

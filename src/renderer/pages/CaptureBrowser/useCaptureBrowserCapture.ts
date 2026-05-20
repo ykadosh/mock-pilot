@@ -132,17 +132,17 @@ async function persistCaptureResult({ args, result, log, progress }: PersistCapt
   await log("Saving project...");
   const project = await window.api.saveProject({ html: formatResult.html, thumbnail: result.thumbnailDataUrl, title: resolveCaptureTitle(args.webviewRef, args.currentUrl), url: args.currentUrl });
   await log("Project saved:", project.id);
-  await saveExtractedAssets(project.id, result.extractedAssets, log);
+  await saveExtractedAssets(project.id, result.extractedAssets, { fontFaceCss: project.fontFaceCss, log });
   progress.setCaptureSteps(previous => previous.map(step => ({ ...step, status: "done" as const })));
   progress.setCapturePercent(100);
   setCapturedHtml(formatResult.html, "mp-asset://assets/");
   args.navigate(`/editor/${project.id}`);
 }
 
-async function saveExtractedAssets(projectId: string, extractedAssets: ExtractedAssets, log: (...args: unknown[]) => Promise<void>) {
+async function saveExtractedAssets(projectId: string, extractedAssets: ExtractedAssets, options: { fontFaceCss?: string | null; log: (...args: unknown[]) => Promise<void> }) {
   const assetsToSave = buildProjectAssets(extractedAssets);
-  await window.api.saveProjectAssets(projectId, assetsToSave);
-  await log("Assets saved:", assetsToSave.typography.length, "typography,", assetsToSave.colors.length, "colors");
+  await window.api.saveProjectAssets(projectId, { ...assetsToSave, fontFaceCss: options.fontFaceCss || undefined });
+  await options.log("Assets saved:", assetsToSave.typography.length, "typography,", assetsToSave.colors.length, "colors");
 }
 
 async function handleCaptureError(error: unknown, log: (...args: unknown[]) => Promise<void>) {

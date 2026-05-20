@@ -7,9 +7,10 @@ import { extractAndSaveAssets } from "../assets";
 import { downloadExternalAssets } from "../download-assets";
 import type { ProjectMeta } from "../projects";
 import { getProjectsIndex, projectsDir, saveProjectsIndex } from "../projects";
+import { extractFontFaceCss } from "./FontFaceUtils";
 
 type SaveProjectData = { url: string; title: string; html: string; thumbnail?: string };
-type ProjectAssets = { typography: unknown[]; colors: unknown[] };
+type ProjectAssets = { typography: unknown[]; colors: unknown[]; fontFaceCss?: string };
 type ProjectHistoryData = { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] };
 
 function projectPath(name: string) {
@@ -54,7 +55,8 @@ async function handleSaveProject(_event: Electron.IpcMainInvokeEvent, data: Save
   const projects = getProjectsIndex();
   projects.unshift(meta);
   saveProjectsIndex(projects);
-  return meta;
+  const fontFaceCss = extractFontFaceCss(processedHtml);
+  return { ...meta, fontFaceCss };
 }
 
 function handleLoadProject(_event: Electron.IpcMainInvokeEvent, id: string) {
