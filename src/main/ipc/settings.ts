@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 
 import { compareVersions } from "../export";
-import { appSettingsPath, ensureProjectsDir, getDirSize, getProjectsIndex, projectsDir } from "../projects";
+import { appSettingsPath, ensureProjectsDir, getDirSize, getProjectDir, getProjectsIndex, projectsDir } from "../projects";
 
 type AppSettings = { aiModel: string };
 type ReleaseAsset = { name: string; browser_download_url: string };
@@ -29,14 +29,8 @@ function handleGetStorageInfo() {
 }
 
 function handleGetProjectSize(_event: Electron.IpcMainInvokeEvent, id: string) {
-  ensureProjectsDir();
-  let totalBytes = 0;
-  for (const entry of fs.readdirSync(projectsDir)) {
-    if (!entry.startsWith(`${id}.`) && entry !== id) continue;
-    const stat = fs.statSync(path.join(projectsDir, entry));
-    if (stat.isFile()) totalBytes += stat.size;
-  }
-  return { totalBytes };
+  const projectDir = getProjectDir(id);
+  return { totalBytes: getDirSize(projectDir) };
 }
 
 async function handleCheckForUpdates() {
@@ -60,7 +54,7 @@ function handleOpenExternal(_event: Electron.IpcMainInvokeEvent, url: string) {
 }
 
 function handleOpenProjectInBrowser(_event: Electron.IpcMainInvokeEvent, id: string) {
-  const htmlPath = path.join(projectsDir, `${id}.html`);
+  const htmlPath = path.join(getProjectDir(id), "project.html");
   if (!fs.existsSync(htmlPath)) return { success: false, error: "Project file not found" };
   shell.openPath(htmlPath);
   return { success: true };

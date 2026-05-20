@@ -2,7 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 
-import { projectsDir } from "./projects";
+import { getProjectDir } from "./projects";
 
 const ASSET_EXTENSIONS: Record<string, string> = {
   "image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", "image/gif": "gif",
@@ -26,7 +26,7 @@ function ensureDir(dir: string): void {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-function createAssetSaver(id: string, assetsDir: string): (dataUri: string) => string {
+function createAssetSaver(assetsDir: string): (dataUri: string) => string {
   const assetMap = new Map<string, string>();
   return function saveAsset(dataUri: string): string {
     const cached = assetMap.get(dataUri);
@@ -37,7 +37,7 @@ function createAssetSaver(id: string, assetsDir: string): (dataUri: string) => s
     const ext = getExtensionFromMime(parsed.mimeType);
     const hash = crypto.createHash("sha256").update(parsed.base64Data).digest("hex").slice(0, 12);
     const filename = `${hash}.${ext}`;
-    const relativePath = `${id}.assets/${filename}`;
+    const relativePath = `assets/${filename}`;
     const filePath = path.join(assetsDir, filename);
 
     ensureDir(assetsDir);
@@ -57,7 +57,7 @@ function replaceImgDataUris(html: string, saveAsset: (dataUri: string) => string
 
 function removeLocalImgSrcsets(html: string): string {
   return html.replace(/<img\b[^>]*>/gi, (imgTag) =>
-    /\bsrc\s*=\s*"[^"]*\.assets\//.test(imgTag) && /\bsrcset\s*=/.test(imgTag)
+    /\bsrc\s*=\s*"assets\//.test(imgTag) && /\bsrcset\s*=/.test(imgTag)
       ? imgTag.replace(/\s*srcset\s*=\s*"[^"]*"/gi, "")
       : imgTag);
 }
@@ -76,8 +76,8 @@ function replaceSrcsetDataUris(html: string, saveAsset: (dataUri: string) => str
 }
 
 export function extractAndSaveAssets(id: string, html: string): string {
-  const assetsDir = path.join(projectsDir, `${id}.assets`);
-  const saveAsset = createAssetSaver(id, assetsDir);
+  const assetsDir = path.join(getProjectDir(id), "assets");
+  const saveAsset = createAssetSaver(assetsDir);
 
   html = replaceImgDataUris(html, saveAsset);
   html = removeLocalImgSrcsets(html);

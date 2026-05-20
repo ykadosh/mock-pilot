@@ -2,7 +2,7 @@ import { BrowserWindow, dialog } from "electron";
 import path from "path";
 import fs from "fs";
 
-import { projectsDir } from "../projects";
+import { getProjectDir } from "../projects";
 import { cleanHtmlForExport } from "./index";
 
 type ExportSaveFilesData = { projectId: string; html: string; baseUrl?: string };
@@ -31,13 +31,9 @@ function extractStylesFromHtml(html: string): ExtractedStyles {
   };
 }
 
-function rewriteProjectAssetPaths(projectId: string, content: string): string {
-  return content.split(`${projectId}.assets/`).join("assets/");
-}
-
 function copyProjectAssets(options: { projectId: string; destDir: string; html: string; css: string }): ExtractedStyles {
   const { projectId, destDir, html, css } = options;
-  const assetsDir = path.join(projectsDir, `${projectId}.assets`);
+  const assetsDir = path.join(getProjectDir(projectId), "assets");
   if (!fs.existsSync(assetsDir)) return { html, css };
 
   const destAssetsDir = path.join(destDir, "assets");
@@ -46,10 +42,7 @@ function copyProjectAssets(options: { projectId: string; destDir: string; html: 
     fs.copyFileSync(path.join(assetsDir, file), path.join(destAssetsDir, file));
   }
 
-  return {
-    html: rewriteProjectAssetPaths(projectId, html),
-    css: css ? rewriteProjectAssetPaths(projectId, css) : css,
-  };
+  return { html, css };
 }
 
 function writeExportFiles(destDir: string, html: string, css: string): void {

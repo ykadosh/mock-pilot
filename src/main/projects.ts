@@ -11,6 +11,17 @@ export function ensureProjectsDir() {
   }
 }
 
+export function ensureProjectDir(id: string) {
+  const dir = path.join(projectsDir, id);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+export function getProjectDir(id: string) {
+  return path.join(projectsDir, id);
+}
+
 export function getDirSize(dirPath: string): number {
   let total = 0;
   if (!fs.existsSync(dirPath)) return 0;
@@ -46,4 +57,55 @@ export function getProjectsIndex(): ProjectMeta[] {
 
 export function saveProjectsIndex(projects: ProjectMeta[]) {
   fs.writeFileSync(path.join(projectsDir, "index.json"), JSON.stringify(projects, null, 2));
+}
+
+function migrateProject(id: string) {
+  const projectDir = path.join(projectsDir, id);
+  if (fs.existsSync(projectDir)) return;
+
+  const htmlPath = path.join(projectsDir, `${id}.html`);
+  if (!fs.existsSync(htmlPath)) return;
+
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.renameSync(htmlPath, path.join(projectDir, "project.html"));
+
+  const filesToMove: [string, string][] = [
+    [`${id}.png`, "thumbnail.png"],
+    [`${id}.assets.json`, "assets.json"],
+    [`${id}.history.json`, "history.json"],
+  ];
+  for (const [src, dest] of filesToMove) {
+    const srcPath = path.join(projectsDir, src);
+    if (fs.existsSync(srcPath)) fs.renameSync(srcPath, path.join(projectDir, dest));
+  }
+
+  let snapIndex = 0;
+  while (fs.existsSync(path.join(projectsDir, `${id}.snap.${snapIndex}.html`))) {
+    fs.renameSync(path.join(projectsDir, `${id}.snap.${snapIndex}.html`), path.join(projectDir, `snap.${snapIndex}.html`));
+    snapIndex++;
+  }
+
+  const assetsFolderPath = path.join(projectsDir, `${id}.assets`);
+  if (fs.existsSync(assetsFolderPath)) fs.renameSync(assetsFolderPath, path.join(projectDir, "assets"));
+
+  const rewriteAssetRefs = (filePath: string) => {
+    if (!fs.existsSync(filePath)) return;
+    let content = fs.readFileSync(filePath, "utf-8");
+    content = content.split(`${id}.assets/`).join("assets/");
+    fs.writeFileSync(filePath, content, "utf-8");
+  };
+
+  rewriteAssetRefs(path.join(projectDir, "project.html"));
+  snapIndex = 0;
+  while (fs.existsSync(path.join(projectDir, `snap.${snapIndex}.html`))) {
+    rewriteAssetRefs(path.join(projectDir, `snap.${snapIndex}.html`));
+    snapIndex++;
+  }
+}
+
+// Migrate flat project files into per-project folders
+export function migrateProjectsToFolders() {
+  for (const project of getProjectsIndex()) {
+    migrateProject(project.id);
+  }
 }

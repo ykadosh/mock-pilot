@@ -9,7 +9,7 @@ import { registerExportHandlers } from "./ipc/export";
 import { registerGraphicsHandlers } from "./ipc/graphics";
 import { registerProjectHandlers } from "./ipc/projects";
 import { registerSettingsHandlers } from "./ipc/settings";
-import { ensureProjectsDir, projectsDir } from "./projects";
+import { ensureProjectsDir, migrateProjectsToFolders, projectsDir } from "./projects";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -41,6 +41,7 @@ protocol.registerSchemesAsPrivileged([
 
 app.on("ready", () => {
   ensureProjectsDir();
+  migrateProjectsToFolders();
 
   protocol.handle("mp-asset", (request) => {
     const url = new URL(request.url);

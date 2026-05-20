@@ -3,7 +3,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import { net } from "electron";
 
-import { projectsDir } from "./projects";
+import { getProjectDir } from "./projects";
 
 const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", "image/gif": "gif",
@@ -33,7 +33,7 @@ function getExtensionFromResponse(contentType: string, url: string): string {
   return "png";
 }
 
-function createDownloader(id: string, assetsDir: string): (url: string) => Promise<string | null> {
+function createDownloader(assetsDir: string): (url: string) => Promise<string | null> {
   const urlCache = new Map<string, string>();
   return async function downloadAndSave(url: string): Promise<string | null> {
     const cached = urlCache.get(url);
@@ -48,7 +48,7 @@ function createDownloader(id: string, assetsDir: string): (url: string) => Promi
       const ext = getExtensionFromResponse(res.headers.get("content-type") || "", url);
       const hash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
       const filename = `${hash}.${ext}`;
-      const relativePath = `${id}.assets/${filename}`;
+      const relativePath = `assets/${filename}`;
       const filePath = path.join(assetsDir, filename);
 
       ensureDir(assetsDir);
@@ -63,7 +63,7 @@ function createDownloader(id: string, assetsDir: string): (url: string) => Promi
 
 function removeLocalImgSrcsets(html: string): string {
   return html.replace(/<img\b[^>]*>/gi, (imgTag) =>
-    /\bsrc\s*=\s*"[^"]*\.assets\//.test(imgTag) && /\bsrcset\s*=/.test(imgTag)
+    /\bsrc\s*=\s*"assets\//.test(imgTag) && /\bsrcset\s*=/.test(imgTag)
       ? imgTag.replace(/\s*srcset\s*=\s*"[^"]*"/gi, "")
       : imgTag);
 }
@@ -100,8 +100,8 @@ async function downloadCssUrls(html: string, downloadAndSave: (url: string) => P
 }
 
 export async function downloadExternalAssets(id: string, html: string): Promise<string> {
-  const assetsDir = path.join(projectsDir, `${id}.assets`);
-  const downloadAndSave = createDownloader(id, assetsDir);
+  const assetsDir = path.join(getProjectDir(id), "assets");
+  const downloadAndSave = createDownloader(assetsDir);
 
   html = await downloadImgSrcs(html, downloadAndSave);
   html = removeLocalImgSrcsets(html);

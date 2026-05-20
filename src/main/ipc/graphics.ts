@@ -2,12 +2,12 @@ import { ipcMain } from "electron";
 import fs from "fs";
 import path from "path";
 
-import { projectsDir } from "../projects";
+import { getProjectDir } from "../projects";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "avif", "bmp", "ico"]);
 
 function handleListProjectGraphics(_event: Electron.IpcMainInvokeEvent, id: string) {
-  const assetsDir = path.join(projectsDir, `${id}.assets`);
+  const assetsDir = path.join(getProjectDir(id), "assets");
   if (!fs.existsSync(assetsDir)) return { success: true, graphics: [] };
   try {
     const entries = fs.readdirSync(assetsDir, { withFileTypes: true });

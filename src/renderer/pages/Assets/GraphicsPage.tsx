@@ -16,7 +16,7 @@ function formatFileSize(bytes: number): string {
 }
 
 function getAssetUrl(projectId: string, filename: string): string {
-  return `mp-asset://assets/${projectId}.assets/${filename}`;
+  return `mp-asset://assets/${projectId}/assets/${filename}`;
 }
 
 export function GraphicsPage() {

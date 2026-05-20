@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 
 import { cleanHtmlForExport } from "./index";
-import { projectsDir } from "../projects";
+import { getProjectDir } from "../projects";
 
 type ExportAsImageData = {
   html: string;
@@ -39,7 +39,7 @@ function loadPuppeteer(): PuppeteerModule {
 }
 
 async function withTempExportFile<T>(projectId: string, html: string, run: (url: string) => Promise<T>): Promise<T> {
-  const tempHtmlPath = path.join(projectsDir, `${projectId}.export-temp.html`);
+  const tempHtmlPath = path.join(getProjectDir(projectId), "export-temp.html");
   fs.writeFileSync(tempHtmlPath, html, "utf-8");
   try {
     return await run(`file://${tempHtmlPath}`);

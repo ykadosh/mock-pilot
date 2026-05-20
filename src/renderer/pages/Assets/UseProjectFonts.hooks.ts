@@ -21,7 +21,7 @@ export function useProjectFonts(projectId?: string) {
           if (url.startsWith("data:") || url.startsWith("http") || url.startsWith("mp-asset://")) {
             return `url("${url}")`;
           }
-          return `url("mp-asset://assets/${url}")`;
+          return `url("mp-asset://assets/${projectId}/${url}")`;
         },
       );
 

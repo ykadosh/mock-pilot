@@ -146,7 +146,7 @@ async function persistCaptureResult({ args, result, log, progress }: PersistCapt
   await saveExtractedAssets(project.id, result.extractedAssets, { fontFaceCss: project.fontFaceCss, log });
   progress.setCaptureSteps(previous => previous.map(step => ({ ...step, status: "done" as const })));
   progress.setCapturePercent(100);
-  setCapturedHtml(formatResult.html, "mp-asset://assets/");
+  setCapturedHtml(formatResult.html, `mp-asset://assets/${project.id}/`);
   args.navigate(`/editor/${project.id}`);
 }
 
