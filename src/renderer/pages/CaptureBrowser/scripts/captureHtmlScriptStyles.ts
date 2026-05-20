@@ -1,6 +1,7 @@
 export const CAPTURE_HTML_SCRIPT_STYLES = `
     _log("[step:scripts] Removing scripts...");
     document.querySelectorAll("script").forEach((s) => s.remove());
+    document.querySelectorAll("noscript").forEach((s) => s.remove());
     document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"], link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').forEach((l) => l.remove());
     _log("[step:cssom] Serializing CSSOM rules...");
     var cssomCount = 0;

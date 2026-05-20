@@ -6,7 +6,17 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
     while (walker.nextNode()) comments.push(walker.currentNode);
     comments.forEach((c) => c.remove());
     _log("Removing hidden elements...");
-    document.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach((el) => el.remove());
+    var hiddenCount = 0;
+    document.querySelectorAll('body *').forEach(function(el) {
+      try {
+        var cs = getComputedStyle(el);
+        if (cs.display === 'none') {
+          el.remove();
+          hiddenCount++;
+        }
+      } catch (e) {}
+    });
+    _log("Removed " + hiddenCount + " hidden element(s)");
     _log("Collapsing whitespace...");
     const textWalker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT);
     const textNodes = [];
