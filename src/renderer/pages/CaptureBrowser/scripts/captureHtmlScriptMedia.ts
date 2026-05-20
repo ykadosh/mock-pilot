@@ -29,6 +29,11 @@ export const CAPTURE_HTML_SCRIPT_MEDIA = `
           ctx.drawImage(img, 0, 0);
           img.src = canvas.toDataURL("image/png");
           img.removeAttribute("srcset");
+          // Remove <source> siblings inside <picture> so the browser uses
+          // the captured data URI on the <img> instead of stale source URLs
+          if (img.parentElement && img.parentElement.tagName === "PICTURE") {
+            img.parentElement.querySelectorAll("source").forEach(function(s) { s.remove(); });
+          }
         }
       } catch {}
     }
