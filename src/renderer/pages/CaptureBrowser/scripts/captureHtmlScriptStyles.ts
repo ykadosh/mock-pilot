@@ -3,47 +3,29 @@ export const CAPTURE_HTML_SCRIPT_STYLES = `
     document.querySelectorAll("script").forEach((s) => s.remove());
     document.querySelectorAll("noscript").forEach((s) => s.remove());
     document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"], link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').forEach((l) => l.remove());
-    _log("[step:cssom] Serializing CSSOM rules...");
-    var cssomCount = 0;
-    document.querySelectorAll("style").forEach(function(style) {
-      try {
-        var sheet = style.sheet;
-        if (sheet && sheet.cssRules && sheet.cssRules.length > 0) {
-          var rules = [];
-          for (var i = 0; i < sheet.cssRules.length; i++) rules.push(sheet.cssRules[i].cssText);
-          var serialized = rules.join("\\n");
-          if (serialized !== (style.textContent || "").trim()) {
-            style.textContent = serialized;
-            cssomCount++;
-          }
-        }
-      } catch (e) {}
-    });
-    _log("Serialized CSSOM rules from " + cssomCount + " style tag(s)");
-    if (document.adoptedStyleSheets && document.adoptedStyleSheets.length > 0) {
-      _log("Serializing " + document.adoptedStyleSheets.length + " adopted stylesheet(s)...");
-      var adoptedCount = 0;
-      for (var asi = 0; asi < document.adoptedStyleSheets.length; asi++) {
-        try {
-          var adoptedSheet = document.adoptedStyleSheets[asi];
-          if (adoptedSheet.cssRules && adoptedSheet.cssRules.length > 0) {
-            var adoptedRules = [];
-            for (var ari = 0; ari < adoptedSheet.cssRules.length; ari++) adoptedRules.push(adoptedSheet.cssRules[ari].cssText);
-            var adoptedStyle = document.createElement("style");
-            adoptedStyle.setAttribute("data-adopted-stylesheet", "true");
-            adoptedStyle.textContent = adoptedRules.join("\\n");
-            document.head.appendChild(adoptedStyle);
-            adoptedCount++;
-          }
-        } catch (e) { _log("Error serializing adopted stylesheet: " + e); }
-      }
-      _log("Serialized " + adoptedCount + " adopted stylesheet(s) into <style> tags");
+    _log("[step:cssom] Restoring CSSOM from pre-capture snapshot...");
+    // Remove all existing <style> and remaining <link rel=stylesheet> elements
+    // and replace with the snapshot we took before any DOM mutations
+    document.querySelectorAll("style").forEach(function(s) { s.remove(); });
+    document.querySelectorAll('link[rel="stylesheet"]').forEach(function(l) { l.remove(); });
+    var _snapshotInjected = 0;
+    for (var _ssi = 0; _ssi < _cssomSnapshot.length; _ssi++) {
+      var _snap = _cssomSnapshot[_ssi];
+      if (_snap.rules.length === 0) continue;
+      var _newStyle = document.createElement("style");
+      if (_snap.adopted) _newStyle.setAttribute("data-adopted-stylesheet", "true");
+      if (_snap.href) _newStyle.setAttribute("data-original-href", _snap.href);
+      _newStyle.textContent = _snap.rules.join("\\n");
+      document.head.appendChild(_newStyle);
+      _snapshotInjected++;
     }
+    _log("Injected " + _snapshotInjected + " stylesheet(s) from snapshot");
     const inlineStyles = [...document.querySelectorAll("style")];
     const fontStyles = inlineStyles.filter(function(s) { return (s.textContent || "").indexOf("@font-face") !== -1; });
     _log("[step:fonts] Processing " + fontStyles.length + " of " + inlineStyles.length + " inline style tag(s) that contain @font-face...");
     await Promise.all(fontStyles.map(async function(style) {
-      style.textContent = await inlineFontUrls(style.textContent || "", document.baseURI);
+      var baseUrl = style.getAttribute("data-original-href") || document.baseURI;
+      style.textContent = await inlineFontUrls(style.textContent || "", baseUrl);
     }));
     _log("Done processing inline style tags");
     _log("[step:layout] Baking viewport-dependent dimensions...");

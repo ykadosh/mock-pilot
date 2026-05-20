@@ -1,24 +1,5 @@
 export const CAPTURE_HTML_SCRIPT_MEDIA = `
-    const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
-    _log("[step:stylesheets] Inlining " + stylesheets.length + " external stylesheet(s)...");
-    for (const link of stylesheets) {
-      try {
-        const href = link.href;
-        _log("  Fetching stylesheet: " + href);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const res = await fetch(href, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        _log("  Fetched stylesheet (" + res.status + "): " + href);
-        let css = await res.text();
-        _log("  Inlining fonts for stylesheet: " + href);
-        css = await inlineFontUrls(css, href);
-        _log("  Done inlining fonts for: " + href);
-        const style = document.createElement("style");
-        style.textContent = css;
-        link.replaceWith(style);
-      } catch (e) { _log("  FAILED stylesheet: " + link.href + " - " + (e && e.message || e)); }
-    }
+    _log("[step:stylesheets] Stylesheet inlining skipped (handled via CSSOM snapshot)");
     const images = document.querySelectorAll("img");
     _log("[step:images] Converting " + images.length + " image(s) to data URIs...");
     for (const img of images) {
