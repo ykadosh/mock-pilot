@@ -9,8 +9,8 @@ interface TopNavTabsProps {
 
 const pageTabs: { label: string; key: ActiveTab; to: string; icon: string }[] = [
   { label: "Editor", key: "editor", to: "/editor", icon: "edit" },
-  { label: "Code Editor", key: "code-editor", to: "/code-editor", icon: "code" },
   { label: "Assets", key: "assets", to: "/assets", icon: "widgets" },
+  { label: "Code Editor", key: "code-editor", to: "/code-editor", icon: "code" },
   { label: "Export", key: "export", to: "/export", icon: "ios_share" },
   { label: "Settings", key: "settings", to: "/settings", icon: "settings" },
 ];

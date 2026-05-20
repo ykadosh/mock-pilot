@@ -33,18 +33,56 @@ export function ComponentPreview({ html, css }: { html: string; css?: string }) 
     doc.write(`<!DOCTYPE html>
 <html><head><style>
 ${css || ""}
-body { margin: 0; padding: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 100%; }
-* { max-width: 100%; box-sizing: border-box; }
+body { margin: 0; padding: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; width: max-content; height: max-content; }
+* { box-sizing: border-box; }
 </style></head><body>${html}</body></html>`);
     doc.close();
+
+    // Scale content to fit within the iframe (object-fit: contain behavior)
+    iframe.onload = () => scaleToFit(iframe);
+    scaleToFit(iframe);
   }, [html, css]);
 
   return (
     <iframe
       ref={iframeRef}
       sandbox="allow-same-origin"
-      className="border-outline/20 h-24 w-full rounded border bg-white"
+      className="border-outline/20 aspect-[4/3] w-full rounded border bg-white"
       title="Component preview"
     />
   );
+}
+
+function scaleToFit(iframe: HTMLIFrameElement) {
+  const doc = iframe.contentDocument;
+  if (!doc?.body) return;
+
+  // Wait a frame for layout to settle
+  requestAnimationFrame(() => {
+    const body = doc.body;
+    const contentWidth = body.scrollWidth;
+    const contentHeight = body.scrollHeight;
+    const frameWidth = iframe.clientWidth;
+    const frameHeight = iframe.clientHeight;
+
+    if (contentWidth <= 0 || contentHeight <= 0) return;
+
+    const scaleX = frameWidth / contentWidth;
+    const scaleY = frameHeight / contentHeight;
+    const scale = Math.min(scaleX, scaleY, 1); // Never scale up, only down
+
+    body.style.transformOrigin = "top left";
+    body.style.transform = `scale(${scale})`;
+    body.style.width = `${contentWidth}px`;
+    body.style.height = `${contentHeight}px`;
+
+    // Center the scaled content
+    const scaledWidth = contentWidth * scale;
+    const scaledHeight = contentHeight * scale;
+    const offsetX = (frameWidth - scaledWidth) / 2;
+    const offsetY = (frameHeight - scaledHeight) / 2;
+    body.style.position = "absolute";
+    body.style.left = `${offsetX}px`;
+    body.style.top = `${offsetY}px`;
+  });
 }

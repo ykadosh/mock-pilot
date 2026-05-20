@@ -12,7 +12,7 @@ export type AssetSection = "fonts" | "components" | "icons" | "graphics" | "pale
 
 export function Assets() {
   const { projectId } = useParams<{ projectId: string }>();
-  const [activeSection, setActiveSection] = useState<AssetSection>("fonts");
+  const [activeSection, setActiveSection] = useState<AssetSection>("components");
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
