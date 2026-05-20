@@ -45,7 +45,7 @@ function IconButton({ disabled, icon, onClick }: { disabled: boolean; icon: stri
 
 function AddressBar(props: { addressBarValue: string; isSecure: boolean; onAddressBarChange: (value: string) => void; onAddressBarKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void }) {
   return (
-    <div className="bg-surface-container-lowest border-outline-variant gap-sm flex h-9 flex-1 items-center rounded border px-3">
+    <div className="bg-surface-container-lowest border-outline-variant focus-within:border-primary gap-sm flex h-9 flex-1 items-center rounded border px-3 transition-colors">
       {props.isSecure && <span className="material-symbols-outlined text-primary text-[16px]">lock</span>}
       <input type="text" value={props.addressBarValue} onChange={(event) => props.onAddressBarChange(event.target.value)} onKeyDown={props.onAddressBarKeyDown} onFocus={(event) => event.target.select()} placeholder="Enter a URL and press Enter" className="text-ui-small text-on-surface-variant font-code-block w-full border-none bg-transparent p-0 focus:ring-0 focus:outline-none" autoFocus />
     </div>
