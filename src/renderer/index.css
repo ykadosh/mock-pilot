@@ -160,7 +160,16 @@
 }
 
 .prompt-box-loading {
-  background: conic-gradient(from var(--gradient-angle), #7c3aed, #d2bbff, #1e1b4b, #7c3aed);
+  background: conic-gradient(
+    from var(--gradient-angle),
+    #7c3aed 0%,
+    #d2bbff 15%,
+    #7c3aed 30%,
+    #1e1b4b 50%,
+    #7c3aed 70%,
+    #d2bbff 85%,
+    #7c3aed 100%
+  );
   animation: rotate-gradient 2s linear infinite;
   padding: 1.5px;
 }
