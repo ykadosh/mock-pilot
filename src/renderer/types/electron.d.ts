@@ -87,6 +87,11 @@ declare global {
         html?: string;
         error?: string;
       }>;
+      aiModifyPage: (data: { prompt: string; fullHTML: string; images?: { name: string; dataUrl: string }[] }) => Promise<{
+        success: boolean;
+        html?: string;
+        error?: string;
+      }>;
       aiExtractComponents: (data: { simplifiedHtml: string; screenshot?: string }) => Promise<{
         success: boolean;
         components?: { name: string; selector: string; count: number; description: string; props: { name: string; type: string; description: string }[] }[];

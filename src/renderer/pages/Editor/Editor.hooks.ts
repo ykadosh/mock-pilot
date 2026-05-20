@@ -96,6 +96,29 @@ function useEditorViewportState(codeEditorDefault: boolean) {
   return { codeDirty, codeEditorOpen: codeEditorDefault, codeTab, device, setCodeDirty, setCodeTab, setDevice, zoom, zoomIn, zoomOut };
 }
 
+interface EditorModificationsArgs {
+  canvasRef: React.RefObject<CanvasPreviewHandle | null>;
+  pendingLabelRef: PendingLabelRef;
+  history: EditorHistory;
+  tools: ReturnType<typeof useEditorToolState>;
+  projectId?: string;
+}
+
+function useEditorModifications({ canvasRef, pendingLabelRef, history, tools, projectId }: EditorModificationsArgs) {
+  const handleApplyModification = useCallback((mpId: string, newHTML: string, label?: string) => {
+    pendingLabelRef.current = label || "AI modification";
+    canvasRef.current?.applyModification(mpId, newHTML, label);
+    if (newHTML === "__REMOVE_ELEMENT__") tools.setSelectedElement(null);
+  }, [canvasRef, pendingLabelRef, tools]);
+
+  const handleApplyPageModification = useCallback((newHTML: string, label?: string) => {
+    history.push(newHTML, label || "AI page modification");
+    if (projectId) window.api.updateProjectHtml(projectId, newHTML);
+  }, [history, projectId]);
+
+  return { handleApplyModification, handleApplyPageModification };
+}
+
 export function useEditorState(codeEditorDefault = false) {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -107,11 +130,7 @@ export function useEditorState(codeEditorDefault = false) {
   useHistoryMessageSync(history, pendingLabelRef, projectId);
   useHistoryPersistence(history, projectId);
 
-  const handleApplyModification = useCallback((mpId: string, newHTML: string, label?: string) => {
-    pendingLabelRef.current = label || "AI modification";
-    canvasRef.current?.applyModification(mpId, newHTML, label);
-    if (newHTML === "__REMOVE_ELEMENT__") tools.setSelectedElement(null);
-  }, [tools]);
+  const { handleApplyModification, handleApplyPageModification } = useEditorModifications({ canvasRef, pendingLabelRef, history, tools, projectId });
 
   const handleCodeUpdate = useCallback((fullHtml: string, label: string) => {
     history.push(fullHtml, label);
@@ -127,6 +146,7 @@ export function useEditorState(codeEditorDefault = false) {
     canvasRef,
     codeEditorRef,
     handleApplyModification,
+    handleApplyPageModification,
     handleCodeUpdate,
     historyOpen: tools.activeTool === "History",
     panActive: tools.activeTool === "Pan Tool",

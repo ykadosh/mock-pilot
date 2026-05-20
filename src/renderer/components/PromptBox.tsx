@@ -1,0 +1,102 @@
+import type { Attachment } from "./PromptBox.types";
+import { getAttachmentLabel } from "./PromptBox.hooks";
+
+interface PromptBoxProps {
+  attachments: Attachment[];
+  error: string;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  handleApply: () => void | Promise<void>;
+  handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleFileSelect: () => void;
+  handlePaste: (event: React.ClipboardEvent) => void;
+  handlePromptKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement>;
+  loading: boolean;
+  prompt: string;
+  removeAttachment: (index: number) => void;
+  setPrompt: (value: string) => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+}
+
+function ImageChip({ attachment, index, onRemove }: { attachment: Attachment & { type: "image" }; index: number; onRemove: (index: number) => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-800/80 py-1 pr-2 pl-1 text-xs text-slate-300">
+      <img alt="Thumb" className="h-6 w-6 rounded object-cover" src={attachment.dataUrl} />
+      <span className="max-w-24 truncate font-medium">{attachment.name}</span>
+      <button className="material-symbols-outlined ml-1 text-[14px] hover:text-red-400" onClick={() => onRemove(index)}>close</button>
+    </div>
+  );
+}
+
+function ElementChip({ attachment, index, onRemove }: { attachment: Attachment; index: number; onRemove: (index: number) => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-900/40 px-2 py-1 text-xs text-violet-200">
+      <span className="material-symbols-outlined text-[14px]">extension</span>
+      <span className="max-w-32 truncate font-mono text-[10px]">{getAttachmentLabel(attachment)}</span>
+      <button className="material-symbols-outlined ml-1 text-[14px] hover:text-violet-100" onClick={() => onRemove(index)}>close</button>
+    </div>
+  );
+}
+
+function AttachmentChips({ attachments, onRemove }: { attachments: Attachment[]; onRemove: (index: number) => void }) {
+  if (attachments.length === 0) return null;
+  return (
+    <div className="mb-2 flex flex-wrap gap-2 px-1">
+      {attachments.map((attachment, index) =>
+        attachment.type === "image"
+          ? <ImageChip key={index} attachment={attachment} index={index} onRemove={onRemove} />
+          : <ElementChip key={index} attachment={attachment} index={index} onRemove={onRemove} />,
+      )}
+    </div>
+  );
+}
+
+function PromptInput({ handleApply, handleFileSelect, handlePaste, handlePromptKeyDown, loading, prompt, setPrompt, textareaRef }: Pick<PromptBoxProps, "handleApply" | "handleFileSelect" | "handlePaste" | "handlePromptKeyDown" | "loading" | "prompt" | "setPrompt" | "textareaRef">) {
+  return (
+    <div className="relative flex items-center overflow-hidden rounded-xl bg-transparent transition-all focus-within:border-violet-500/50">
+      <textarea
+        ref={textareaRef}
+        value={prompt}
+        onChange={(event) => setPrompt(event.target.value)}
+        onKeyDown={handlePromptKeyDown}
+        onPaste={handlePaste}
+        disabled={loading}
+        className="font-body-main text-body-main h-12 flex-1 resize-none border-none bg-transparent p-3 text-slate-200 placeholder-slate-500 focus:ring-0 disabled:opacity-50"
+        placeholder="Describe changes to the selected element..."
+      />
+      <div className="flex items-center gap-2 pr-3">
+        <button className="text-slate-500 transition-colors hover:text-slate-300" onClick={handleFileSelect} title="Attach image">
+          <span className="material-symbols-outlined">attach_file</span>
+        </button>
+        <button
+          onClick={() => void handleApply()}
+          disabled={!prompt.trim() || loading}
+          className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="material-symbols-outlined text-lg">{loading ? "progress_activity" : "bolt"}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function PromptBox(props: PromptBoxProps) {
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-70 flex justify-center px-4">
+      <div className="pointer-events-auto w-full max-w-2xl rounded-2xl border border-slate-600/20 bg-[rgba(15,23,42,0.85)] p-3 shadow-2xl backdrop-blur-xl">
+        <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} />
+        {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
+        <PromptInput
+          handleApply={props.handleApply}
+          handleFileSelect={props.handleFileSelect}
+          handlePaste={props.handlePaste}
+          handlePromptKeyDown={props.handlePromptKeyDown}
+          loading={props.loading}
+          prompt={props.prompt}
+          setPrompt={props.setPrompt}
+          textareaRef={props.textareaRef}
+        />
+        <input ref={props.fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={props.handleFileChange} />
+      </div>
+    </div>
+  );
+}

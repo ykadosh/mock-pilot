@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld("api", {
   getProjectThumbnail: (id: string) => ipcRenderer.invoke("get-project-thumbnail", id),
   aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) =>
     ipcRenderer.invoke("ai-modify-element", data),
+  aiModifyPage: (data: { prompt: string; fullHTML: string; images?: { name: string; dataUrl: string }[] }) =>
+    ipcRenderer.invoke("ai-modify-page", data),
   aiExtractComponents: (data: { simplifiedHtml: string; screenshot?: string }) =>
     ipcRenderer.invoke("ai-extract-components", data),
   // Auth

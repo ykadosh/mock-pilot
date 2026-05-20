@@ -1,19 +1,14 @@
 import type { SelectedElement } from "../pages/Editor";
-import { usePropertiesPanelModifier } from "./PropertiesPanel.hooks";
 import { PropertiesPanelDetails } from "./PropertiesPanelDetails";
-import { PropertiesPanelModifier } from "./PropertiesPanelModifier";
 import { buildElementSelector } from "./PropertiesPanel.utils";
 import { SidePanel } from "./ui/SidePanel";
 
 interface PropertiesPanelProps {
   element: SelectedElement;
   onClose: () => void;
-  onApplyModification?: (mpId: string, newHTML: string, label?: string) => void;
-  getElementHTML?: () => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
 }
 
-export function PropertiesPanel({ element, onClose, onApplyModification, getElementHTML }: PropertiesPanelProps) {
-  const modifier = usePropertiesPanelModifier({ element, onApplyModification, getElementHTML });
+export function PropertiesPanel({ element, onClose }: PropertiesPanelProps) {
   const selector = buildElementSelector(element);
 
   return (
@@ -24,7 +19,6 @@ export function PropertiesPanel({ element, onClose, onApplyModification, getElem
           <span className="flex-1 truncate font-mono text-[11px] text-violet-300">{selector}</span>
         </div>
       </div>
-      <PropertiesPanelModifier {...modifier} />
       <PropertiesPanelDetails element={element} />
     </SidePanel>
   );
