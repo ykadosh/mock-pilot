@@ -92,7 +92,11 @@ function usePromptSubmit(args: UsePromptBoxArgs & { attachments: Attachment[]; s
   };
 
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== "Enter" || event.shiftKey || !prompt.trim() || loading) return;
+    if (event.key === "Enter" && event.shiftKey) {
+      event.stopPropagation();
+      return;
+    }
+    if (event.key !== "Enter" || !prompt.trim() || loading) return;
     event.preventDefault();
     void handleApply();
   };

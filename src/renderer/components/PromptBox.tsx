@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { Attachment } from "./PromptBox.types";
 import { getAttachmentLabel } from "./PromptBox.hooks";
 
@@ -51,19 +52,19 @@ function AttachmentChips({ attachments, onRemove }: { attachments: Attachment[];
 }
 
 function PromptInput({ handleApply, handleFileSelect, handlePaste, handlePromptKeyDown, loading, prompt, setPrompt, textareaRef }: Pick<PromptBoxProps, "handleApply" | "handleFileSelect" | "handlePaste" | "handlePromptKeyDown" | "loading" | "prompt" | "setPrompt" | "textareaRef">) {
-  const autoResize = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const textarea = event.target;
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
-    setPrompt(textarea.value);
-  };
+  }, [prompt, textareaRef]);
 
   return (
     <div className="relative flex items-end overflow-hidden rounded-xl bg-transparent transition-all">
       <textarea
         ref={textareaRef}
         value={prompt}
-        onChange={autoResize}
+        onChange={(event) => setPrompt(event.target.value)}
         onKeyDown={handlePromptKeyDown}
         onPaste={handlePaste}
         disabled={loading}
