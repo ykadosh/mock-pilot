@@ -10,7 +10,7 @@ import { getProjectsIndex, projectsDir, saveProjectsIndex } from "../projects";
 import { extractFontFaceCss } from "./FontFaceUtils";
 
 type SaveProjectData = { url: string; title: string; html: string; thumbnail?: string };
-type ProjectAssets = { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] } };
+type ProjectAssets = { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] }; components?: unknown[]; componentsCss?: string };
 type ProjectHistoryData = { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] };
 
 function projectPath(name: string) {

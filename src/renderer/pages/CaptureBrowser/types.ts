@@ -26,10 +26,27 @@ export interface ExtractedIcons {
   libraries: string[];
 }
 
+export interface ExtractedComponentProp {
+  name: string;
+  type: string;
+  description: string;
+}
+
+export interface ExtractedComponent {
+  label: string;
+  html: string;
+  count: number;
+  hash: string;
+  description?: string;
+  props?: ExtractedComponentProp[];
+}
+
 export interface ExtractedAssets {
   typography: ExtractedTypography[];
   colors: ExtractedColor[];
   icons?: ExtractedIcons;
+  components?: ExtractedComponent[];
+  componentsCss?: string;
 }
 
 export interface CaptureProgressState {

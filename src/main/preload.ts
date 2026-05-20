@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld("api", {
   getProjectThumbnail: (id: string) => ipcRenderer.invoke("get-project-thumbnail", id),
   aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) =>
     ipcRenderer.invoke("ai-modify-element", data),
+  aiExtractComponents: (data: { simplifiedHtml: string; screenshot?: string }) =>
+    ipcRenderer.invoke("ai-extract-components", data),
   // Auth
   authGetStatus: () => ipcRenderer.invoke("auth-get-status"),
   authStartDeviceFlow: () => ipcRenderer.invoke("auth-start-device-flow"),
@@ -45,7 +47,7 @@ contextBridge.exposeInMainWorld("api", {
   deployToStackblitz: (data: { html: string; css?: string; baseUrl?: string }) =>
     ipcRenderer.invoke("deploy-stackblitz", data),
   // Project assets
-  saveProjectAssets: (id: string, assets: { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] } }) =>
+  saveProjectAssets: (id: string, assets: { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] }; components?: unknown[]; componentsCss?: string }) =>
     ipcRenderer.invoke("save-project-assets", id, assets),
   loadProjectAssets: (id: string) => ipcRenderer.invoke("load-project-assets", id),
   listProjectGraphics: (id: string) => ipcRenderer.invoke("list-project-graphics", id),

@@ -20,23 +20,29 @@ interface TypographyAsset {
   textTransform: string;
 }
 
-interface ColorAsset {
+interface ColorAsset { id: string; label: string; value: string }
+
+interface GraphicAsset { filename: string; extension: string; sizeBytes: number }
+
+interface ComponentAsset {
   id: string;
   label: string;
-  value: string;
+  html: string;
+  count: number;
+  hash: string;
+  description?: string;
+  props?: ComponentPropAsset[];
 }
 
-interface GraphicAsset {
-  filename: string;
-  extension: string;
-  sizeBytes: number;
-}
+interface ComponentPropAsset { name: string; type: string; description: string }
 
 interface ProjectAssets {
   typography: TypographyAsset[];
   colors: ColorAsset[];
   fontFaceCss?: string;
   icons?: { libraries: string[] };
+  components?: ComponentAsset[];
+  componentsCss?: string;
 }
 
 declare global {
@@ -79,6 +85,11 @@ declare global {
       aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => Promise<{
         success: boolean;
         html?: string;
+        error?: string;
+      }>;
+      aiExtractComponents: (data: { simplifiedHtml: string; screenshot?: string }) => Promise<{
+        success: boolean;
+        components?: { name: string; selector: string; count: number; description: string; props: { name: string; type: string; description: string }[] }[];
         error?: string;
       }>;
       // Auth

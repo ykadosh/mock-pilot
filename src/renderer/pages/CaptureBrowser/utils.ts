@@ -50,5 +50,15 @@ export function buildProjectAssets(extractedAssets: ExtractedAssets) {
     })),
     colors: extractedAssets.colors.map((asset, index) => ({ id: `color-${index}`, label: "", value: asset.value })),
     icons: extractedAssets.icons,
+    components: (extractedAssets.components || []).map((component, index) => ({
+      id: `comp-${index}`,
+      label: component.label,
+      html: component.html,
+      count: component.count,
+      hash: component.hash,
+      description: component.description,
+      props: component.props,
+    })),
+    componentsCss: extractedAssets.componentsCss,
   };
 }
