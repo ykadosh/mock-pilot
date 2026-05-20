@@ -8,7 +8,7 @@ import {
   replaceIframeWithPlaceholder,
   resolveIframeUrl,
   type IframeData,
-} from "./capture-website-utils";
+} from "./website-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { html_beautify } = require("js-beautify");

@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import fs from "fs";
-import { getToken, getCopilotToken } from "./auth";
-import { appSettingsPath } from "./projects";
+import { getToken, getCopilotToken } from "../auth";
+import { appSettingsPath } from "../projects";
 
 const AI_SYSTEM_PROMPT = `You are an expert front-end developer. The user has selected an HTML element and wants to modify it.
 You will receive the element's current HTML and computed CSS styles.

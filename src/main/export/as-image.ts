@@ -2,8 +2,8 @@ import { BrowserWindow, dialog } from "electron";
 import path from "path";
 import fs from "fs";
 
-import { cleanHtmlForExport } from "./export";
-import { projectsDir } from "./projects";
+import { cleanHtmlForExport } from "./index";
+import { projectsDir } from "../projects";
 
 type ExportAsImageData = {
   html: string;

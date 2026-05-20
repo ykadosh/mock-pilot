@@ -2,12 +2,12 @@ import { app, BrowserWindow, net, protocol } from "electron";
 import path from "path";
 import { pathToFileURL } from "url";
 
-import { registerAiHandlers } from "./ipc-ai";
-import { registerAuthHandlers } from "./ipc-auth";
-import { registerCaptureHandlers } from "./ipc-capture";
-import { registerExportHandlers } from "./ipc-export";
-import { registerProjectHandlers } from "./ipc-projects";
-import { registerSettingsHandlers } from "./ipc-settings";
+import { registerAiHandlers } from "./ipc/ai";
+import { registerAuthHandlers } from "./ipc/auth";
+import { registerCaptureHandlers } from "./ipc/capture";
+import { registerExportHandlers } from "./ipc/export";
+import { registerProjectHandlers } from "./ipc/projects";
+import { registerSettingsHandlers } from "./ipc/settings";
 import { ensureProjectsDir, projectsDir } from "./projects";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;

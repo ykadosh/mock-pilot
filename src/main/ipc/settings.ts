@@ -2,8 +2,8 @@ import { app, ipcMain, shell } from "electron";
 import fs from "fs";
 import path from "path";
 
-import { compareVersions } from "./export";
-import { appSettingsPath, ensureProjectsDir, getDirSize, getProjectsIndex, projectsDir } from "./projects";
+import { compareVersions } from "../export";
+import { appSettingsPath, ensureProjectsDir, getDirSize, getProjectsIndex, projectsDir } from "../projects";
 
 type AppSettings = { aiModel: string };
 type ReleaseAsset = { name: string; browser_download_url: string };

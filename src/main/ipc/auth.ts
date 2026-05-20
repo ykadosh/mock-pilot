@@ -1,8 +1,8 @@
 import { execFile, execSync } from "node:child_process";
 import { promisify } from "node:util";
 import { ipcMain, shell } from "electron";
-import { loadAuth, saveAuth, clearAuth, isExplicitlyLoggedOut, GITHUB_CLIENT_ID, shellEnv } from "./auth";
-import type { AuthData } from "./auth";
+import { loadAuth, saveAuth, clearAuth, isExplicitlyLoggedOut, GITHUB_CLIENT_ID, shellEnv } from "../auth";
+import type { AuthData } from "../auth";
 
 async function handleAuthGetStatus() {
   const auth = loadAuth();

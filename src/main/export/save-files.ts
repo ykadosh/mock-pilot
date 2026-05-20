@@ -2,8 +2,8 @@ import { BrowserWindow, dialog } from "electron";
 import path from "path";
 import fs from "fs";
 
-import { projectsDir } from "./projects";
-import { cleanHtmlForExport } from "./export";
+import { projectsDir } from "../projects";
+import { cleanHtmlForExport } from "./index";
 
 type ExportSaveFilesData = { projectId: string; html: string; baseUrl?: string };
 type ExtractedStyles = { html: string; css: string };

@@ -1,9 +1,9 @@
 import { ipcMain } from "electron";
 
-import { handleExportSaveFiles } from "./export-save-files";
-import { handleExportAsImage } from "./export-as-image";
-import { handleDeployCodesandbox } from "./deploy-codesandbox";
-import { handleDeployStackblitz } from "./deploy-stackblitz";
+import { handleExportSaveFiles } from "../export/save-files";
+import { handleExportAsImage } from "../export/as-image";
+import { handleDeployCodesandbox } from "../export/deploy-codesandbox";
+import { handleDeployStackblitz } from "../export/deploy-stackblitz";
 
 export function registerExportHandlers() {
   ipcMain.handle("export-save-files", handleExportSaveFiles);

@@ -1,9 +1,9 @@
 import { ipcMain } from "electron";
 import path from "path";
 
-import { handleCaptureIframes } from "./capture-iframes";
-import { handleCaptureWebsite } from "./capture-website";
-import { handleFormatHtml } from "./format-html";
+import { handleCaptureIframes } from "../capture/iframes";
+import { handleCaptureWebsite } from "../capture/website";
+import { handleFormatHtml } from "../capture/format-html";
 
 export function registerCaptureHandlers() {
   ipcMain.handle("capture-website", handleCaptureWebsite);

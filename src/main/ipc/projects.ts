@@ -3,10 +3,10 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
-import { extractAndSaveAssets } from "./assets";
-import { downloadExternalAssets } from "./download-assets";
-import type { ProjectMeta } from "./projects";
-import { getProjectsIndex, projectsDir, saveProjectsIndex } from "./projects";
+import { extractAndSaveAssets } from "../assets";
+import { downloadExternalAssets } from "../download-assets";
+import type { ProjectMeta } from "../projects";
+import { getProjectsIndex, projectsDir, saveProjectsIndex } from "../projects";
 
 type SaveProjectData = { url: string; title: string; html: string; thumbnail?: string };
 type ProjectAssets = { typography: unknown[]; colors: unknown[] };

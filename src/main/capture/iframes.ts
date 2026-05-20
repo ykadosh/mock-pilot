@@ -10,7 +10,7 @@ import {
   matchesKnownIframeUrl,
   type CapturedIframe,
   type FrameCapture,
-} from "./capture-iframes-utils";
+} from "./iframes-utils";
 
 type CaptureIframesResult =
   | { success: true; iframes: CapturedIframe[] }

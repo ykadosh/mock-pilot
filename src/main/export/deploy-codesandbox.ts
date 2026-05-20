@@ -2,7 +2,7 @@ import { app, shell } from "electron";
 import path from "path";
 import fs from "fs";
 
-import { cleanHtmlForExport } from "./export";
+import { cleanHtmlForExport } from "./index";
 
 type DeployCodesandboxData = { html: string; css?: string; baseUrl?: string };
 type CodesandboxFiles = Record<string, { content: string }>;
