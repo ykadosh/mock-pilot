@@ -63,7 +63,7 @@ function removeLocalImgSrcsets(html: string): string {
 }
 
 function replaceCssDataUris(html: string, saveAsset: (dataUri: string) => string): string {
-  return html.replace(/url\(\s*["']?(data:[^"')]+;base64,[^"')]+)["']?\s*\)/gi,
+  return html.replace(/url\(\s*(?:["']|&quot;)?(data:[^"')&]+;base64,[^"')&]+)(?:["']|&quot;)?\s*\)/gi,
     (_match, dataUri) => `url("${saveAsset(dataUri)}")`);
 }
 

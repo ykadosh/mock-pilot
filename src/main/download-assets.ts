@@ -90,7 +90,7 @@ async function downloadSourceSrcsets(html: string, downloadAndSave: (url: string
 }
 
 async function downloadCssUrls(html: string, downloadAndSave: (url: string) => Promise<string | null>): Promise<string> {
-  for (const match of html.matchAll(/url\(\s*["']?(https?:\/\/[^"')]+?)["']?\s*\)/gi)) {
+  for (const match of html.matchAll(/url\(\s*(?:["']|&quot;)?(https?:\/\/[^"')&]+?)(?:["']|&quot;)?\s*\)/gi)) {
     const url = normalizeAssetUrl(match[1]);
     if (!IMAGE_URL_PATTERN.test(url) && !/\/is\/(?:image|content)\//i.test(url)) continue;
     const localPath = await downloadAndSave(url);

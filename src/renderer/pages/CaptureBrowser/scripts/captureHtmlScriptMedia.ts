@@ -119,25 +119,22 @@ export const CAPTURE_HTML_SCRIPT_MEDIA = `
     }
     _log("Done capturing video posters");
     var bgElements = document.querySelectorAll('[style*="background"]');
-    _log("[step:backgrounds] Inlining " + bgElements.length + " element(s) with background images...");
-    var bgInlinedCount = 0;
+    _log("[step:backgrounds] Resolving " + bgElements.length + " element(s) with background image URLs...");
+    var bgResolvedCount = 0;
     for (var bgEl of bgElements) {
       try {
         var bgStyle = bgEl.getAttribute("style") || "";
-        var bgUrlRegex = /url\\(["']?(?!data:)([^"')]+?)["']?\\)/g;
+        var bgUrlRegex = /url\\(["']?(?!data:|https?:\\/\\/)([^"')]+?)["']?\\)/g;
         var bgMatch, newStyle = bgStyle;
         while ((bgMatch = bgUrlRegex.exec(bgStyle)) !== null) {
           try {
             var resolvedBgUrl = new URL(bgMatch[1], document.baseURI).href;
-            var bgRes = await fetch(resolvedBgUrl);
-            if (!bgRes.ok) continue;
-            var bgBlob = await bgRes.blob();
-            var bgDataUri = await new Promise(function(r) { var rd = new FileReader(); rd.onloadend = function() { r(rd.result); }; rd.readAsDataURL(bgBlob); });
-            if (bgDataUri) { newStyle = newStyle.replace(bgMatch[0], 'url("' + bgDataUri + '")'); bgInlinedCount++; }
-          } catch (e2) { _log("  Failed to inline bg image: " + bgMatch[1] + " - " + (e2 && e2.message || e2)); }
+            newStyle = newStyle.replace(bgMatch[0], 'url("' + resolvedBgUrl + '")');
+            bgResolvedCount++;
+          } catch (e2) {}
         }
         if (newStyle !== bgStyle) bgEl.setAttribute("style", newStyle);
       } catch (e) {}
     }
-    _log("Inlined " + bgInlinedCount + " background image(s)");
+    _log("Resolved " + bgResolvedCount + " background image URL(s) to absolute");
 `;
