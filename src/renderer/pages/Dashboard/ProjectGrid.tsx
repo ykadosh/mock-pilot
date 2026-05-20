@@ -25,7 +25,7 @@ export function ProjectGrid({
   return (
     <div className="gap-md grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
       <NewProjectCard />
-      {projects.map((project, index) => (
+      {projects.map((project, _index) => (
         <ProjectCard
           key={project.id}
           title={project.title}

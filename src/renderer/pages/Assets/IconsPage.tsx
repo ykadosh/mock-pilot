@@ -128,7 +128,7 @@ function IconCell({ name, codepoint, renderMode, fontFamily }: { name: string; c
   return (
     <div className="bg-surface-container hover:bg-surface-container-high flex flex-col items-center justify-center rounded-md p-2 transition-colors" title={name}>
       <span
-        className="mb-1 text-2xl leading-none text-on-surface"
+        className="text-on-surface mb-1 text-2xl leading-none"
         style={{ fontFamily: cssFontFamily, fontWeight: 900 }}
       >
         {glyphContent}
