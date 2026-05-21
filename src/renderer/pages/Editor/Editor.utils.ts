@@ -1,7 +1,7 @@
 import type { SelectedElement } from "./Editor";
 
 export type DevicePreset = "desktop" | "tablet" | "phone";
-export type EditorTool = "Element Picker" | "Rectangle Selector" | "Pan Tool" | "History";
+export type EditorTool = "Element Picker" | "Rectangle Selector" | "Pan Tool" | "History" | "Chat";
 
 export const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number }> = {
   desktop: { width: 1280, height: 800 },

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { useCallback, useState, type KeyboardEvent } from "react";
 import type { Attachment } from "./PromptBox.types";
+import { useAgentProgressListener } from "./PromptBox.progress";
 import { applyElementModification, applyAgentModification, isSimplePrompt } from "./PromptBox.utils";
 
 interface UsePromptSubmitArgs {
@@ -10,67 +11,101 @@ interface UsePromptSubmitArgs {
   getElementHTML?: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
   getFullPageHTML?: () => string | null;
   projectAssets?: object;
+  onConversationMessage?: (role: "user" | "assistant", content: string) => void;
+  openChat?: () => void;
 }
 
-function useAgentProgressListener() {
-  const [agentProgress, setAgentProgress] = useState<{ toolName?: string; iteration?: number; maxIterations?: number } | null>(null);
-
-  useEffect(() => {
-    const cleanup = window.api.onAiAgentProgress((progress) => {
-      if (progress.type === "tool_start") setAgentProgress((prev) => ({ ...prev, toolName: progress.toolName }));
-      else if (progress.type === "iteration") setAgentProgress({ iteration: progress.iteration, maxIterations: progress.maxIterations });
-      else if (progress.type === "complete" || progress.type === "error") setAgentProgress(null);
-    });
-    return cleanup;
-  }, []);
-
-  return { agentProgress, clearProgress: () => setAgentProgress(null) };
+interface ModificationResult {
+  error?: string;
+  summary?: string;
+  maxIterationsReached?: boolean;
 }
 
-async function executeModification(args: UsePromptSubmitArgs, trimmedPrompt: string): Promise<string | null> {
+async function executeModification(args: UsePromptSubmitArgs, trimmedPrompt: string, continueFromPrevious?: boolean): Promise<ModificationResult> {
   if (isSimplePrompt(trimmedPrompt, args.attachments)) {
     console.log("[PromptBox] Using single-shot element modification"); // eslint-disable-line no-console
-    return applyElementModification({ attachments: args.attachments, prompt: trimmedPrompt, getElementHTML: args.getElementHTML, onApply: args.onApplyModification });
+    const error = await applyElementModification({ attachments: args.attachments, prompt: trimmedPrompt, getElementHTML: args.getElementHTML, onApply: args.onApplyModification });
+    return error ? { error } : {};
   }
   console.log("[PromptBox] Using agent loop modification"); // eslint-disable-line no-console
-  return applyAgentModification({ prompt: trimmedPrompt, attachments: args.attachments, getFullPageHTML: args.getFullPageHTML, onApply: args.onApplyPageModification, projectAssets: args.projectAssets });
+  return applyAgentModification({ prompt: trimmedPrompt, attachments: args.attachments, getFullPageHTML: args.getFullPageHTML, onApply: args.onApplyPageModification, projectAssets: args.projectAssets, continueFromPrevious });
 }
 
 function isCancelError(e: unknown): boolean {
   return e instanceof Error && (e.message.includes("abort") || e.message.includes("Cancel"));
 }
 
+interface SubmitState {
+  setLoading: (v: boolean) => void;
+  setError: (v: string) => void;
+  setPrompt: (v: string) => void;
+  clearProgress: () => void;
+  setAwaitingContinue: (v: boolean) => void;
+  continueFromPrevious?: boolean;
+}
+
+async function applyPrompt(args: UsePromptSubmitArgs, trimmedPrompt: string, state: SubmitState) {
+  const isAgent = !isSimplePrompt(trimmedPrompt, args.attachments);
+  if (isAgent) args.openChat?.();
+
+  const result = await executeModification(args, trimmedPrompt, state.continueFromPrevious);
+  if (result.error) {
+    if (!isCancelError(new Error(result.error))) state.setError(result.error);
+    return;
+  }
+  if (result.maxIterationsReached) {
+    args.onConversationMessage?.("assistant", "⚠️ Reached the maximum number of iterations. The changes made so far have been applied. Would you like to continue?");
+    state.setAwaitingContinue(true);
+    state.setPrompt(trimmedPrompt);
+    args.setAttachments([]);
+    return;
+  }
+  const summary = result.summary || (isAgent ? "Changes applied successfully" : `Applied: ${trimmedPrompt}`);
+  args.onConversationMessage?.("assistant", `✓ ${summary}`);
+  state.setPrompt("");
+  args.setAttachments([]);
+}
+
+async function runPromptFlow(args: UsePromptSubmitArgs, trimmedPrompt: string, state: SubmitState & { displayMessage?: string }) {
+  state.setAwaitingContinue(false);
+  state.setLoading(true);
+  state.clearProgress();
+  args.onConversationMessage?.("user", state.displayMessage || trimmedPrompt);
+  try {
+    await applyPrompt(args, trimmedPrompt, state);
+  } catch (e: unknown) {
+    if (!isCancelError(e)) state.setError(e instanceof Error ? e.message : "Unexpected error");
+  } finally {
+    state.setLoading(false);
+    state.clearProgress();
+  }
+}
+
 export function usePromptSubmit(args: UsePromptSubmitArgs) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [prompt, setPrompt] = useState("");
-  const { agentProgress, clearProgress } = useAgentProgressListener();
+  const [awaitingContinue, setAwaitingContinue] = useState(false);
+  const { agentProcessing, agentProgress, clearProgress } = useAgentProgressListener(args.onConversationMessage);
+  const state = { setLoading, setError, setPrompt, clearProgress, setAwaitingContinue };
 
   const handleCancel = useCallback(async () => {
     await window.api.aiAgentCancel();
     await window.api.aiCancelRequest();
-    setLoading(false);
-    setError("");
-    clearProgress();
+    setLoading(false); setError(""); setAwaitingContinue(false); clearProgress();
   }, [clearProgress]);
 
   const handleApply = async () => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) return;
-    setLoading(true);
     setError("");
-    clearProgress();
-    try {
-      const errorMsg = await executeModification(args, trimmedPrompt);
-      if (errorMsg) { if (!errorMsg.includes("abort") && !errorMsg.includes("Cancel")) setError(errorMsg); return; }
-      setPrompt("");
-      args.setAttachments([]);
-    } catch (e: unknown) {
-      if (!isCancelError(e)) setError(e instanceof Error ? e.message : "Unexpected error");
-    } finally {
-      setLoading(false);
-      clearProgress();
-    }
+    await runPromptFlow(args, trimmedPrompt, state);
+  };
+
+  const handleContinue = async () => {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) return;
+    await runPromptFlow(args, trimmedPrompt, { ...state, displayMessage: "Continue", continueFromPrevious: true });
   };
 
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -80,5 +115,5 @@ export function usePromptSubmit(args: UsePromptSubmitArgs) {
     void handleApply();
   };
 
-  return { agentProgress, error, handleApply, handleCancel, handlePromptKeyDown, loading, prompt, setPrompt };
+  return { agentProcessing, agentProgress, awaitingContinue, error, handleApply, handleCancel, handleContinue, handlePromptKeyDown, loading, prompt, setPrompt };
 }

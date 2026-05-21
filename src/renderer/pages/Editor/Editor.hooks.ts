@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { CanvasPreviewHandle } from "../../components/CanvasPreview";
 import type { CodeEditorHandle } from "../../components/CodeEditor";
+import { useConversation } from "../../hooks/useConversation";
 import { useHistory } from "../../hooks/useHistory";
 import { getAssetsBasePath, getCapturedHtml } from "../../lib/store";
 import type { SelectedElement } from "./Editor";
@@ -66,7 +67,7 @@ function useEditorToolState() {
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
 
   const handleToolClick = useCallback((tool: string) => {
-    if (tool !== "Element Picker" && tool !== "Rectangle Selector" && tool !== "Pan Tool" && tool !== "History") return;
+    if (tool !== "Element Picker" && tool !== "Rectangle Selector" && tool !== "Pan Tool" && tool !== "History" && tool !== "Chat") return;
     setActiveTool((current) => (current === tool ? null : tool));
     setSelectedElement(null);
   }, []);
@@ -81,7 +82,9 @@ function useEditorToolState() {
     setActiveTool((current) => (current === "Element Picker" ? null : current));
   }, []);
 
-  return { activeTool, handleElementSelected, handleSelectionClear, handleToolClick, selectedElement, setSelectedElement };
+  const openChat = useCallback(() => setActiveTool("Chat"), []);
+
+  return { activeTool, handleElementSelected, handleSelectionClear, handleToolClick, openChat, selectedElement, setActiveTool, setSelectedElement };
 }
 
 function useEditorViewportState(codeEditorDefault: boolean) {
@@ -125,6 +128,7 @@ export function useEditorState(codeEditorDefault = false) {
   const assetsBasePath = useProjectAssets(projectId);
   const canvasRef = useRef<CanvasPreviewHandle>(null), codeEditorRef = useRef<CodeEditorHandle>(null), pendingLabelRef = useRef("AI modification");
   const history = useHistory(projectId), tools = useEditorToolState(), viewport = useEditorViewportState(codeEditorDefault);
+  const conversation = useConversation(projectId);
 
   useHistoryInitialization(history);
   useHistoryMessageSync(history, pendingLabelRef, projectId);
@@ -142,13 +146,17 @@ export function useEditorState(codeEditorDefault = false) {
     ...history,
     ...tools,
     ...viewport,
+    addConversationMessage: conversation.addMessage,
     assetsBasePath,
     canvasRef,
+    chatOpen: tools.activeTool === "Chat",
     codeEditorRef,
+    conversationMessages: conversation.messages,
     handleApplyModification,
     handleApplyPageModification,
     handleCodeUpdate,
     historyOpen: tools.activeTool === "History",
+    openChat: tools.openChat,
     panActive: tools.activeTool === "Pan Tool",
     pickerActive: tools.activeTool === "Element Picker",
     projectId,

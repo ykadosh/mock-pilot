@@ -9,6 +9,7 @@ interface AppSettingsController {
   ghCliStatus: GhCliStatus | null;
   handleCheckForUpdates: () => Promise<void>;
   handleDownloadUpdate: () => void;
+  handleMaxIterationsChange: (value: number) => Promise<void>;
   handleModelChange: (modelId: string) => Promise<void>;
   saved: boolean;
   settings: AppSettingsData;
@@ -59,6 +60,12 @@ export function useAppSettingsState(): AppSettingsController {
     await window.api.saveAppSettings(nextSettings);
     flashSavedState(setSaved);
   };
+  const handleMaxIterationsChange = async (value: number) => {
+    const nextSettings = { ...settings, maxIterations: value };
+    setSettings(nextSettings);
+    await window.api.saveAppSettings(nextSettings);
+    flashSavedState(setSaved);
+  };
 
-  return { appVersion, auth, ghCliStatus, handleCheckForUpdates, handleDownloadUpdate, handleModelChange, saved, settings, storage, updateStatus };
+  return { appVersion, auth, ghCliStatus, handleCheckForUpdates, handleDownloadUpdate, handleMaxIterationsChange, handleModelChange, saved, settings, storage, updateStatus };
 }

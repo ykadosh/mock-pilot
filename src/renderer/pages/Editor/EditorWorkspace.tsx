@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { CanvasPreview } from "../../components/CanvasPreview";
 import { CodeEditor } from "../../components/CodeEditor";
+import { ConversationPanel } from "../../components/ConversationPanel";
 import { HistoryPanel } from "../../components/HistoryPanel";
 import { PromptBox } from "../../components/PromptBox";
 import { usePromptBox } from "../../components/PromptBox.hooks";
@@ -40,9 +41,13 @@ function WorkspaceContent(state: EditorState) {
   );
 }
 
-function WorkspaceSidePanel(state: EditorState) {
+function WorkspaceSidePanel(state: EditorState & { agentProcessing?: boolean; awaitingContinue?: boolean; currentTool?: string; onContinue?: () => void }) {
   if (state.historyOpen) {
     return <HistoryPanel entries={state.entries} pointer={state.pointer} onGoTo={state.goTo} onClose={() => state.handleToolClick("History")} />;
+  }
+
+  if (state.chatOpen) {
+    return <ConversationPanel messages={state.conversationMessages} agentProcessing={state.agentProcessing} awaitingContinue={state.awaitingContinue} currentTool={state.currentTool} onClose={() => state.handleToolClick("Chat")} onContinue={state.onContinue} />;
   }
 
   if (!state.selectedElement) return null;
@@ -60,6 +65,8 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
     onApplyPageModification: state.handleApplyPageModification,
     getElementHTML: (mpId: string) => state.canvasRef.current?.getElementHTML(mpId) ?? Promise.resolve(null),
     getFullPageHTML: () => state.currentHtml ?? null,
+    onConversationMessage: state.addConversationMessage,
+    openChat: state.openChat,
   });
 
   // When an element is selected via the picker, add it as an attachment
@@ -75,7 +82,7 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
   return (
     <>
       <WorkspaceContent {...state} />
-      <WorkspaceSidePanel {...state} />
+      <WorkspaceSidePanel {...state} agentProcessing={promptBox.agentProcessing} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
       {!state.codeEditorOpen && <PromptBox {...promptBox} />}
     </>
   );

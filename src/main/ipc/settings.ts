@@ -5,7 +5,7 @@ import path from "path";
 import { compareVersions } from "../export";
 import { appSettingsPath, ensureProjectsDir, getDirSize, getProjectDir, getProjectsIndex, projectsDir } from "../projects";
 
-type AppSettings = { aiModel: string };
+type AppSettings = { aiModel: string; maxIterations?: number };
 type ReleaseAsset = { name: string; browser_download_url: string };
 type ReleaseInfo = { tag_name: string; html_url: string; assets: ReleaseAsset[] };
 

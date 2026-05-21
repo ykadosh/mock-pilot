@@ -54,10 +54,11 @@ export interface ToolCall {
 }
 
 export interface AgentProgress {
-  type: "tool_start" | "tool_end" | "iteration" | "complete" | "error";
+  type: "tool_start" | "tool_end" | "iteration" | "complete" | "error" | "thinking";
   toolName?: string;
   iteration?: number;
   maxIterations?: number;
   result?: string;
   error?: string;
+  content?: string;
 }

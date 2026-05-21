@@ -7,6 +7,7 @@ import { registerAgentHandlers } from "./ipc/ai-agent";
 import { registerAuthHandlers } from "./ipc/auth";
 import { registerCaptureHandlers } from "./ipc/capture";
 import { registerExportHandlers } from "./ipc/export";
+import { registerConversationHandlers } from "./ipc/conversation";
 import { registerGraphicsHandlers } from "./ipc/graphics";
 import { registerProjectHandlers } from "./ipc/projects";
 import { registerSettingsHandlers } from "./ipc/settings";
@@ -53,6 +54,7 @@ app.on("ready", () => {
   });
 
   registerProjectHandlers();
+  registerConversationHandlers();
   registerCaptureHandlers();
   registerAuthHandlers();
   registerAiHandlers();

@@ -41,6 +41,7 @@ export function SideNav({ activeTool, onToolClick }: SideNavProps) {
       <ToolButton icon="pan_tool" label="Pan Tool" active={activeTool === "Pan Tool"} onClick={() => onToolClick?.("Pan Tool")} />
       <ToolButton icon="history" label="History" active={activeTool === "History"} onClick={() => onToolClick?.("History")} />
       <ToolButton icon="layers" label="Layers" active={activeTool === "Layers"} onClick={() => onToolClick?.("Layers")} />
+      <ToolButton icon="chat_bubble" label="Conversation" active={activeTool === "Chat"} onClick={() => onToolClick?.("Chat")} />
     </div>
   );
 }

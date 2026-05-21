@@ -21,6 +21,8 @@ export interface AgentLoopOptions {
   onProgress?: (progress: AgentProgress) => void;
   aiModel: string;
   apiToken: string;
+  /** If provided, resume from these messages instead of starting fresh. */
+  previousMessages?: AgentMessage[];
 }
 
 export interface AgentLoopResult {
@@ -29,6 +31,9 @@ export interface AgentLoopResult {
   summary?: string;
   error?: string;
   iterations: number;
+  maxIterationsReached?: boolean;
+  /** Conversation messages so far — returned when maxIterationsReached so the caller can resume. */
+  messages?: AgentMessage[];
 }
 
 function createContext(fullHTML: string, projectAssets?: ProjectAssets, signal?: AbortSignal): ToolContext {
@@ -63,17 +68,43 @@ interface IterationContext {
   onProgress?: (p: AgentProgress) => void;
 }
 
+const INTERMEDIATE_PATTERNS = /\b(let me|i'll|i will|i need to|i'm going to|first,? i|now i|next,? i|now remove|now add|now edit|now update|now change|now replace|now delete|now modify|now create|now insert|now move|now set|now apply|now fix|now wrap|now look)\b|:\s*$/i;
+
+function looksLikeIntermediateThought(content: string): boolean {
+  if (!content || content.length < 10) return false;
+  // Check explicit patterns
+  if (INTERMEDIATE_PATTERNS.test(content)) return true;
+  // If it does NOT contain past-tense completion language, it's likely intermediate
+  const completionPatterns = /\b(done|complete|finished|applied|modified|updated|changed|removed|added|created|here'?s (a |the )?summary|successfully|all (changes|modifications))\b/i;
+  return !completionPatterns.test(content);
+}
+
 async function runIteration(iter: IterationContext, iteration: number, maxIterations: number): Promise<AgentLoopResult | null> {
   log(`--- Iteration ${iteration}/${maxIterations} ---`);
   iter.onProgress?.({ type: "iteration", iteration, maxIterations });
   const response = await requestAgentChatCompletion({ messages: iter.messages, tools: iter.toolSchemas, aiModel: iter.aiModel, apiToken: iter.apiToken, signal: iter.signal });
 
   if (!response.tool_calls || response.tool_calls.length === 0) {
-    log("Agent finished (no tool calls). Summary:", response.content?.slice(0, 200));
-    return { success: true, html: iter.context.getHtml(), summary: response.content || "Modifications complete.", iterations: iteration };
+    const content = response.content || "";
+    // If the response looks like an intermediate thought rather than a summary, nudge the agent to act
+    if (looksLikeIntermediateThought(content)) {
+      if (iteration < maxIterations) {
+        log("Agent returned intermediate thought, nudging to continue:", content.slice(0, 100));
+        iter.messages.push({ role: "assistant", content });
+        iter.messages.push({ role: "user", content: "Please continue and use the available tools to make the changes you described. Do not just describe what you plan to do — actually do it." });
+        return null;
+      }
+      // On last iteration with intermediate thought — treat as max iterations reached
+      log("Agent returned intermediate thought on final iteration:", content.slice(0, 100));
+      iter.messages.push({ role: "assistant", content });
+      return { success: true, html: iter.context.getHtml(), summary: "Reached maximum iterations.", iterations: iteration, maxIterationsReached: true, messages: iter.messages };
+    }
+    log("Agent finished (no tool calls). Summary:", content.slice(0, 200));
+    return { success: true, html: iter.context.getHtml(), summary: content || "Modifications complete.", iterations: iteration };
   }
 
   log(`Agent requested ${response.tool_calls.length} tool call(s):`, response.tool_calls.map(tc => tc.function.name).join(", "));
+  if (response.content) iter.onProgress?.({ type: "thinking", content: response.content });
   iter.messages.push({ role: "assistant", content: response.content || undefined, tool_calls: response.tool_calls });
   const ok = await processToolCalls({ toolCalls: response.tool_calls, messages: iter.messages, context: iter.context, onProgress: iter.onProgress, signal: iter.signal });
   if (!ok) return { success: false, error: "Cancelled", iterations: iteration };
@@ -88,14 +119,21 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
   log("HTML length:", options.fullHTML.length);
   log("Attached elements:", options.attachedElements?.length ?? 0);
   log("Images:", options.images?.length ?? 0);
+  log("Continuing from previous:", Boolean(options.previousMessages));
 
   const context = createContext(options.fullHTML, options.projectAssets, signal);
-  const userContent = buildUserContent(options.prompt, options.attachedElements, options.images);
 
-  const messages: AgentMessage[] = [
-    { role: "system", content: AGENT_SYSTEM_PROMPT },
-    { role: "user", content: userContent },
-  ];
+  let messages: AgentMessage[];
+  if (options.previousMessages && options.previousMessages.length > 0) {
+    messages = [...options.previousMessages];
+    messages.push({ role: "user", content: "Please continue making the changes. Pick up where you left off." });
+  } else {
+    const userContent = buildUserContent(options.prompt, options.attachedElements, options.images);
+    messages = [
+      { role: "system", content: AGENT_SYSTEM_PROMPT },
+      { role: "user", content: userContent },
+    ];
+  }
 
   const iter: IterationContext = { messages, toolSchemas: getToolSchemas(), context, aiModel, apiToken, signal, onProgress };
 
@@ -109,7 +147,7 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
   }
 
   log("Max iterations reached");
-  return { success: true, html: context.getHtml(), summary: "Reached maximum iterations. Returning current state.", iterations: maxIterations };
+  return { success: true, html: context.getHtml(), summary: "Reached maximum iterations.", iterations: maxIterations, maxIterationsReached: true, messages };
 }
 
 function buildUserContent(

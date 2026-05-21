@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld("api", {
   saveProjectHistory: (id: string, data: { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] }) =>
     ipcRenderer.invoke("save-project-history", id, data),
   loadProjectHistory: (id: string) => ipcRenderer.invoke("load-project-history", id),
+  saveProjectConversation: (id: string, messages: { role: string; content: string; timestamp: number }[]) =>
+    ipcRenderer.invoke("save-project-conversation", id, messages),
+  loadProjectConversation: (id: string) => ipcRenderer.invoke("load-project-conversation", id),
   renameProject: (id: string, newTitle: string) => ipcRenderer.invoke("rename-project", id, newTitle),
   deleteProject: (id: string) => ipcRenderer.invoke("delete-project", id),
   getProjectThumbnail: (id: string) => ipcRenderer.invoke("get-project-thumbnail", id),
@@ -25,7 +28,7 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("ai-extract-components", data),
   aiCancelRequest: () => ipcRenderer.invoke("ai-cancel-request"),
   // AI Agent
-  aiAgentModify: (data: { prompt: string; fullHTML: string; projectId?: string; attachedElements?: { mpId: string; selector: string; outerHTML: string }[]; images?: { name: string; dataUrl: string }[]; projectAssets?: object }) =>
+  aiAgentModify: (data: { prompt: string; fullHTML: string; projectId?: string; attachedElements?: { mpId: string; selector: string; outerHTML: string }[]; images?: { name: string; dataUrl: string }[]; projectAssets?: object; continueFromPrevious?: boolean }) =>
     ipcRenderer.invoke("ai-agent-modify", data),
   aiAgentCancel: () => ipcRenderer.invoke("ai-agent-cancel"),
   onAiAgentProgress: (callback: (progress: { type: string; toolName?: string; iteration?: number; maxIterations?: number; result?: string; error?: string }) => void) => {

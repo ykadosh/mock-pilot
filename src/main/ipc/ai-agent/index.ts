@@ -1,9 +1,11 @@
 /* eslint-disable complexity */
 import { ipcMain, type BrowserWindow } from "electron";
+import fs from "fs";
 import { runAgentLoop, type AgentLoopOptions } from "./agent-loop";
 import { getAgentCredentials } from "./agent-chat";
 import { abortActiveAiRequest } from "../ai-shared";
-import type { AgentProgress, ProjectAssets } from "./agent-types";
+import type { AgentMessage, AgentProgress, ProjectAssets } from "./agent-types";
+import { appSettingsPath } from "../../projects";
 
 function log(...args: unknown[]) {
   // eslint-disable-next-line no-console
@@ -11,6 +13,8 @@ function log(...args: unknown[]) {
 }
 
 let activeAgentAbortController: AbortController | null = null;
+/** Stored conversation messages from previous run, for continuation. */
+let pendingContinuationMessages: AgentMessage[] | null = null;
 
 interface AgentModifyRequest {
   prompt: string;
@@ -19,6 +23,7 @@ interface AgentModifyRequest {
   attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
   images?: { name: string; dataUrl: string }[];
   projectAssets?: ProjectAssets;
+  continueFromPrevious?: boolean;
 }
 
 function createProgressHandler(getMainWindow: () => BrowserWindow | null) {
@@ -26,6 +31,17 @@ function createProgressHandler(getMainWindow: () => BrowserWindow | null) {
     const win = getMainWindow();
     if (win && !win.isDestroyed()) win.webContents.send("ai-agent-progress", progress);
   };
+}
+
+function getMaxIterations(): number | undefined {
+  try {
+    if (fs.existsSync(appSettingsPath)) {
+      const settings = JSON.parse(fs.readFileSync(appSettingsPath, "utf-8"));
+      if (settings.maxIterations === 0) return 999;
+      if (settings.maxIterations) return settings.maxIterations;
+    }
+  } catch { /* use default */ }
+  return undefined;
 }
 
 async function handleAgentModify(_event: Electron.IpcMainInvokeEvent, data: AgentModifyRequest, getMainWindow: () => BrowserWindow | null) {
@@ -48,14 +64,23 @@ async function handleAgentModify(_event: Electron.IpcMainInvokeEvent, data: Agen
     projectAssets: data.projectAssets,
     attachedElements: data.attachedElements,
     images: data.images,
+    maxIterations: getMaxIterations(),
     signal: abortController.signal,
     onProgress: createProgressHandler(getMainWindow),
     aiModel,
     apiToken,
+    previousMessages: data.continueFromPrevious ? (pendingContinuationMessages ?? undefined) : undefined,
   };
 
   const result = await runAgentLoop(options);
   activeAgentAbortController = null;
+
+  // Store or clear continuation messages
+  if (result.maxIterationsReached && result.messages) {
+    pendingContinuationMessages = result.messages;
+  } else {
+    pendingContinuationMessages = null;
+  }
 
   log("Agent result - success:", result.success, "| iterations:", result.iterations, "| html length:", result.html?.length);
   if (result.summary) log("  Summary:", result.summary);
@@ -65,7 +90,7 @@ async function handleAgentModify(_event: Electron.IpcMainInvokeEvent, data: Agen
   }
 
   if (!result.success) return { success: false, error: result.error || "Agent loop failed" };
-  return { success: true, html: result.html, summary: result.summary, iterations: result.iterations };
+  return { success: true, html: result.html, summary: result.summary, iterations: result.iterations, maxIterationsReached: result.maxIterationsReached };
 }
 
 export function registerAgentHandlers(getMainWindow: () => BrowserWindow | null) {

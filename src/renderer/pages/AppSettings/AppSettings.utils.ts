@@ -5,6 +5,7 @@ export interface StorageInfo {
 
 export interface AppSettingsData {
   aiModel: string;
+  maxIterations?: number;
 }
 
 export interface GhCliStatus {

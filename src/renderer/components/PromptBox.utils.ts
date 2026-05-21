@@ -55,11 +55,12 @@ interface AgentModifyArgs {
   getFullPageHTML?: () => string | null;
   onApply?: (newHTML: string, label?: string) => void;
   projectAssets?: object;
+  continueFromPrevious?: boolean;
 }
 
-export async function applyAgentModification(args: AgentModifyArgs): Promise<string | null> {
+export async function applyAgentModification(args: AgentModifyArgs): Promise<{ error?: string; summary?: string; maxIterationsReached?: boolean }> {
   const fullHtml = args.getFullPageHTML?.();
-  if (!fullHtml) return "No page content available";
+  if (!fullHtml) return { error: "No page content available" };
 
   const images = args.attachments
     .filter((a): a is ImageAttachment => a.type === "image")
@@ -83,11 +84,12 @@ export async function applyAgentModification(args: AgentModifyArgs): Promise<str
     attachedElements: attachedElements.length > 0 ? attachedElements : undefined,
     images: images.length > 0 ? images : undefined,
     projectAssets: args.projectAssets,
+    continueFromPrevious: args.continueFromPrevious,
   });
 
-  if (!result.success || !result.html) return result.error || "Agent modification failed";
+  if (!result.success || !result.html) return { error: result.error || "Agent modification failed" };
   args.onApply?.(result.html, args.prompt);
-  return null;
+  return { summary: result.summary, maxIterationsReached: result.maxIterationsReached };
 }
 
 /**

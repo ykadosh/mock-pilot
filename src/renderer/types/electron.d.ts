@@ -80,6 +80,8 @@ declare global {
         pointer?: number;
         htmlSnapshots?: string[];
       }>;
+      saveProjectConversation: (id: string, messages: { role: string; content: string; timestamp: number }[]) => Promise<{ success: boolean }>;
+      loadProjectConversation: (id: string) => Promise<{ success: boolean; messages?: { role: string; content: string; timestamp: number }[] }>;
       renameProject: (id: string, newTitle: string) => Promise<{ success: boolean }>;
       deleteProject: (id: string) => Promise<{ success: boolean }>;
       getProjectThumbnail: (id: string) => Promise<string | null>;
@@ -107,11 +109,13 @@ declare global {
         attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
         images?: { name: string; dataUrl: string }[];
         projectAssets?: object;
+        continueFromPrevious?: boolean;
       }) => Promise<{
         success: boolean;
         html?: string;
         summary?: string;
         iterations?: number;
+        maxIterationsReached?: boolean;
         error?: string;
       }>;
       aiAgentCancel: () => Promise<{ success: boolean }>;
@@ -142,8 +146,8 @@ declare global {
       authLogout: () => Promise<{ success: boolean }>;
       authCheckGhCli: () => Promise<{ connected: boolean; login?: string }>;
       // App settings
-      getAppSettings: () => Promise<{ aiModel: string }>;
-      saveAppSettings: (settings: { aiModel: string }) => Promise<{ success: boolean }>;
+      getAppSettings: () => Promise<{ aiModel: string; maxIterations?: number }>;
+      saveAppSettings: (settings: { aiModel: string; maxIterations?: number }) => Promise<{ success: boolean }>;
       getStorageInfo: () => Promise<{ totalBytes: number; projectCount: number }>;
       getProjectSize: (id: string) => Promise<{ totalBytes: number }>;
       // Updates
