@@ -7,6 +7,7 @@ interface PromptBoxProps {
   error: string;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleApply: () => void | Promise<void>;
+  handleCancel: () => void | Promise<void>;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleFileSelect: () => void;
   handlePaste: (event: React.ClipboardEvent) => void;
@@ -51,7 +52,30 @@ function AttachmentChips({ attachments, onRemove }: { attachments: Attachment[];
   );
 }
 
-function PromptInput({ handleApply, handleFileSelect, handlePaste, handlePromptKeyDown, loading, prompt, setPrompt, textareaRef }: Pick<PromptBoxProps, "handleApply" | "handleFileSelect" | "handlePaste" | "handlePromptKeyDown" | "loading" | "prompt" | "setPrompt" | "textareaRef">) {
+function SubmitButton({ handleApply, handleCancel, loading, prompt }: Pick<PromptBoxProps, "handleApply" | "handleCancel" | "loading" | "prompt">) {
+  if (loading) {
+    return (
+      <button
+        onClick={() => void handleCancel()}
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white shadow-lg shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
+        title="Cancel request"
+      >
+        <span className="material-symbols-outlined text-lg">stop</span>
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={() => void handleApply()}
+      disabled={!prompt.trim()}
+      className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      <span className="material-symbols-outlined text-lg">bolt</span>
+    </button>
+  );
+}
+
+function PromptInput({ handleApply, handleCancel, handleFileSelect, handlePaste, handlePromptKeyDown, loading, prompt, setPrompt, textareaRef }: Pick<PromptBoxProps, "handleApply" | "handleCancel" | "handleFileSelect" | "handlePaste" | "handlePromptKeyDown" | "loading" | "prompt" | "setPrompt" | "textareaRef">) {
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -76,13 +100,7 @@ function PromptInput({ handleApply, handleFileSelect, handlePaste, handlePromptK
         <button className="flex h-8 w-8 items-center justify-center text-slate-500 transition-colors hover:text-slate-300" onClick={handleFileSelect} title="Attach image">
           <span className="material-symbols-outlined">attach_file</span>
         </button>
-        <button
-          onClick={() => void handleApply()}
-          disabled={!prompt.trim() || loading}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <span className="material-symbols-outlined text-lg">bolt</span>
-        </button>
+        <SubmitButton handleApply={handleApply} handleCancel={handleCancel} loading={loading} prompt={prompt} />
       </div>
     </div>
   );
@@ -97,6 +115,7 @@ export function PromptBox(props: PromptBoxProps) {
           {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
           <PromptInput
             handleApply={props.handleApply}
+            handleCancel={props.handleCancel}
             handleFileSelect={props.handleFileSelect}
             handlePaste={props.handlePaste}
             handlePromptKeyDown={props.handlePromptKeyDown}

@@ -97,6 +97,7 @@ declare global {
         components?: { name: string; selector: string; count: number; description: string; props: { name: string; type: string; description: string }[] }[];
         error?: string;
       }>;
+      aiCancelRequest: () => Promise<{ success: boolean }>;
       // Auth
       authGetStatus: () => Promise<{ authenticated: boolean; login?: string; avatar_url?: string }>;
       authStartDeviceFlow: () => Promise<{

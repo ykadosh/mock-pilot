@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { getToken } from "../auth";
-import { getSelectedAiModel, getAiApiToken, requestChatCompletion } from "./ai-shared";
+import { getSelectedAiModel, getAiApiToken, requestChatCompletion, abortActiveAiRequest } from "./ai-shared";
 import { registerAiPageHandlers } from "./ai-page";
 
 const AI_SYSTEM_PROMPT = `You are an expert front-end developer. The user has selected an HTML element and wants to modify it.
@@ -100,5 +100,6 @@ async function handleAiExtractComponents(_event: Electron.IpcMainInvokeEvent, da
 export function registerAiHandlers() {
   ipcMain.handle("ai-modify-element", handleAiModifyElement);
   ipcMain.handle("ai-extract-components", handleAiExtractComponents);
+  ipcMain.handle("ai-cancel-request", () => { abortActiveAiRequest(); return { success: true }; });
   registerAiPageHandlers();
 }

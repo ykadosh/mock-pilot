@@ -71,6 +71,12 @@ function usePromptSubmit(args: UsePromptBoxArgs & { attachments: Attachment[]; s
   const [error, setError] = useState("");
   const [prompt, setPrompt] = useState("");
 
+  const handleCancel = useCallback(async () => {
+    await window.api.aiCancelRequest();
+    setLoading(false);
+    setError("");
+  }, []);
+
   const handleApply = async () => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) return;
@@ -85,6 +91,7 @@ function usePromptSubmit(args: UsePromptBoxArgs & { attachments: Attachment[]; s
       setPrompt("");
       args.setAttachments([]);
     } catch (e: unknown) {
+      if (e instanceof Error && e.message.includes("abort")) return;
       setError(e instanceof Error ? e.message : "Unexpected error");
     } finally {
       setLoading(false);
@@ -101,7 +108,7 @@ function usePromptSubmit(args: UsePromptBoxArgs & { attachments: Attachment[]; s
     void handleApply();
   };
 
-  return { error, handleApply, handlePromptKeyDown, loading, prompt, setPrompt };
+  return { error, handleApply, handleCancel, handlePromptKeyDown, loading, prompt, setPrompt };
 }
 
 export function usePromptBox(args: UsePromptBoxArgs) {

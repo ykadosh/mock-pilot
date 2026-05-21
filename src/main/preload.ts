@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("ai-modify-page", data),
   aiExtractComponents: (data: { simplifiedHtml: string; screenshot?: string }) =>
     ipcRenderer.invoke("ai-extract-components", data),
+  aiCancelRequest: () => ipcRenderer.invoke("ai-cancel-request"),
   // Auth
   authGetStatus: () => ipcRenderer.invoke("auth-get-status"),
   authStartDeviceFlow: () => ipcRenderer.invoke("auth-start-device-flow"),

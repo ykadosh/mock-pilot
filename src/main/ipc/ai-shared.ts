@@ -28,16 +28,32 @@ function extractResponseContent(result: ChatResponse) {
   return choice?.message?.content ?? choice?.delta?.content ?? "";
 }
 
-export async function requestChatCompletion(options: { aiModel: string; apiToken: string; systemPrompt: string; userMessage: string | object[] }) {
-  const response = await fetch("https://api.githubcopilot.com/chat/completions", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${options.apiToken}`, "Content-Type": "application/json", "Copilot-Integration-Id": "copilot-4-cli" },
-    body: JSON.stringify({ model: options.aiModel, messages: [{ role: "system", content: options.systemPrompt }, { role: "user", content: options.userMessage }], temperature: 0.2 }),
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`API error (${response.status}): ${body.slice(0, 500)}`);
+let activeAbortController: AbortController | null = null;
+
+export function abortActiveAiRequest() {
+  if (activeAbortController) {
+    activeAbortController.abort();
+    activeAbortController = null;
   }
-  const result = await response.json() as ChatResponse;
-  return extractResponseContent(result).trim();
+}
+
+export async function requestChatCompletion(options: { aiModel: string; apiToken: string; systemPrompt: string; userMessage: string | object[] }) {
+  activeAbortController = new AbortController();
+  const { signal } = activeAbortController;
+  try {
+    const response = await fetch("https://api.githubcopilot.com/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${options.apiToken}`, "Content-Type": "application/json", "Copilot-Integration-Id": "copilot-4-cli" },
+      body: JSON.stringify({ model: options.aiModel, messages: [{ role: "system", content: options.systemPrompt }, { role: "user", content: options.userMessage }], temperature: 0.2 }),
+      signal,
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`API error (${response.status}): ${body.slice(0, 500)}`);
+    }
+    const result = await response.json() as ChatResponse;
+    return extractResponseContent(result).trim();
+  } finally {
+    activeAbortController = null;
+  }
 }
