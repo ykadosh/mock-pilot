@@ -24,6 +24,15 @@ contextBridge.exposeInMainWorld("api", {
   aiExtractComponents: (data: { simplifiedHtml: string; screenshot?: string }) =>
     ipcRenderer.invoke("ai-extract-components", data),
   aiCancelRequest: () => ipcRenderer.invoke("ai-cancel-request"),
+  // AI Agent
+  aiAgentModify: (data: { prompt: string; fullHTML: string; projectId?: string; attachedElements?: { mpId: string; selector: string; outerHTML: string }[]; images?: { name: string; dataUrl: string }[]; projectAssets?: object }) =>
+    ipcRenderer.invoke("ai-agent-modify", data),
+  aiAgentCancel: () => ipcRenderer.invoke("ai-agent-cancel"),
+  onAiAgentProgress: (callback: (progress: { type: string; toolName?: string; iteration?: number; maxIterations?: number; result?: string; error?: string }) => void) => {
+    const handler = (_event: unknown, progress: Parameters<typeof callback>[0]) => callback(progress);
+    ipcRenderer.on("ai-agent-progress", handler);
+    return () => { ipcRenderer.removeListener("ai-agent-progress", handler); };
+  },
   // Auth
   authGetStatus: () => ipcRenderer.invoke("auth-get-status"),
   authStartDeviceFlow: () => ipcRenderer.invoke("auth-start-device-flow"),

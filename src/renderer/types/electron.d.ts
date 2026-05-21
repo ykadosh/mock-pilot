@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 export {};
 
 interface ProjectMeta {
@@ -98,6 +99,30 @@ declare global {
         error?: string;
       }>;
       aiCancelRequest: () => Promise<{ success: boolean }>;
+      // AI Agent
+      aiAgentModify: (data: {
+        prompt: string;
+        fullHTML: string;
+        projectId?: string;
+        attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
+        images?: { name: string; dataUrl: string }[];
+        projectAssets?: object;
+      }) => Promise<{
+        success: boolean;
+        html?: string;
+        summary?: string;
+        iterations?: number;
+        error?: string;
+      }>;
+      aiAgentCancel: () => Promise<{ success: boolean }>;
+      onAiAgentProgress: (callback: (progress: {
+        type: "tool_start" | "tool_end" | "iteration" | "complete" | "error";
+        toolName?: string;
+        iteration?: number;
+        maxIterations?: number;
+        result?: string;
+        error?: string;
+      }) => void) => () => void;
       // Auth
       authGetStatus: () => Promise<{ authenticated: boolean; login?: string; avatar_url?: string }>;
       authStartDeviceFlow: () => Promise<{

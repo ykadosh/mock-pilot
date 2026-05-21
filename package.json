@@ -57,6 +57,7 @@
     "@codemirror/view": "^6.42.0",
     "@radix-ui/react-slot": "^1.2.4",
     "@types/lz-string": "^1.3.34",
+    "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "codemirror": "^6.0.2",

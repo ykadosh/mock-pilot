@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 import type { Attachment } from "./PromptBox.types";
 import { getAttachmentLabel } from "./PromptBox.hooks";
+import { AgentProgressIndicator } from "./AgentProgressIndicator";
 
 interface PromptBoxProps {
+  agentProgress?: { toolName?: string; iteration?: number; maxIterations?: number } | null;
   attachments: Attachment[];
   error: string;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -113,6 +115,7 @@ export function PromptBox(props: PromptBoxProps) {
         <div className={`rounded-2xl p-3 ${props.loading ? "prompt-box-inner backdrop-blur-xl" : ""}`}>
           <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} />
           {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
+          <AgentProgressIndicator progress={props.agentProgress} />
           <PromptInput
             handleApply={props.handleApply}
             handleCancel={props.handleCancel}

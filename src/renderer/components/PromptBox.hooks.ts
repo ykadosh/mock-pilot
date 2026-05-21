@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SelectedElement } from "../pages/Editor";
 import type { Attachment, ImageAttachment } from "./PromptBox.types";
-import { applyElementModification, applyPageModification } from "./PromptBox.utils";
+import { usePromptSubmit } from "./PromptBox.submit";
 import { buildElementSelector } from "./PropertiesPanel.utils";
 
 interface UsePromptBoxArgs {
@@ -9,6 +9,7 @@ interface UsePromptBoxArgs {
   onApplyPageModification?: (newHTML: string, label?: string) => void;
   getElementHTML?: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
   getFullPageHTML?: () => string | null;
+  projectAssets?: object;
 }
 
 function useImageAttachment(setAttachments: React.Dispatch<React.SetStateAction<Attachment[]>>) {
@@ -66,51 +67,6 @@ function useKeyboardShortcut(textareaRef: React.RefObject<HTMLTextAreaElement | 
   }, [textareaRef]);
 }
 
-function usePromptSubmit(args: UsePromptBoxArgs & { attachments: Attachment[]; setAttachments: React.Dispatch<React.SetStateAction<Attachment[]>> }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [prompt, setPrompt] = useState("");
-
-  const handleCancel = useCallback(async () => {
-    await window.api.aiCancelRequest();
-    setLoading(false);
-    setError("");
-  }, []);
-
-  const handleApply = async () => {
-    const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt) return;
-    setLoading(true);
-    setError("");
-    try {
-      const hasElements = args.attachments.some((a) => a.type === "element");
-      const errorMsg = hasElements
-        ? await applyElementModification({ attachments: args.attachments, prompt: trimmedPrompt, getElementHTML: args.getElementHTML, onApply: args.onApplyModification })
-        : await applyPageModification({ prompt: trimmedPrompt, attachments: args.attachments, getFullPageHTML: args.getFullPageHTML, onApply: args.onApplyPageModification });
-      if (errorMsg) {
-        if (!errorMsg.includes("abort")) setError(errorMsg);
-        return;
-      }
-      setPrompt("");
-      args.setAttachments([]);
-    } catch (e: unknown) {
-      if (e instanceof Error && e.message.includes("abort")) return;
-      setError(e instanceof Error ? e.message : "Unexpected error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && event.shiftKey) { event.stopPropagation(); return; }
-    if (event.key !== "Enter" || !prompt.trim() || loading) return;
-    event.preventDefault();
-    void handleApply();
-  };
-
-  return { error, handleApply, handleCancel, handlePromptKeyDown, loading, prompt, setPrompt };
-}
-
 export function usePromptBox(args: UsePromptBoxArgs) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -147,4 +103,3 @@ export function getAttachmentLabel(attachment: Attachment): string {
   if (attachment.type === "element") return buildElementSelector(attachment.element);
   return attachment.name;
 }
-

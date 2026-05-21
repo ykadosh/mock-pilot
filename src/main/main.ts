@@ -3,6 +3,7 @@ import path from "path";
 import { pathToFileURL } from "url";
 
 import { registerAiHandlers } from "./ipc/ai";
+import { registerAgentHandlers } from "./ipc/ai-agent";
 import { registerAuthHandlers } from "./ipc/auth";
 import { registerCaptureHandlers } from "./ipc/capture";
 import { registerExportHandlers } from "./ipc/export";
@@ -14,8 +15,10 @@ import { ensureProjectsDir, migrateProjectsToFolders, projectsDir } from "./proj
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
+let mainWindow: BrowserWindow | null = null;
+
 const createWindow = () => {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     titleBarStyle: "hiddenInset",
@@ -53,6 +56,7 @@ app.on("ready", () => {
   registerCaptureHandlers();
   registerAuthHandlers();
   registerAiHandlers();
+  registerAgentHandlers(() => mainWindow);
   registerSettingsHandlers();
   registerExportHandlers();
   registerGraphicsHandlers();

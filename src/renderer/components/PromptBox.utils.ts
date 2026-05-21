@@ -1,4 +1,5 @@
 import type { Attachment, ImageAttachment } from "./PromptBox.types";
+import { buildElementSelector } from "./PropertiesPanel.utils";
 
 interface ModifyElementArgs {
   attachments: Attachment[];
@@ -46,4 +47,69 @@ export async function applyPageModification(args: ModifyPageArgs): Promise<strin
   if (!result.success || !result.html) return result.error || "Failed to modify page";
   args.onApply?.(result.html, args.prompt);
   return null;
+}
+
+interface AgentModifyArgs {
+  prompt: string;
+  attachments: Attachment[];
+  getFullPageHTML?: () => string | null;
+  onApply?: (newHTML: string, label?: string) => void;
+  projectAssets?: object;
+}
+
+export async function applyAgentModification(args: AgentModifyArgs): Promise<string | null> {
+  const fullHtml = args.getFullPageHTML?.();
+  if (!fullHtml) return "No page content available";
+
+  const images = args.attachments
+    .filter((a): a is ImageAttachment => a.type === "image")
+    .map((a) => ({ name: a.name, dataUrl: a.dataUrl }));
+
+  const attachedElements = args.attachments
+    .filter((a) => a.type === "element")
+    .map((a) => {
+      if (a.type !== "element") return null;
+      return {
+        mpId: a.element.mpId,
+        selector: buildElementSelector(a.element),
+        outerHTML: a.element.outerHTML,
+      };
+    })
+    .filter(Boolean) as { mpId: string; selector: string; outerHTML: string }[];
+
+  const result = await window.api.aiAgentModify({
+    prompt: args.prompt,
+    fullHTML: fullHtml,
+    attachedElements: attachedElements.length > 0 ? attachedElements : undefined,
+    images: images.length > 0 ? images : undefined,
+    projectAssets: args.projectAssets,
+  });
+
+  if (!result.success || !result.html) return result.error || "Agent modification failed";
+  args.onApply?.(result.html, args.prompt);
+  return null;
+}
+
+/**
+ * Determine whether a prompt is simple enough for single-shot modification.
+ * Simple = short prompt + single element + simple verb (no images attached).
+ */
+export function isSimplePrompt(prompt: string, attachments: Attachment[]): boolean {
+  const hasImages = attachments.some((a) => a.type === "image");
+  if (hasImages) return false;
+
+  const elementCount = attachments.filter((a) => a.type === "element").length;
+  if (elementCount > 1) return false;
+
+  // Only consider single-element with simple, short prompt as simple
+  if (elementCount === 0) return false;
+
+  // Heuristic: short prompt with simple verbs
+  const trimmed = prompt.trim();
+  if (trimmed.length > 150) return false;
+
+  const complexPatterns = /\b(add column|add row|reorganize|redesign|restructure|rearrange|create|build|implement|generate|duplicate|split|merge|convert to|transform)\b/i;
+  if (complexPatterns.test(trimmed)) return false;
+
+  return true;
 }
