@@ -1,0 +1,65 @@
+name: Enhancement
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which section of the app does this relate to?
+      options:
+        - Editor
+        - Capture Browser
+        - Assets
+        - AI
+        - General
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Effort Size
+      description: Estimated effort required
+      options:
+        - Small
+        - Medium
+        - Large
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the enhancement you'd like
+      placeholder: A clear description of what you want to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this needed? What problem does it solve?
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How do you think this should be implemented?
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: What does "done" look like?
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: false
