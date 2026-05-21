@@ -57,10 +57,10 @@ function SubmitButton({ handleApply, handleCancel, loading, prompt }: Pick<Promp
     return (
       <button
         onClick={() => void handleCancel()}
-        className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white shadow-lg shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 active:scale-95"
         title="Cancel request"
       >
-        <span className="material-symbols-outlined text-lg">stop</span>
+        <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>stop</span>
       </button>
     );
   }
