@@ -44,6 +44,7 @@ export function ProjectSettingsContent({
       <ProjectTechnicalInfoSection
         createdDate={createdDate}
         onCopyUrl={onCopyUrl}
+        projectId={project.id}
         storage={storage}
         url={project.url}
         urlCopied={urlCopied}

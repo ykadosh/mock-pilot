@@ -42,7 +42,7 @@ export function Settings() {
       <TopNav activeTab="settings" projectId={projectId} />
       <div className="flex min-h-0 flex-1">
         <PageLayout
-          title="General Settings"
+          title="Project Settings"
           subtitle="Manage your project core configuration."
           headerActions={<SettingsHeaderActions hasChanges={settings.hasChanges} nameSaved={settings.nameSaved} onDiscard={settings.handleDiscard} onSave={settings.handleRename} />}
         >

@@ -1,5 +1,17 @@
 export const CAPTURE_HTML_SCRIPT_MEDIA = `
     _log("[step:stylesheets] Stylesheet inlining skipped (handled via CSSOM snapshot)");
+    _log("[step:scroll] Scrolling page to trigger lazy-loaded images...");
+    var _scrollStep = Math.max(200, window.innerHeight - 50);
+    var _maxScroll = document.documentElement.scrollHeight;
+    for (var _scrollPos = 0; _scrollPos < _maxScroll; _scrollPos += _scrollStep) {
+      window.scrollTo(0, _scrollPos);
+      await new Promise(function(r) { setTimeout(r, 80); });
+    }
+    window.scrollTo(0, _maxScroll);
+    await new Promise(function(r) { setTimeout(r, 200); });
+    window.scrollTo(0, 0);
+    await new Promise(function(r) { setTimeout(r, 100); });
+    _log("Scroll complete, triggering image loads...");
     const images = document.querySelectorAll("img");
     _log("[step:images] Converting " + images.length + " image(s) to data URIs...");
     for (const img of images) {
@@ -8,9 +20,9 @@ export const CAPTURE_HTML_SCRIPT_MEDIA = `
     await new Promise(resolve => {
       var pending = 0;
       var done = false;
-      var timeout = setTimeout(() => { done = true; resolve(undefined); }, 5000);
+      var timeout = setTimeout(() => { done = true; resolve(undefined); }, 8000);
       for (const img of images) {
-        if (img.complete && img.naturalWidth > 0) continue;
+        if (img.complete && img.naturalWidth > 2) continue;
         if (!img.src || img.src.startsWith("data:")) continue;
         pending++;
         var check = () => { pending--; if (pending <= 0 && !done) { done = true; clearTimeout(timeout); resolve(undefined); } };
@@ -25,7 +37,7 @@ export const CAPTURE_HTML_SCRIPT_MEDIA = `
         canvas.width = img.naturalWidth || img.width || 300;
         canvas.height = img.naturalHeight || img.height || 200;
         const ctx = canvas.getContext("2d");
-        if (ctx && img.complete && img.naturalWidth > 0) {
+        if (ctx && img.complete && img.naturalWidth > 2) {
           ctx.drawImage(img, 0, 0);
           img.src = canvas.toDataURL("image/png");
           img.removeAttribute("srcset");

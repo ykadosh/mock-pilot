@@ -81,7 +81,23 @@ function formatCapturedHtml(rawHtml: string): string {
   return `<!DOCTYPE html>\n${formattedHtml}`;
 }
 
+async function scrollPageToTriggerLazyLoads(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const step = Math.max(200, window.innerHeight - 50);
+    const maxScroll = document.documentElement.scrollHeight;
+    for (let pos = 0; pos < maxScroll; pos += step) {
+      window.scrollTo(0, pos);
+      await new Promise(r => setTimeout(r, 80));
+    }
+    window.scrollTo(0, maxScroll);
+    await new Promise(r => setTimeout(r, 200));
+    window.scrollTo(0, 0);
+    await new Promise(r => setTimeout(r, 100));
+  });
+}
+
 async function buildPageCapture(page: Page): Promise<CaptureWebsiteResult> {
+  await scrollPageToTriggerLazyLoads(page);
   const html = await page.evaluate(inlineCaptureScript);
   const title = (await page.title()) || undefined;
   await page.evaluate(() => window.scrollTo(0, 0));

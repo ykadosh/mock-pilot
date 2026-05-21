@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { formatProjectDate, formatProjectTime } from "./Settings.utils";
 
@@ -9,6 +10,7 @@ interface StorageValue {
 interface ProjectTechnicalInfoSectionProps {
   createdDate: Date | null;
   onCopyUrl: () => void;
+  projectId: string;
   storage: StorageValue | null;
   url: string;
   urlCopied: boolean;
@@ -55,9 +57,25 @@ function StorageField({ storage }: Pick<ProjectTechnicalInfoSectionProps, "stora
 }
 
 export function ProjectTechnicalInfoSection(props: ProjectTechnicalInfoSectionProps) {
+  const [idCopied, setIdCopied] = useState(false);
+  const handleCopyId = () => {
+    void navigator.clipboard.writeText(props.projectId);
+    setIdCopied(true);
+    setTimeout(() => setIdCopied(false), 2000);
+  };
+
   return (
     <SectionCard title="TECHNICAL INFORMATION" className="col-span-12">
       <div className="gap-lg grid grid-cols-1 md:grid-cols-3">
+        <div className="space-y-xs">
+          <span className="text-label-caps font-label-caps text-outline block">Project ID</span>
+          <div className="gap-xs font-code-block text-code-block text-on-surface bg-surface-container-lowest px-sm py-xs flex items-center overflow-hidden border border-[#334155]">
+            <span className="flex-1 truncate">{props.projectId}</span>
+            <span className="material-symbols-outlined hover:text-primary shrink-0 cursor-pointer text-sm" onClick={handleCopyId} title={idCopied ? "Copied!" : "Copy ID"}>
+              {idCopied ? "check" : "content_copy"}
+            </span>
+          </div>
+        </div>
         <SourceUrlField onCopyUrl={props.onCopyUrl} url={props.url} urlCopied={props.urlCopied} />
         <CreatedDateField createdDate={props.createdDate} />
         <StorageField storage={props.storage} />

@@ -70,7 +70,7 @@ function PromptInput({ handleApply, handleFileSelect, handlePaste, handlePromptK
         disabled={loading}
         rows={1}
         className="font-body-main text-body-main max-h-48 min-h-12 flex-1 resize-none border-none bg-transparent p-3 text-slate-200 placeholder-slate-500 outline-none focus:ring-0 focus:outline-none disabled:opacity-50"
-        placeholder="Describe changes to the selected element..."
+        placeholder="Describe your changes..."
       />
       <div className="flex items-center gap-2 pr-3 pb-2">
         <button className="flex h-8 w-8 items-center justify-center text-slate-500 transition-colors hover:text-slate-300" onClick={handleFileSelect} title="Attach image">
@@ -91,7 +91,7 @@ function PromptInput({ handleApply, handleFileSelect, handlePaste, handlePromptK
 export function PromptBox(props: PromptBoxProps) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-70 flex justify-center px-4">
-      <div className={`pointer-events-auto w-full max-w-2xl rounded-2xl shadow-2xl ${props.loading ? "prompt-box-loading" : "border border-slate-600/20 bg-[rgba(15,23,42,0.85)] backdrop-blur-xl"}`}>
+      <div className={`pointer-events-auto w-full max-w-2xl rounded-2xl shadow-2xl transition-colors ${props.loading ? "prompt-box-loading" : "border border-slate-600/20 bg-[rgba(15,23,42,0.85)] backdrop-blur-xl focus-within:border-slate-500/40"}`}>
         <div className={`rounded-2xl p-3 ${props.loading ? "prompt-box-inner backdrop-blur-xl" : ""}`}>
           <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} />
           {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
