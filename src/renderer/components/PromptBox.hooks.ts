@@ -87,7 +87,10 @@ function usePromptSubmit(args: UsePromptBoxArgs & { attachments: Attachment[]; s
       const errorMsg = hasElements
         ? await applyElementModification({ attachments: args.attachments, prompt: trimmedPrompt, getElementHTML: args.getElementHTML, onApply: args.onApplyModification })
         : await applyPageModification({ prompt: trimmedPrompt, attachments: args.attachments, getFullPageHTML: args.getFullPageHTML, onApply: args.onApplyPageModification });
-      if (errorMsg) { setError(errorMsg); return; }
+      if (errorMsg) {
+        if (!errorMsg.includes("abort")) setError(errorMsg);
+        return;
+      }
       setPrompt("");
       args.setAttachments([]);
     } catch (e: unknown) {
@@ -99,10 +102,7 @@ function usePromptSubmit(args: UsePromptBoxArgs & { attachments: Attachment[]; s
   };
 
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && event.shiftKey) {
-      event.stopPropagation();
-      return;
-    }
+    if (event.key === "Enter" && event.shiftKey) { event.stopPropagation(); return; }
     if (event.key !== "Enter" || !prompt.trim() || loading) return;
     event.preventDefault();
     void handleApply();
