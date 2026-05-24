@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { type AvailableFonts, parseFontFaceCss } from "./fontFaceParser";
+
 type TypographyFormValues = Omit<TypographyAsset, "id">;
 
 const EMPTY_ASSETS: ProjectAssets = { typography: [], colors: [] };
 
 export function useTypographyAssets(projectId?: string) {
   const [typography, setTypography] = useState<TypographyAsset[]>([]);
+  const [availableFonts, setAvailableFonts] = useState<AvailableFonts>({ textFonts: new Map(), iconFonts: new Map() });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -21,7 +24,10 @@ export function useTypographyAssets(projectId?: string) {
     if (!projectId) return;
     void (async () => {
       const result = await window.api.loadProjectAssets(projectId);
-      if (result.success && result.assets) setTypography(result.assets.typography || []);
+      if (result.success && result.assets) {
+        setTypography(result.assets.typography || []);
+        setAvailableFonts(parseFontFaceCss(result.assets.fontFaceCss));
+      }
     })();
   }, [projectId]);
 
@@ -39,5 +45,5 @@ export function useTypographyAssets(projectId?: string) {
     setShowAddForm(false);
   }, [persistTypography, typography]);
 
-  return { typography, editingId, showAddForm, setEditingId, setShowAddForm, handleAdd, handleDelete, handleSave };
+  return { typography, availableFonts, editingId, showAddForm, setEditingId, setShowAddForm, handleAdd, handleDelete, handleSave };
 }

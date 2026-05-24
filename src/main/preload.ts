@@ -65,5 +65,6 @@ contextBridge.exposeInMainWorld("api", {
   saveProjectAssets: (id: string, assets: { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] }; components?: unknown[]; componentsCss?: string }) =>
     ipcRenderer.invoke("save-project-assets", id, assets),
   loadProjectAssets: (id: string) => ipcRenderer.invoke("load-project-assets", id),
+  extractIconFontGlyphs: (id: string) => ipcRenderer.invoke("extract-icon-font-glyphs", id),
   listProjectGraphics: (id: string) => ipcRenderer.invoke("list-project-graphics", id),
 });

@@ -76,58 +76,67 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
       for (var _wi = 0; _wi < Math.min(CONCURRENCY, queue.length); _wi++) workers.push(worker());
       await Promise.all(workers);
     }
+    function _pickBestFontUrl(faceBlock, baseUrl) {
+      // Extract all font URLs with their format from a @font-face block
+      var candidates = [];
+      const fmtRegex = /url\\(["']?([^"')]+?)["']?\\)\\s*format\\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\\)/gi;
+      for (const m of faceBlock.matchAll(fmtRegex)) {
+        if (m[1].startsWith("data:")) continue;
+        try { candidates.push({ url: new URL(m[1], baseUrl).href, format: m[2], match: m[0] }); } catch (e) {}
+      }
+      const simpleRegex = /url\\(["']?([^"')]+\\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\\)/gi;
+      for (const m of faceBlock.matchAll(simpleRegex)) {
+        if (m[1].startsWith("data:")) continue;
+        try {
+          var resolved = new URL(m[1], baseUrl).href;
+          if (!candidates.some(function(c) { return c.url === resolved; })) {
+            var ext = resolved.split("?")[0].split(".").pop().toLowerCase();
+            var fmt = ext === "woff2" ? "woff2" : ext === "woff" ? "woff" : ext === "eot" ? "embedded-opentype" : "truetype";
+            candidates.push({ url: resolved, format: fmt, match: m[0] });
+          }
+        } catch (e) {}
+      }
+      // Prefer woff2, then woff — skip eot/truetype/opentype entirely
+      var woff2 = candidates.find(function(c) { return c.format === "woff2"; });
+      if (woff2) return woff2;
+      var woff = candidates.find(function(c) { return c.format === "woff"; });
+      if (woff) return woff;
+      return null;
+    }
     async function inlineFontUrls(cssText, baseUrl) {
       const fontFaceRegex = /@font-face\\s*\\{[^}]*\\}/gi;
       const fontFaces = [...cssText.matchAll(fontFaceRegex)];
       _log("  Found " + fontFaces.length + " @font-face block(s) in CSS (" + cssText.length + " chars)");
-      // Pass 1: Collect all unique font URLs
+      // Pass 1: Collect best (woff2/woff) URL per @font-face block
       var urlsToFetch = [];
       var seen = {};
+      var bestPerFace = [];
       for (const faceMatch of fontFaces) {
-        var faceBlock = faceMatch[0];
-        const urlRegex = /url\\(["']?([^"')]+?)["']?\\)\\s*format\\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\\)/gi;
-        for (const match of faceBlock.matchAll(urlRegex)) {
-          if (match[1].startsWith("data:")) continue;
-          try {
-            var resolved = new URL(match[1], baseUrl).href;
-            if (!seen[resolved] && !_fontCache[resolved]) { seen[resolved] = true; urlsToFetch.push(resolved); }
-          } catch (e) {}
-        }
-        const simpleUrlRegex = /url\\(["']?([^"')]+\\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\\)/gi;
-        for (const match of faceBlock.matchAll(simpleUrlRegex)) {
-          if (match[1].startsWith("data:")) continue;
-          try {
-            var resolved2 = new URL(match[1], baseUrl).href;
-            if (!seen[resolved2] && !_fontCache[resolved2]) { seen[resolved2] = true; urlsToFetch.push(resolved2); }
-          } catch (e) {}
+        var best = _pickBestFontUrl(faceMatch[0], baseUrl);
+        bestPerFace.push(best);
+        if (best && !seen[best.url] && !_fontCache[best.url]) {
+          seen[best.url] = true;
+          urlsToFetch.push(best.url);
         }
       }
-      // Pass 2: Fetch all unique URLs in parallel
-      _log("  Fetching " + urlsToFetch.length + " unique font URL(s) in parallel...");
+      // Pass 2: Fetch selected URLs in parallel
+      _log("  Fetching " + urlsToFetch.length + " font URL(s) (woff2 preferred)...");
       await _fetchAllFontsParallel(urlsToFetch);
-      // Pass 3: Replace URLs with cached data URIs
-      for (const faceMatch of fontFaces) {
-        let faceBlock = faceMatch[0];
-        const urlRegex = /url\\(["']?([^"')]+?)["']?\\)\\s*format\\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\\)/gi;
-        for (const match of faceBlock.matchAll(urlRegex)) {
-          if (match[1].startsWith("data:")) continue;
-          try {
-            var resolvedUrl = new URL(match[1], baseUrl).href;
-            var dataUri = _fontCache[resolvedUrl];
-            if (dataUri) faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '") format("' + match[2] + '")');
-          } catch (e) {}
-        }
-        const simpleUrlRegex = /url\\(["']?([^"')]+\\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\\)/gi;
-        for (const match of faceBlock.matchAll(simpleUrlRegex)) {
-          if (match[1].startsWith("data:")) continue;
-          try {
-            var resolvedUrl2 = new URL(match[1], baseUrl).href;
-            var dataUri2 = _fontCache[resolvedUrl2];
-            if (dataUri2) faceBlock = faceBlock.replace(match[0], 'url("' + dataUri2 + '")');
-          } catch (e) {}
-        }
+      // Pass 3: Rebuild @font-face blocks with only the inlined font
+      var removedCount = 0;
+      for (var _fi = 0; _fi < fontFaces.length; _fi++) {
+        var faceMatch = fontFaces[_fi];
+        var best = bestPerFace[_fi];
+        if (!best) { cssText = cssText.replace(faceMatch[0], ""); removedCount++; continue; }
+        var dataUri = _fontCache[best.url];
+        if (!dataUri) { cssText = cssText.replace(faceMatch[0], ""); removedCount++; continue; }
+        // Rewrite the src: property to only include the successfully fetched font
+        var faceBlock = faceMatch[0];
+        var newSrc = 'src: url("' + dataUri + '") format("' + best.format + '")';
+        faceBlock = faceBlock.replace(/src:\\s*[^;]+;?/i, newSrc + ";");
         cssText = cssText.replace(faceMatch[0], faceBlock);
       }
+      if (removedCount > 0) _log("  Removed " + removedCount + " @font-face block(s) with no supported format");
       return cssText;
     }
 `;

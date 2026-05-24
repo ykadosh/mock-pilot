@@ -8,6 +8,7 @@ import { downloadExternalAssets } from "../download-assets";
 import type { ProjectMeta } from "../projects";
 import { ensureProjectDir, getProjectDir, getProjectsIndex, saveProjectsIndex } from "../projects";
 import { extractFontFaceCss } from "./FontFaceUtils";
+import { extractProjectIconFontGlyphs } from "./FontGlyphUtils";
 
 type SaveProjectData = { url: string; title: string; html: string; thumbnail?: string };
 type ProjectAssets = { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] }; components?: unknown[]; componentsCss?: string };
@@ -136,6 +137,15 @@ function handleGetProjectThumbnail(_event: Electron.IpcMainInvokeEvent, id: stri
   return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p, "base64")}` : null;
 }
 
+async function handleExtractIconFontGlyphs(_event: Electron.IpcMainInvokeEvent, id: string) {
+  try {
+    const results = await extractProjectIconFontGlyphs(getProjectDir(id));
+    return { success: true, fonts: results };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
 export function registerProjectHandlers() {
   ipcMain.handle("list-projects", listProjects);
   ipcMain.handle("save-project", handleSaveProject);
@@ -148,4 +158,5 @@ export function registerProjectHandlers() {
   ipcMain.handle("rename-project", handleRenameProject);
   ipcMain.handle("delete-project", handleDeleteProject);
   ipcMain.handle("get-project-thumbnail", handleGetProjectThumbnail);
+  ipcMain.handle("extract-icon-font-glyphs", handleExtractIconFontGlyphs);
 }

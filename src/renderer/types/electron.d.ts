@@ -184,6 +184,7 @@ declare global {
       // Project assets
       saveProjectAssets: (id: string, assets: ProjectAssets) => Promise<{ success: boolean }>;
       loadProjectAssets: (id: string) => Promise<{ success: boolean; assets?: ProjectAssets }>;
+      extractIconFontGlyphs: (id: string) => Promise<{ success: boolean; fonts?: { family: string; glyphs: { codepoint: string; name: string }[] }[]; error?: string }>;
       listProjectGraphics: (id: string) => Promise<{ success: boolean; graphics?: GraphicAsset[] }>;
     };
   }

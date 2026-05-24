@@ -3,13 +3,18 @@ import { useParams } from "react-router-dom";
 
 import { getLibraryById } from "../../lib/icon-libraries";
 import type { IconLibraryMeta } from "../../lib/icon-libraries";
+import { IconCell } from "./IconCell";
 import { useIconAssets } from "./UseIconAssets.hooks";
 import { useIconFonts } from "./UseIconFonts.hooks";
+import { type IconFontGlyphData, useProjectIconFonts } from "./UseProjectIconFonts.hooks";
+import { useProjectFonts } from "./UseProjectFonts.hooks";
 
 export function IconsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { detectedLibraries, loading } = useIconAssets(projectId);
+  const { iconFontsData, loading: iconFontsLoading } = useProjectIconFonts(projectId);
   useIconFonts(detectedLibraries);
+  useProjectFonts(projectId);
   const [search, setSearch] = useState("");
 
   const libraries = useMemo(() => {
@@ -18,32 +23,32 @@ export function IconsPage() {
       .filter((lib): lib is IconLibraryMeta => lib !== undefined);
   }, [detectedLibraries]);
 
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-5xl">
-        <IconsPageHeader />
-        <p className="text-outline text-ui-small">Loading icons...</p>
-      </div>
-    );
-  }
-
-  if (libraries.length === 0) {
-    return (
-      <div className="mx-auto max-w-5xl">
-        <IconsPageHeader />
-        <EmptyIconsState />
-      </div>
-    );
-  }
+  const isLoading = loading || iconFontsLoading;
+  const hasContent = libraries.length > 0 || iconFontsData.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl">
       <IconsPageHeader />
-      <IconSearchInput value={search} onChange={setSearch} />
+      {isLoading && <p className="text-outline text-ui-small">Loading icons...</p>}
+      {!isLoading && !hasContent && <EmptyIconsState />}
+      {!isLoading && hasContent && (
+        <IconsContent libraries={libraries} iconFontsData={iconFontsData} search={search} onSearch={setSearch} />
+      )}
+    </div>
+  );
+}
+
+function IconsContent({ libraries, iconFontsData, search, onSearch }: { libraries: IconLibraryMeta[]; iconFontsData: IconFontGlyphData[]; search: string; onSearch: (v: string) => void }) {
+  return (
+    <>
+      <IconSearchInput value={search} onChange={onSearch} />
       {libraries.map((lib) => (
         <IconLibrarySection key={lib.id} library={lib} search={search} />
       ))}
-    </div>
+      {iconFontsData.map((font) => (
+        <ProjectIconFontSection key={font.family} font={font} search={search} />
+      ))}
+    </>
   );
 }
 
@@ -97,46 +102,37 @@ function IconLibrarySection({ library, search }: { library: IconLibraryMeta; sea
       </h2>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-3">
         {filteredIcons.map((icon) => (
-          <IconCell
-            key={icon.name}
-            name={icon.name}
-            codepoint={icon.codepoint}
-            renderMode={library.renderMode}
-            fontFamily={library.name}
-          />
+          <IconCell key={icon.name} name={icon.name} codepoint={icon.codepoint} fontFamily={library.name} renderMode={library.renderMode} />
         ))}
       </div>
     </section>
   );
 }
 
-function IconCell({ name, codepoint, renderMode, fontFamily }: { name: string; codepoint: string; renderMode: "codepoint" | "ligature"; fontFamily: string }) {
-  const glyphContent = renderMode === "ligature"
-    ? name
-    : String.fromCodePoint(parseInt(codepoint, 16));
+function ProjectIconFontSection({ font, search }: { font: IconFontGlyphData; search: string }) {
+  const filteredGlyphs = useMemo(() => {
+    if (!search.trim()) return font.glyphs;
+    const query = search.toLowerCase().trim();
+    return font.glyphs.filter((g) => g.name.toLowerCase().includes(query) || g.codepoint.includes(query));
+  }, [font.glyphs, search]);
 
-  // Map library display names to the actual CSS font-family values
-  const fontFamilyMap: Record<string, string> = {
-    "Font Awesome": "'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome'",
-    "Material Icons": "'Material Icons', 'Material Symbols Outlined'",
-    "Bootstrap Icons": "'bootstrap-icons'",
-    "Remix Icons": "'remixicon'",
-  };
-
-  const cssFontFamily = fontFamilyMap[fontFamily] || fontFamily;
+  if (filteredGlyphs.length === 0 && search.trim()) return null;
 
   return (
-    <div className="bg-surface-container hover:bg-surface-container-high flex flex-col items-center justify-center rounded-md p-2 transition-colors" title={name}>
-      <span
-        className="text-on-surface mb-1 text-2xl leading-none"
-        style={{ fontFamily: cssFontFamily, fontWeight: 900 }}
-      >
-        {glyphContent}
-      </span>
-      <span className="text-outline w-full truncate text-center text-[10px]">
-        {name}
-      </span>
-    </div>
+    <section className="mb-xl">
+      <h2 className="text-on-surface font-headline-sm mb-sm text-lg font-semibold">
+        {font.family}
+        <span className="text-outline ml-2 text-sm font-normal">
+          ({filteredGlyphs.length} icon{filteredGlyphs.length !== 1 ? "s" : ""})
+        </span>
+      </h2>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-3">
+        {filteredGlyphs.map((glyph) => (
+          <IconCell key={glyph.codepoint} name={glyph.name || glyph.codepoint} codepoint={glyph.codepoint} fontFamily={font.family} />
+        ))}
+      </div>
+    </section>
   );
 }
+
 

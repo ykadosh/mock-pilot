@@ -8,18 +8,19 @@ import { useTypographyAssets } from "./UseTypographyAssets.hooks";
 export function FontsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   useProjectFonts(projectId);
-  const { typography, editingId, showAddForm, setEditingId, setShowAddForm, handleAdd, handleDelete, handleSave } = useTypographyAssets(projectId);
+  const { typography, availableFonts, editingId, showAddForm, setEditingId, setShowAddForm, handleAdd, handleDelete, handleSave } = useTypographyAssets(projectId);
 
   return (
     <div className="mx-auto max-w-5xl">
       <FontsPageHeader onAdd={() => setShowAddForm(true)} />
-      {showAddForm && <TypographyForm onSave={handleAdd} onCancel={() => setShowAddForm(false)} />}
+      {showAddForm && <TypographyForm availableFonts={availableFonts} onSave={handleAdd} onCancel={() => setShowAddForm(false)} />}
       {typography.length === 0 && !showAddForm && <EmptyTypographyState />}
       <div className="space-y-3">
         {typography.map((item) => (
           <TypographyCard
             key={item.id}
             typography={item}
+            availableFonts={availableFonts}
             isEditing={editingId === item.id}
             onDelete={handleDelete}
             onEdit={setEditingId}

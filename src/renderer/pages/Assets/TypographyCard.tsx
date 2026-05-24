@@ -1,20 +1,22 @@
 import type { CSSProperties } from "react";
 
+import type { AvailableFonts } from "./fontFaceParser";
 import { TypographyForm } from "./TypographyForm";
 
 interface TypographyCardProps {
   typography: TypographyAsset;
+  availableFonts: AvailableFonts;
   isEditing: boolean;
   onDelete: (id: string) => void;
   onEdit: (id: string | null) => void;
   onSave: (item: TypographyAsset) => void;
 }
 
-export function TypographyCard({ typography, isEditing, onDelete, onEdit, onSave }: TypographyCardProps) {
+export function TypographyCard({ typography, availableFonts, isEditing, onDelete, onEdit, onSave }: TypographyCardProps) {
   return (
     <div className="border-outline/20 bg-surface rounded-lg border p-4">
       {isEditing ? (
-        <TypographyCardEditor typography={typography} onCancel={() => onEdit(null)} onSave={onSave} />
+        <TypographyCardEditor typography={typography} availableFonts={availableFonts} onCancel={() => onEdit(null)} onSave={onSave} />
       ) : (
         <TypographyCardPreview typography={typography} onDelete={onDelete} onEdit={onEdit} />
       )}
@@ -24,14 +26,16 @@ export function TypographyCard({ typography, isEditing, onDelete, onEdit, onSave
 
 function TypographyCardEditor({
   typography,
+  availableFonts,
   onCancel,
   onSave,
 }: {
   typography: TypographyAsset;
+  availableFonts: AvailableFonts;
   onCancel: () => void;
   onSave: (item: TypographyAsset) => void;
 }) {
-  return <TypographyForm initial={typography} onSave={(values) => onSave({ ...values, id: typography.id })} onCancel={onCancel} />;
+  return <TypographyForm initial={typography} availableFonts={availableFonts} onSave={(values) => onSave({ ...values, id: typography.id })} onCancel={onCancel} />;
 }
 
 function TypographyCardPreview({
