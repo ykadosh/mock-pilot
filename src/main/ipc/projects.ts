@@ -13,29 +13,19 @@ type SaveProjectData = { url: string; title: string; html: string; thumbnail?: s
 type ProjectAssets = { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] }; components?: unknown[]; componentsCss?: string };
 type ProjectHistoryData = { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] };
 
-function projectFilePath(id: string, filename: string) {
-  return path.join(getProjectDir(id), filename);
-}
+function projectFilePath(id: string, filename: string) { return path.join(getProjectDir(id), filename); }
 
 function updateProjectTimestamp(id: string) {
   const projects = getProjectsIndex();
-  const project = projects.find((entry) => entry.id === id);
-  if (!project) return;
-  project.updatedAt = new Date().toISOString();
-  saveProjectsIndex(projects);
+  const p = projects.find((e) => e.id === id);
+  if (p) { p.updatedAt = new Date().toISOString(); saveProjectsIndex(projects); }
 }
 
 function removeSnapshots(id: string, startIndex = 0) {
-  let index = startIndex;
-  while (fs.existsSync(projectFilePath(id, `snap.${index}.html`))) {
-    fs.unlinkSync(projectFilePath(id, `snap.${index}.html`));
-    index += 1;
-  }
+  for (let i = startIndex; fs.existsSync(projectFilePath(id, `snap.${i}.html`)); i++) fs.unlinkSync(projectFilePath(id, `snap.${i}.html`));
 }
 
-function listProjects() {
-  return getProjectsIndex();
-}
+function listProjects() { return getProjectsIndex(); }
 
 async function handleSaveProject(_event: Electron.IpcMainInvokeEvent, data: SaveProjectData) {
   const id = crypto.randomUUID();
@@ -73,6 +63,10 @@ function handleUpdateProjectHtml(_event: Electron.IpcMainInvokeEvent, id: string
 function handleSaveProjectAssets(_event: Electron.IpcMainInvokeEvent, id: string, assets: ProjectAssets) {
   try {
     ensureProjectDir(id);
+    if (assets.components) {
+      assets.components = (assets.components as { html: string }[]).map((c) => ({ ...c, html: extractAndSaveAssets(id, c.html) }));
+    }
+    if (assets.componentsCss) assets.componentsCss = extractAndSaveAssets(id, assets.componentsCss);
     fs.writeFileSync(projectFilePath(id, "assets.json"), JSON.stringify(assets, null, 2), "utf-8");
     return { success: true };
   } catch (error) {
@@ -138,9 +132,8 @@ function handleDeleteProject(_event: Electron.IpcMainInvokeEvent, id: string) {
 }
 
 function handleGetProjectThumbnail(_event: Electron.IpcMainInvokeEvent, id: string) {
-  const pngPath = projectFilePath(id, "thumbnail.png");
-  if (!fs.existsSync(pngPath)) return null;
-  return `data:image/png;base64,${fs.readFileSync(pngPath, "base64")}`;
+  const p = projectFilePath(id, "thumbnail.png");
+  return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p, "base64")}` : null;
 }
 
 export function registerProjectHandlers() {

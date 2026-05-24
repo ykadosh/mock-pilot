@@ -21,7 +21,7 @@ export function ComponentCodeBlock({ html }: { html: string }) {
   return <div ref={containerRef} className="mt-2 max-h-48 overflow-auto rounded text-xs" />;
 }
 
-export function ComponentPreview({ html, css }: { html: string; css?: string }) {
+export function ComponentPreview({ html, css, projectId }: { html: string; css?: string; projectId?: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -29,9 +29,10 @@ export function ComponentPreview({ html, css }: { html: string; css?: string }) 
     if (!iframe) return;
     const doc = iframe.contentDocument;
     if (!doc) return;
+    const baseTag = projectId ? `<base href="mp-asset://assets/${projectId}/">` : "";
     doc.open();
     doc.write(`<!DOCTYPE html>
-<html><head><style>
+<html><head>${baseTag}<style>
 ${css || ""}
 body { margin: 0; padding: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; width: max-content; height: max-content; }
 * { box-sizing: border-box; }
@@ -41,7 +42,7 @@ body { margin: 0; padding: 16px; overflow: hidden; display: flex; align-items: c
     // Scale content to fit within the iframe (object-fit: contain behavior)
     iframe.onload = () => scaleToFit(iframe);
     scaleToFit(iframe);
-  }, [html, css]);
+  }, [html, css, projectId]);
 
   return (
     <iframe

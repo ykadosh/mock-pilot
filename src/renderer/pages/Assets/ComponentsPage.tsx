@@ -24,6 +24,7 @@ export function ComponentsPage() {
             key={component.id}
             component={component}
             css={componentsCss}
+            projectId={projectId}
             isEditing={editingId === component.id}
             onDelete={handleDelete}
             onEdit={setEditingId}
@@ -52,13 +53,14 @@ interface ComponentProp {
 interface ComponentCardProps {
   component: { id: string; label: string; html: string; count: number; description?: string; props?: ComponentProp[] };
   css?: string;
+  projectId?: string;
   isEditing: boolean;
   onDelete: (id: string) => void;
   onEdit: (id: string | null) => void;
   onRename: (id: string, newLabel: string) => void;
 }
 
-function ComponentCard({ component, css, isEditing, onDelete, onEdit, onRename }: ComponentCardProps) {
+function ComponentCard({ component, css, projectId, isEditing, onDelete, onEdit, onRename }: ComponentCardProps) {
   const [showCode, setShowCode] = useState(false);
 
   return (
@@ -67,7 +69,7 @@ function ComponentCard({ component, css, isEditing, onDelete, onEdit, onRename }
       {component.description && (
         <p className="text-outline mb-2 text-xs">{component.description}</p>
       )}
-      <ComponentPreview html={component.html} css={css} />
+      <ComponentPreview html={component.html} css={css} projectId={projectId} />
       {component.props && component.props.length > 0 && <PropsList props={component.props} />}
       <ComponentCardActions showCode={showCode} onToggleCode={() => setShowCode(!showCode)} onDelete={() => onDelete(component.id)} />
       {showCode && <ComponentCodeBlock html={component.html} />}
