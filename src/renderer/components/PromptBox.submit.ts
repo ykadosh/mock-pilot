@@ -45,8 +45,8 @@ interface SubmitState {
 }
 
 async function applyPrompt(args: UsePromptSubmitArgs, trimmedPrompt: string, state: SubmitState) {
+  args.openChat?.();
   const isAgent = !isSimplePrompt(trimmedPrompt, args.attachments);
-  if (isAgent) args.openChat?.();
 
   const result = await executeModification(args, trimmedPrompt, state.continueFromPrevious);
   if (result.error) {
