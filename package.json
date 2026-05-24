@@ -34,6 +34,7 @@
     "@electron-forge/maker-zip": "^7.11.1",
     "@electron-forge/plugin-vite": "^7.11.1",
     "@eslint/js": "^9.39.4",
+    "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -67,7 +68,9 @@
     "puppeteer": "^24.42.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.15.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0"
   }
 }

@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ConversationMessage } from "../hooks/useConversation";
 import { SidePanel } from "./ui/SidePanel";
 
@@ -33,7 +35,9 @@ function MessageBubble({ msg }: { msg: ConversationMessage }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${isUser ? "bg-violet-600/30 text-violet-200" : "bg-slate-700/50 text-slate-300"}`}>
-        <p className="break-words whitespace-pre-wrap">{msg.content}</p>
+        <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[14px] break-words">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+        </div>
         <span className="mt-1 block text-[10px] text-slate-500">
           {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>
