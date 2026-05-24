@@ -63,29 +63,68 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
       _fontCache[resolvedUrl] = null;
       return null;
     }
+    async function _fetchAllFontsParallel(urls) {
+      var CONCURRENCY = 6;
+      var queue = urls.slice();
+      async function worker() {
+        while (queue.length > 0) {
+          var url = queue.shift();
+          if (url) await _fetchFontAsDataUri(url);
+        }
+      }
+      var workers = [];
+      for (var _wi = 0; _wi < Math.min(CONCURRENCY, queue.length); _wi++) workers.push(worker());
+      await Promise.all(workers);
+    }
     async function inlineFontUrls(cssText, baseUrl) {
       const fontFaceRegex = /@font-face\\s*\\{[^}]*\\}/gi;
       const fontFaces = [...cssText.matchAll(fontFaceRegex)];
       _log("  Found " + fontFaces.length + " @font-face block(s) in CSS (" + cssText.length + " chars)");
+      // Pass 1: Collect all unique font URLs
+      var urlsToFetch = [];
+      var seen = {};
+      for (const faceMatch of fontFaces) {
+        var faceBlock = faceMatch[0];
+        const urlRegex = /url\\(["']?([^"')]+?)["']?\\)\\s*format\\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\\)/gi;
+        for (const match of faceBlock.matchAll(urlRegex)) {
+          if (match[1].startsWith("data:")) continue;
+          try {
+            var resolved = new URL(match[1], baseUrl).href;
+            if (!seen[resolved] && !_fontCache[resolved]) { seen[resolved] = true; urlsToFetch.push(resolved); }
+          } catch (e) {}
+        }
+        const simpleUrlRegex = /url\\(["']?([^"')]+\\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\\)/gi;
+        for (const match of faceBlock.matchAll(simpleUrlRegex)) {
+          if (match[1].startsWith("data:")) continue;
+          try {
+            var resolved2 = new URL(match[1], baseUrl).href;
+            if (!seen[resolved2] && !_fontCache[resolved2]) { seen[resolved2] = true; urlsToFetch.push(resolved2); }
+          } catch (e) {}
+        }
+      }
+      // Pass 2: Fetch all unique URLs in parallel
+      _log("  Fetching " + urlsToFetch.length + " unique font URL(s) in parallel...");
+      await _fetchAllFontsParallel(urlsToFetch);
+      // Pass 3: Replace URLs with cached data URIs
       for (const faceMatch of fontFaces) {
         let faceBlock = faceMatch[0];
         const urlRegex = /url\\(["']?([^"')]+?)["']?\\)\\s*format\\(["']?(woff2?|truetype|opentype|embedded-opentype)["']?\\)/gi;
-        const urlMatches = [...faceBlock.matchAll(urlRegex)];
-        for (const match of urlMatches) {
-          const fontUrl = match[1];
-          if (fontUrl.startsWith("data:")) continue;
-          const resolvedUrl = new URL(fontUrl, baseUrl).href;
-          const dataUri = await _fetchFontAsDataUri(resolvedUrl);
-          if (dataUri) faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '") format("' + match[2] + '")');
+        for (const match of faceBlock.matchAll(urlRegex)) {
+          if (match[1].startsWith("data:")) continue;
+          try {
+            var resolvedUrl = new URL(match[1], baseUrl).href;
+            var dataUri = _fontCache[resolvedUrl];
+            if (dataUri) faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '") format("' + match[2] + '")');
+          } catch (e) {}
         }
         const simpleUrlRegex = /url\\(["']?([^"')]+\\.(?:woff2?|ttf|otf|eot)[^"')]*?)["']?\\)/gi;
-        const simpleMatches = [...faceBlock.matchAll(simpleUrlRegex)];
-        for (const match of simpleMatches) {
-          const fontUrl = match[1];
-          if (fontUrl.startsWith("data:")) continue;
-          const resolvedUrl = new URL(fontUrl, baseUrl).href;
-          const dataUri = await _fetchFontAsDataUri(resolvedUrl);
-          if (dataUri) faceBlock = faceBlock.replace(match[0], 'url("' + dataUri + '")');
+        for (const match of faceBlock.matchAll(simpleUrlRegex)) {
+          if (match[1].startsWith("data:")) continue;
+          try {
+            var resolvedUrl2 = new URL(match[1], baseUrl).href;
+            var dataUri2 = _fontCache[resolvedUrl2];
+            if (dataUri2) faceBlock = faceBlock.replace(match[0], 'url("' + dataUri2 + '")');
+          } catch (e) {}
         }
         cssText = cssText.replace(faceMatch[0], faceBlock);
       }
