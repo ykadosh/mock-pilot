@@ -28,47 +28,40 @@ export const CAPTURE_HTML_SCRIPT_STYLES = `
       style.textContent = await inlineFontUrls(style.textContent || "", baseUrl);
     }));
     _log("Done processing inline style tags");
-    _log("[step:layout] Baking viewport-dependent dimensions...");
+    _log("[step:layout] Processing layout (bake, viewport heights, scrollable containers)...");
     var bakeCount = 0;
-    document.querySelectorAll('*').forEach(function(el) {
+    var heightFixCount = 0;
+    var expandCount = 0;
+    var vpHeight = window.innerHeight;
+    function _bakeHeight(el) {
       var cs = getComputedStyle(el);
       if (el.style.height && el.style.height.endsWith('px')) return;
-      var needsBake = false;
-      if ((cs.position === 'absolute' || cs.position === 'fixed') && cs.top !== 'auto' && cs.bottom !== 'auto') needsBake = true;
-      if (needsBake) {
+      if ((cs.position === 'absolute' || cs.position === 'fixed') && cs.top !== 'auto' && cs.bottom !== 'auto') {
         var rect = el.getBoundingClientRect();
         if (rect.height > 0) {
           el.style.height = rect.height + 'px';
           bakeCount++;
         }
       }
-    });
-    _log("Baked " + bakeCount + " viewport-dependent dimensions");
-    if (_heightMode !== 'keep-as-is') {
-      _log("Processing viewport-derived heights (mode: " + _heightMode + ")...");
-      var vpHeight = window.innerHeight;
-      var heightFixCount = 0;
-      document.querySelectorAll('*').forEach(function(el) {
-        if (!el.style.height || !el.style.height.endsWith('px')) return;
-        var h = parseFloat(el.style.height);
-        if (isNaN(h) || h <= 0) return;
-        var rect = el.getBoundingClientRect();
-        var bottomGap = Math.abs((rect.top + h) - vpHeight);
-        if (bottomGap < 30 && h > vpHeight * 0.3) {
-          var offset = Math.round(rect.top);
-          if (_heightMode === 'convert-vh') {
-            el.style.height = offset > 0 ? 'calc(100vh - ' + offset + 'px)' : '100vh';
-          } else {
-            el.style.removeProperty('height');
-          }
-          heightFixCount++;
-        }
-      });
-      _log("Fixed " + heightFixCount + " viewport-derived height(s)");
     }
-    _log("Expanding scrollable containers...");
-    var expandCount = 0;
-    document.querySelectorAll('*').forEach(function(el) {
+    function _fixViewportHeight(el) {
+      if (_heightMode === 'keep-as-is') return;
+      if (!el.style.height || !el.style.height.endsWith('px')) return;
+      var h = parseFloat(el.style.height);
+      if (isNaN(h) || h <= 0) return;
+      var rect = el.getBoundingClientRect();
+      var bottomGap = Math.abs((rect.top + h) - vpHeight);
+      if (bottomGap < 30 && h > vpHeight * 0.3) {
+        var offset = Math.round(rect.top);
+        if (_heightMode === 'convert-vh') {
+          el.style.height = offset > 0 ? 'calc(100vh - ' + offset + 'px)' : '100vh';
+        } else {
+          el.style.removeProperty('height');
+        }
+        heightFixCount++;
+      }
+    }
+    function _expandScrollable(el) {
       var cs = getComputedStyle(el);
       if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') {
         var extra = el.scrollHeight - el.clientHeight;
@@ -79,6 +72,11 @@ export const CAPTURE_HTML_SCRIPT_STYLES = `
           expandCount++;
         }
       }
+    }
+    document.querySelectorAll('*').forEach(function(el) {
+      _bakeHeight(el);
+      _fixViewportHeight(el);
+      _expandScrollable(el);
     });
-    _log("Expanded " + expandCount + " scrollable container(s)");
+    _log("Baked " + bakeCount + " viewport-dependent dimension(s), fixed " + heightFixCount + " viewport-derived height(s), expanded " + expandCount + " scrollable container(s)");
 `;
