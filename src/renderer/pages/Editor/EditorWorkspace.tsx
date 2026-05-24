@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { CanvasPreview } from "../../components/CanvasPreview";
 import { CodeEditor } from "../../components/CodeEditor";
 import { ConversationPanel } from "../../components/ConversationPanel";
@@ -69,21 +68,11 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
     openChat: state.openChat,
   });
 
-  // When an element is selected via the picker, add it as an attachment
-  const prevMpIdRef = useRef<string | null>(null);
-  const { addElementAttachment } = promptBox;
-  useEffect(() => {
-    if (state.selectedElement && state.selectedElement.mpId !== prevMpIdRef.current) {
-      addElementAttachment(state.selectedElement);
-    }
-    prevMpIdRef.current = state.selectedElement?.mpId ?? null;
-  }, [state.selectedElement, addElementAttachment]);
-
   return (
     <>
       <WorkspaceContent {...state} />
       <WorkspaceSidePanel {...state} agentProcessing={promptBox.agentProcessing} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
-      {!state.codeEditorOpen && <PromptBox {...promptBox} />}
+      {!state.codeEditorOpen && <PromptBox {...promptBox} selectedElement={state.selectedElement} />}
     </>
   );
 }

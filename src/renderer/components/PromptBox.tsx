@@ -1,9 +1,11 @@
 import { useEffect } from "react";
+import type { SelectedElement } from "../pages/Editor";
 import type { Attachment } from "./PromptBox.types";
-import { getAttachmentLabel } from "./PromptBox.hooks";
+import { AttachmentChips } from "./PromptBox.chips";
 import { AgentProgressIndicator } from "./AgentProgressIndicator";
 
 interface PromptBoxProps {
+  addElementAttachment: (element: SelectedElement) => void;
   agentProgress?: { toolName?: string; iteration?: number; maxIterations?: number } | null;
   attachments: Attachment[];
   error: string;
@@ -17,41 +19,9 @@ interface PromptBoxProps {
   loading: boolean;
   prompt: string;
   removeAttachment: (index: number) => void;
+  selectedElement: SelectedElement | null;
   setPrompt: (value: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-}
-
-function ImageChip({ attachment, index, onRemove }: { attachment: Attachment & { type: "image" }; index: number; onRemove: (index: number) => void }) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-800/80 py-1 pr-2 pl-1 text-xs text-slate-300">
-      <img alt="Thumb" className="h-6 w-6 rounded object-cover" src={attachment.dataUrl} />
-      <span className="max-w-24 truncate font-medium">{attachment.name}</span>
-      <button className="material-symbols-outlined ml-1 text-[14px] hover:text-red-400" onClick={() => onRemove(index)}>close</button>
-    </div>
-  );
-}
-
-function ElementChip({ attachment, index, onRemove }: { attachment: Attachment; index: number; onRemove: (index: number) => void }) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-900/40 px-2 py-1 text-xs text-violet-200">
-      <span className="material-symbols-outlined text-[14px]">extension</span>
-      <span className="max-w-32 truncate font-mono text-[10px]">{getAttachmentLabel(attachment)}</span>
-      <button className="material-symbols-outlined ml-1 text-[14px] hover:text-violet-100" onClick={() => onRemove(index)}>close</button>
-    </div>
-  );
-}
-
-function AttachmentChips({ attachments, onRemove }: { attachments: Attachment[]; onRemove: (index: number) => void }) {
-  if (attachments.length === 0) return null;
-  return (
-    <div className="mb-2 flex flex-wrap gap-2 px-1">
-      {attachments.map((attachment, index) =>
-        attachment.type === "image"
-          ? <ImageChip key={index} attachment={attachment} index={index} onRemove={onRemove} />
-          : <ElementChip key={index} attachment={attachment} index={index} onRemove={onRemove} />,
-      )}
-    </div>
-  );
 }
 
 function SubmitButton({ handleApply, handleCancel, loading, prompt }: Pick<PromptBoxProps, "handleApply" | "handleCancel" | "loading" | "prompt">) {
@@ -109,11 +79,18 @@ function PromptInput({ handleApply, handleCancel, handleFileSelect, handlePaste,
 }
 
 export function PromptBox(props: PromptBoxProps) {
+  // Show selected element as suggestion only if it's not already pinned
+  const isPinned = props.selectedElement && props.attachments.some((a) => a.type === "element" && a.element.mpId === props.selectedElement!.mpId);
+  const suggestedElement = props.selectedElement && !isPinned ? props.selectedElement : null;
+  const handlePinSuggestion = () => {
+    if (suggestedElement) props.addElementAttachment(suggestedElement);
+  };
+
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-70 flex justify-center px-4">
       <div className={`pointer-events-auto w-full max-w-2xl rounded-2xl shadow-2xl transition-colors ${props.loading ? "prompt-box-loading" : "border border-slate-600/20 bg-[rgba(15,23,42,0.85)] backdrop-blur-xl focus-within:border-slate-500/40"}`}>
         <div className={`rounded-2xl p-3 ${props.loading ? "prompt-box-inner backdrop-blur-xl" : ""}`}>
-          <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} />
+          <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} suggestedElement={suggestedElement} onPinSuggestion={handlePinSuggestion} />
           {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
           <AgentProgressIndicator progress={props.agentProgress} />
           <PromptInput

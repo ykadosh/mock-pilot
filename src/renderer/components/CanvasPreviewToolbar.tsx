@@ -30,6 +30,7 @@ export function CanvasPreviewToolbar({ rect, scale, selectedMpId, selectedSelect
         <ToolbarButton icon="delete" onClick={onDelete} title="Delete" />
         <ToolbarButton icon="arrow_upward" onClick={() => onPickerAction("picker-action-move-up")} title="Move up" />
         <ToolbarButton icon="arrow_downward" onClick={() => onPickerAction("picker-action-move-down")} title="Move down" />
+        <ToolbarButton icon="expand_content" onClick={() => onPickerAction("picker-action-select-parent")} title="Select parent" />
         <ToolbarButton icon="close" onClick={onDeselect} title="Deselect" />
       </div>
     </div>
