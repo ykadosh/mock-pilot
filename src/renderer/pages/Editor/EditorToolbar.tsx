@@ -24,7 +24,7 @@ function DeviceButton({ active, device, icon, onClick }: { active: boolean; devi
 
   return (
     <button onClick={() => onClick(device)} className={`flex cursor-pointer items-center justify-center rounded p-1.5 px-2.5 ${className}`}>
-      <span className="material-symbols-outlined text-lg leading-none">{icon}</span>
+      <span className="material-symbols-outlined text-2xl leading-none">{icon}</span>
     </button>
   );
 }
@@ -33,8 +33,8 @@ function IconButton({ disabled = false, icon, onClick }: { disabled?: boolean; i
   const className = disabled ? "cursor-not-allowed text-slate-700" : "text-slate-500 hover:text-white";
 
   return (
-    <button onClick={onClick} disabled={disabled} className={`material-symbols-outlined cursor-pointer ${className}`}>
-      {icon}
+    <button onClick={onClick} disabled={disabled} className={`cursor-pointer ${className}`}>
+      <span className="material-symbols-outlined text-2xl">{icon}</span>
     </button>
   );
 }

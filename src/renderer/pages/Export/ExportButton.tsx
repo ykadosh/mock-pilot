@@ -14,7 +14,7 @@ export function ExportButton({ onClick, disabled, icon, children, className = ""
       disabled={disabled}
       className={`px-lg bg-primary-container/80 text-on-primary-container text-ui-small flex cursor-pointer items-center justify-center gap-2 py-2 font-bold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     >
-      <span className="material-symbols-outlined text-[16px]">{icon}</span>
+      <span className="material-symbols-outlined text-lg">{icon}</span>
       {children}
     </button>
   );

@@ -29,11 +29,11 @@ export function HistoryPanel({ entries, pointer, onGoTo, onClose }: HistoryPanel
                       : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                   }`}
                 >
-                  <div className="gap-xs flex items-center">
-                    <span className="material-symbols-outlined text-[14px]">
+                  <div className={`gap-xs flex ${isActive ? "items-start" : "items-center"}`}>
+                    <span className="material-symbols-outlined shrink-0 text-[14px]">
                       {idx === 0 ? "flag" : "edit"}
                     </span>
-                    <span className="flex-1 truncate">{entry.label}</span>
+                    <span className={`flex-1 ${isActive ? "whitespace-normal" : "truncate"}`}>{entry.label}</span>
                   </div>
                   <span className="ml-5 text-[10px] text-slate-500">
                     {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}

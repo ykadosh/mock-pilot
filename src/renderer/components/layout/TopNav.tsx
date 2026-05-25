@@ -29,9 +29,9 @@ export function TopNav({ children, activeTab, projectId }: TopNavProps) {
         {children}
         <button
           onClick={() => navigate("/app-settings")}
-          className="material-symbols-outlined cursor-pointer text-slate-400 transition-colors hover:text-white"
+          className="cursor-pointer text-slate-400 transition-colors hover:text-white"
         >
-          settings
+          <span className="material-symbols-outlined text-2xl">settings</span>
         </button>
         <TopNavAuth />
       </div>

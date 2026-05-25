@@ -15,7 +15,7 @@ export function ProjectDangerZoneSection({ onDelete }: ProjectDangerZoneSectionP
           onClick={onDelete}
           className="bg-error-container text-on-error-container px-lg py-sm text-ui-small hover:bg-error gap-sm flex shrink-0 cursor-pointer items-center font-bold transition-colors"
         >
-          <span className="material-symbols-outlined text-sm">delete_forever</span>
+          <span className="material-symbols-outlined text-2xl">delete_forever</span>
           Delete Project
         </button>
       </div>

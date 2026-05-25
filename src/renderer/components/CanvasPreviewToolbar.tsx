@@ -12,8 +12,8 @@ interface CanvasPreviewToolbarProps {
 
 function ToolbarButton({ icon, onClick, title }: { icon: string; onClick: () => void; title: string }) {
   return (
-    <button onClick={onClick} className="material-symbols-outlined cursor-pointer rounded p-0.5 transition-colors hover:bg-white/20" style={{ fontSize: "16px" }} title={title}>
-      {icon}
+    <button onClick={onClick} className="cursor-pointer rounded p-0.5 transition-colors hover:bg-white/20" title={title}>
+      <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>{icon}</span>
     </button>
   );
 }

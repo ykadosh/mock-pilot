@@ -59,7 +59,7 @@ function DevicePresetSelector({ device, setDevice }: Pick<ExportImageSectionProp
             onClick={() => setDevice(key)}
             className={`flex cursor-pointer flex-col items-center justify-center border py-4 transition-all ${device === key ? "bg-primary-container/10 text-primary border-[#7C3AED]" : "hover:border-outline text-outline border-[#334155]"}`}
           >
-            <span className="material-symbols-outlined mb-1">{preset.icon}</span>
+            <span className="material-symbols-outlined mb-1 text-2xl">{preset.icon}</span>
             <span className="text-[10px] font-bold">{preset.label}</span>
           </button>
         ))}

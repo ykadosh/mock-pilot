@@ -53,9 +53,9 @@ export function SidePanel({ title, onClose, children }: SidePanelProps) {
         </span>
         <button
           onClick={onClose}
-          className="material-symbols-outlined cursor-pointer text-sm text-slate-500 hover:text-slate-200"
+          className="cursor-pointer text-slate-500 hover:text-slate-200"
         >
-          close
+          <span className="material-symbols-outlined text-sm">close</span>
         </button>
       </div>
       <div className="flex-1 overflow-y-auto">

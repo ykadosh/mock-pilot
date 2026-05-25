@@ -23,7 +23,7 @@ function getMenuPosition(button: HTMLButtonElement): MenuPosition {
 }
 
 function MenuItem({ icon, label, tone = "text-slate-300", onClick }: { icon: string; label: string; tone?: string; onClick: (event: React.MouseEvent<HTMLButtonElement>) => void; }) {
-  return <button onClick={onClick} className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs ${tone} hover:bg-slate-700`}><span className="material-symbols-outlined text-sm">{icon}</span>{label}</button>;
+  return <button onClick={onClick} className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs ${tone} hover:bg-slate-700`}><span className="material-symbols-outlined text-base">{icon}</span>{label}</button>;
 }
 
 function ProjectCardMenu({ menuOpen, menuPos, menuRef, onClose, onOpen, onRename, onDelete }: { menuOpen: boolean; menuPos: MenuPosition; menuRef: React.RefObject<HTMLDivElement | null>; onClose: () => void; onOpen?: () => void; onRename?: () => void; onDelete?: () => void; }) {

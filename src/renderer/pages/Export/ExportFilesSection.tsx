@@ -44,7 +44,7 @@ function FileRow({ icon, label, size }: { icon: string; label: string; size: str
   return (
     <div className="p-sm bg-surface-container-lowest flex items-center justify-between border border-[#334155]">
       <div className="gap-sm flex items-center">
-        <span className="material-symbols-outlined text-outline text-[16px]">{icon}</span>
+        <span className="material-symbols-outlined text-outline text-2xl">{icon}</span>
         <span className="text-ui-small font-code-block">{label}</span>
       </div>
       <span className="text-outline font-mono text-[10px]">{size}</span>

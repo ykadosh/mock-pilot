@@ -32,7 +32,7 @@ function SubmitButton({ handleApply, handleCancel, loading, prompt }: Pick<Promp
         className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 active:scale-95"
         title="Cancel request"
       >
-        <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>stop</span>
+        <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>stop</span>
       </button>
     );
   }
@@ -42,7 +42,7 @@ function SubmitButton({ handleApply, handleCancel, loading, prompt }: Pick<Promp
       disabled={!prompt.trim()}
       className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <span className="material-symbols-outlined text-lg">bolt</span>
+      <span className="material-symbols-outlined text-2xl">bolt</span>
     </button>
   );
 }
@@ -70,7 +70,7 @@ function PromptInput({ handleApply, handleCancel, handleFileSelect, handlePaste,
       />
       <div className="flex items-center gap-2 pr-3 pb-2">
         <button className="flex h-8 w-8 items-center justify-center text-slate-500 transition-colors hover:text-slate-300" onClick={handleFileSelect} title="Attach image">
-          <span className="material-symbols-outlined">attach_file</span>
+          <span className="material-symbols-outlined text-2xl">attach_file</span>
         </button>
         <SubmitButton handleApply={handleApply} handleCancel={handleCancel} loading={loading} prompt={prompt} />
       </div>

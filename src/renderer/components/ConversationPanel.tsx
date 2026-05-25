@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ConversationMessage } from "../hooks/useConversation";
@@ -30,6 +30,26 @@ function TypingIndicator({ toolName }: { toolName?: string }) {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [text]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="ml-1 shrink-0 cursor-pointer text-violet-400/60 transition-colors hover:text-violet-300"
+      title="Copy prompt"
+    >
+      <span className="material-symbols-outlined text-[12px]">{copied ? "check" : "content_copy"}</span>
+    </button>
+  );
+}
+
 function MessageBubble({ msg }: { msg: ConversationMessage }) {
   const isUser = msg.role === "user";
   return (
@@ -38,9 +58,12 @@ function MessageBubble({ msg }: { msg: ConversationMessage }) {
         <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[14px] break-words">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
         </div>
-        <span className="mt-1 block text-[10px] text-slate-500">
-          {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </span>
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-[10px] text-slate-500">
+            {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </span>
+          {isUser && <CopyButton text={msg.content} />}
+        </div>
       </div>
     </div>
   );
