@@ -1,7 +1,7 @@
 import { useCallback, useState, type KeyboardEvent } from "react";
 import type { Attachment } from "./PromptBox.types";
 import { useAgentProgressListener } from "./PromptBox.progress";
-import { applyElementModification, applyAgentModification, isSimplePrompt } from "./PromptBox.utils";
+import { applyAgentModification } from "./PromptBox.utils";
 
 interface UsePromptSubmitArgs {
   attachments: Attachment[];
@@ -22,12 +22,6 @@ interface ModificationResult {
 }
 
 async function executeModification(args: UsePromptSubmitArgs, trimmedPrompt: string, continueFromPrevious?: boolean): Promise<ModificationResult> {
-  if (isSimplePrompt(trimmedPrompt, args.attachments)) {
-    console.log("[PromptBox] Using single-shot element modification"); // eslint-disable-line no-console
-    const error = await applyElementModification({ attachments: args.attachments, prompt: trimmedPrompt, getElementHTML: args.getElementHTML, onApply: args.onApplyModification });
-    return error ? { error } : {};
-  }
-  console.log("[PromptBox] Using agent loop modification"); // eslint-disable-line no-console
   return applyAgentModification({ prompt: trimmedPrompt, attachments: args.attachments, getFullPageHTML: args.getFullPageHTML, onApply: args.onApplyPageModification, projectAssets: args.projectAssets, continueFromPrevious });
 }
 
@@ -46,7 +40,6 @@ interface SubmitState {
 
 async function applyPrompt(args: UsePromptSubmitArgs, trimmedPrompt: string, state: SubmitState) {
   args.openChat?.();
-  const isAgent = !isSimplePrompt(trimmedPrompt, args.attachments);
 
   const result = await executeModification(args, trimmedPrompt, state.continueFromPrevious);
   if (result.error) {
@@ -60,7 +53,7 @@ async function applyPrompt(args: UsePromptSubmitArgs, trimmedPrompt: string, sta
     args.setAttachments([]);
     return;
   }
-  const summary = result.summary || (isAgent ? "Changes applied successfully" : `Applied: ${trimmedPrompt}`);
+  const summary = result.summary || "Changes applied successfully";
   args.onConversationMessage?.("assistant", `✓ ${summary}`);
   state.setPrompt("");
   args.setAttachments([]);

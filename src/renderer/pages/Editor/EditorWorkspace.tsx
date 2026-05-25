@@ -71,7 +71,7 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
   return (
     <>
       <WorkspaceContent {...state} />
-      <WorkspaceSidePanel {...state} agentProcessing={promptBox.agentProcessing} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
+      <WorkspaceSidePanel {...state} agentProcessing={promptBox.agentProcessing || promptBox.loading} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
       {!state.codeEditorOpen && <PromptBox {...promptBox} selectedElement={state.selectedElement} />}
     </>
   );
