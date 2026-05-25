@@ -5,14 +5,16 @@ interface ProjectGridProps {
   projects: SavedProject[];
   onDeleteProject: (project: SavedProject) => void;
   onOpenProject: (project: SavedProject) => void;
-  onRenameProject: (project: SavedProject) => void;
+  onSettingsProject: (project: SavedProject) => void;
+  onDuplicateProject: (project: SavedProject) => void;
 }
 
 export function ProjectGrid({
   projects,
   onDeleteProject,
   onOpenProject,
-  onRenameProject,
+  onSettingsProject,
+  onDuplicateProject,
 }: ProjectGridProps) {
   if (projects.length === 0) {
     return (
@@ -34,7 +36,8 @@ export function ProjectGrid({
           lastEdit={formatProjectDate(project.updatedAt)}
           onClick={() => onOpenProject(project)}
           onDelete={() => onDeleteProject(project)}
-          onRename={() => onRenameProject(project)}
+          onSettings={() => onSettingsProject(project)}
+          onDuplicate={() => onDuplicateProject(project)}
         />
       ))}
     </div>

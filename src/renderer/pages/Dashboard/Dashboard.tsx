@@ -3,15 +3,11 @@ import { TopNav } from "../../components/layout/TopNav";
 import { setCapturedHtml } from "../../lib/store";
 import type { SavedProject } from "./Dashboard.types";
 import { ProjectGrid } from "./ProjectGrid";
-import { RenameProjectDialog } from "./RenameProjectDialog";
-import { useProjectRename } from "./useProjectRename";
 import { useSavedProjects } from "./useSavedProjects";
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { savedProjects, setSavedProjects } = useSavedProjects();
-  const { clearRenameTarget, renameTarget, renameValue, setRenameValue, startRename, submitRename } =
-    useProjectRename(setSavedProjects);
 
   const handleOpenProject = async (project: SavedProject) => {
     const result = await window.api.loadProject(project.id);
@@ -26,6 +22,17 @@ export function Dashboard() {
     setSavedProjects((projects) => projects.filter((savedProject) => savedProject.id !== project.id));
   };
 
+  const handleSettingsProject = (project: SavedProject) => {
+    navigate(`/settings/${project.id}`);
+  };
+
+  const handleDuplicateProject = async (project: SavedProject) => {
+    const result = await window.api.duplicateProject(project.id);
+    if (!result.success || !result.project) return;
+    const thumbnail = await window.api.getProjectThumbnail(result.project.id);
+    setSavedProjects((projects) => [{ ...result.project!, thumbnail: thumbnail ?? undefined }, ...projects]);
+  };
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <TopNav />
@@ -34,16 +41,10 @@ export function Dashboard() {
           projects={savedProjects}
           onOpenProject={handleOpenProject}
           onDeleteProject={handleDeleteProject}
-          onRenameProject={startRename}
+          onSettingsProject={handleSettingsProject}
+          onDuplicateProject={handleDuplicateProject}
         />
       </main>
-      <RenameProjectDialog
-        project={renameTarget}
-        value={renameValue}
-        onChange={setRenameValue}
-        onClose={clearRenameTarget}
-        onSubmit={submitRename}
-      />
     </div>
   );
 }

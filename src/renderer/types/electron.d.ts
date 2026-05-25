@@ -84,6 +84,7 @@ declare global {
       loadProjectConversation: (id: string) => Promise<{ success: boolean; messages?: { role: string; content: string; timestamp: number }[] }>;
       renameProject: (id: string, newTitle: string) => Promise<{ success: boolean }>;
       deleteProject: (id: string) => Promise<{ success: boolean }>;
+      duplicateProject: (id: string) => Promise<{ success: boolean; project?: ProjectMeta }>;
       getProjectThumbnail: (id: string) => Promise<string | null>;
       aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => Promise<{
         success: boolean;

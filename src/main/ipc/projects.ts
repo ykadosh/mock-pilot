@@ -6,7 +6,7 @@ import path from "path";
 import { extractAndSaveAssets } from "../assets";
 import { downloadExternalAssets } from "../download-assets";
 import type { ProjectMeta } from "../projects";
-import { ensureProjectDir, getProjectDir, getProjectsIndex, saveProjectsIndex } from "../projects";
+import { ensureProjectDir, getProjectDir, getProjectsIndex, saveProjectsIndex, duplicateProject } from "../projects";
 import { extractFontFaceCss } from "./FontFaceUtils";
 import { extractProjectIconFontGlyphs } from "./FontGlyphUtils";
 
@@ -132,6 +132,10 @@ function handleDeleteProject(_event: Electron.IpcMainInvokeEvent, id: string) {
   return { success: true };
 }
 
+function handleDuplicateProject(_event: Electron.IpcMainInvokeEvent, id: string) {
+  return duplicateProject(id);
+}
+
 function handleGetProjectThumbnail(_event: Electron.IpcMainInvokeEvent, id: string) {
   const p = projectFilePath(id, "thumbnail.png");
   return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p, "base64")}` : null;
@@ -157,6 +161,7 @@ export function registerProjectHandlers() {
   ipcMain.handle("load-project-history", handleLoadProjectHistory);
   ipcMain.handle("rename-project", handleRenameProject);
   ipcMain.handle("delete-project", handleDeleteProject);
+  ipcMain.handle("duplicate-project", handleDuplicateProject);
   ipcMain.handle("get-project-thumbnail", handleGetProjectThumbnail);
   ipcMain.handle("extract-icon-font-glyphs", handleExtractIconFontGlyphs);
 }

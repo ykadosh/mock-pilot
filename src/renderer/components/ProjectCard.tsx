@@ -9,7 +9,8 @@ interface ProjectCardProps {
   isHero?: boolean;
   onClick?: () => void;
   onDelete?: () => void;
-  onRename?: () => void;
+  onSettings?: () => void;
+  onDuplicate?: () => void;
 }
 
 interface MenuPosition {
@@ -26,14 +27,14 @@ function MenuItem({ icon, label, tone = "text-slate-300", onClick }: { icon: str
   return <button onClick={onClick} className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs ${tone} hover:bg-slate-700`}><span className="material-symbols-outlined text-base">{icon}</span>{label}</button>;
 }
 
-function ProjectCardMenu({ menuOpen, menuPos, menuRef, onClose, onOpen, onRename, onDelete }: { menuOpen: boolean; menuPos: MenuPosition; menuRef: React.RefObject<HTMLDivElement | null>; onClose: () => void; onOpen?: () => void; onRename?: () => void; onDelete?: () => void; }) {
+function ProjectCardMenu({ menuOpen, menuPos, menuRef, onClose, onSettings, onDuplicate, onDelete }: { menuOpen: boolean; menuPos: MenuPosition; menuRef: React.RefObject<HTMLDivElement | null>; onClose: () => void; onSettings?: () => void; onDuplicate?: () => void; onDelete?: () => void; }) {
   const handleSelect = (action?: () => void) => (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     onClose();
     action?.();
   };
   if (!menuOpen) return null;
-  return createPortal(<div ref={menuRef} className="fixed z-[9999] w-36 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl" style={menuPos}><MenuItem icon="open_in_new" label="Open" onClick={handleSelect(onOpen)} /><MenuItem icon="edit" label="Rename" onClick={handleSelect(onRename)} /><MenuItem icon="delete" label="Delete" tone="text-red-400" onClick={handleSelect(onDelete)} /></div>, document.body);
+  return createPortal(<div ref={menuRef} className="fixed z-[9999] w-36 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl" style={menuPos}><MenuItem icon="settings" label="Settings" onClick={handleSelect(onSettings)} /><MenuItem icon="content_copy" label="Duplicate" onClick={handleSelect(onDuplicate)} /><MenuItem icon="delete" label="Delete" tone="text-red-400" onClick={handleSelect(onDelete)} /></div>, document.body);
 }
 
 function ProjectCardContent({ title, url, imageUrl, lastEdit }: Pick<ProjectCardProps, "title" | "url" | "imageUrl" | "lastEdit">) {
@@ -67,9 +68,9 @@ function useProjectCardMenu() {
   return { menuOpen, menuPos, menuRef, buttonRef, closeMenu: () => setMenuOpen(false), toggleMenu };
 }
 
-export function ProjectCard({ title, url, imageUrl, lastEdit, isHero, onClick, onDelete, onRename }: ProjectCardProps) {
+export function ProjectCard({ title, url, imageUrl, lastEdit, isHero, onClick, onDelete, onSettings, onDuplicate }: ProjectCardProps) {
   const { menuOpen, menuPos, menuRef, buttonRef, closeMenu, toggleMenu } = useProjectCardMenu();
-  return <div onClick={onClick} className={`group bg-surface-container border-outline-variant/30 hover:border-primary/50 relative flex cursor-pointer flex-col overflow-hidden border transition-all ${isHero ? "col-span-1 lg:col-span-2" : ""}`}><button ref={buttonRef} onClick={toggleMenu} className="absolute top-2 right-2 z-10 flex h-7 w-7 cursor-pointer items-center justify-center rounded text-slate-400 opacity-0 transition-colors group-hover:opacity-100 hover:bg-slate-700/80 hover:text-slate-200"><span className="material-symbols-outlined text-lg leading-none">more_vert</span></button><ProjectCardMenu menuOpen={menuOpen} menuPos={menuPos} menuRef={menuRef} onClose={closeMenu} onOpen={onClick} onRename={onRename} onDelete={onDelete} /><ProjectCardContent title={title} url={url} imageUrl={imageUrl} lastEdit={lastEdit} /></div>;
+  return <div onClick={onClick} className={`group bg-surface-container border-outline-variant/30 hover:border-primary/50 relative flex cursor-pointer flex-col overflow-hidden border transition-all ${isHero ? "col-span-1 lg:col-span-2" : ""}`}><button ref={buttonRef} onClick={toggleMenu} className="absolute top-2 right-2 z-10 flex h-7 w-7 cursor-pointer items-center justify-center rounded text-slate-400 opacity-0 transition-colors group-hover:opacity-100 hover:bg-slate-700/80 hover:text-slate-200"><span className="material-symbols-outlined text-lg leading-none">more_vert</span></button><ProjectCardMenu menuOpen={menuOpen} menuPos={menuPos} menuRef={menuRef} onClose={closeMenu} onSettings={onSettings} onDuplicate={onDuplicate} onDelete={onDelete} /><ProjectCardContent title={title} url={url} imageUrl={imageUrl} lastEdit={lastEdit} /></div>;
 }
 
 export { NewProjectCard } from "./NewProjectCard";

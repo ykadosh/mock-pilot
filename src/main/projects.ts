@@ -1,4 +1,5 @@
 import { app } from "electron";
+import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 
@@ -57,6 +58,32 @@ export function getProjectsIndex(): ProjectMeta[] {
 
 export function saveProjectsIndex(projects: ProjectMeta[]) {
   fs.writeFileSync(path.join(projectsDir, "index.json"), JSON.stringify(projects, null, 2));
+}
+
+export function duplicateProject(id: string): { success: boolean; project?: ProjectMeta; error?: string } {
+  const projects = getProjectsIndex();
+  const source = projects.find((entry) => entry.id === id);
+  if (!source) return { success: false, error: "Project not found" };
+  const newId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const newMeta: ProjectMeta = { id: newId, title: `${source.title} (Copy)`, url: source.url, createdAt: now, updatedAt: now };
+  const sourceDir = getProjectDir(id);
+  const destDir = getProjectDir(newId);
+  ensureProjectDir(newId);
+  if (fs.existsSync(sourceDir)) {
+    for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
+      const srcPath = path.join(sourceDir, entry.name);
+      const destPath = path.join(destDir, entry.name);
+      if (entry.isDirectory()) {
+        fs.cpSync(srcPath, destPath, { recursive: true });
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  }
+  projects.unshift(newMeta);
+  saveProjectsIndex(projects);
+  return { success: true, project: newMeta };
 }
 
 function migrateProject(id: string) {
