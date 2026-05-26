@@ -54,6 +54,7 @@ function MessageBubble({ msg }: { msg: ConversationMessage }) {
   const isUser = msg.role === "user";
   const isThinking = msg.type === "thinking";
   const isTool = msg.type === "tool";
+  const isDone = msg.type === "done";
   
   // Determine styling based on message type
   let bgClass = "bg-slate-700/50 text-slate-300";
@@ -67,6 +68,9 @@ function MessageBubble({ msg }: { msg: ConversationMessage }) {
   } else if (isTool) {
     bgClass = "bg-amber-600/20 text-amber-200 border border-amber-600/30";
     icon = "🔧 ";
+  } else if (isDone) {
+    bgClass = "bg-green-600/20 text-green-200 border border-green-600/30";
+    icon = "✓ ";
   }
   
   return (
@@ -75,12 +79,11 @@ function MessageBubble({ msg }: { msg: ConversationMessage }) {
         <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[14px] break-words">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{icon + msg.content}</ReactMarkdown>
         </div>
-        <div className="mt-1 flex items-center justify-between">
-          <span className="text-[10px] text-slate-500">
-            {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </span>
-          {isUser && <CopyButton text={msg.content} />}
-        </div>
+        {isUser && (
+          <div className="mt-1 flex items-center justify-end">
+            <CopyButton text={msg.content} />
+          </div>
+        )}
       </div>
     </div>
   );

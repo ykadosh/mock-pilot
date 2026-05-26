@@ -4,7 +4,7 @@ export interface ConversationMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
-  type?: "message" | "thinking" | "tool";
+  type?: "message" | "thinking" | "tool" | "done";
 }
 
 export function useConversation(projectId?: string) {
@@ -24,7 +24,7 @@ export function useConversation(projectId?: string) {
     window.api.saveProjectConversation(projectId, msgs);
   }, [projectId]);
 
-  const addMessage = useCallback((role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool") => {
+  const addMessage = useCallback((role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => {
     const msg: ConversationMessage = { role, content, timestamp: Date.now(), type };
     setMessages((prev) => {
       const next = [...prev, msg];

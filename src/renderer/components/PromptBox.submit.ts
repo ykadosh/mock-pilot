@@ -11,7 +11,7 @@ interface UsePromptSubmitArgs {
   getElementHTML?: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
   getFullPageHTML?: () => string | null;
   projectAssets?: object;
-  onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool") => void;
+  onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void;
   openChat?: () => void;
 }
 
@@ -54,7 +54,7 @@ async function applyPrompt(args: UsePromptSubmitArgs, trimmedPrompt: string, sta
     return;
   }
   const summary = result.summary || "Changes applied successfully";
-  args.onConversationMessage?.("assistant", `✓ ${summary}`, "message");
+  args.onConversationMessage?.("assistant", summary, "done");
   state.setPrompt("");
   args.setAttachments([]);
 }

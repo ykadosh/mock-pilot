@@ -24,7 +24,7 @@ interface ProgressState {
   setAgentProgress: React.Dispatch<React.SetStateAction<{ toolName?: string; iteration?: number; maxIterations?: number } | null>>;
   setAgentProcessing: (v: boolean) => void;
   lastIterationRef: React.RefObject<number>;
-  onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool") => void;
+  onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void;
 }
 
 function handleProgressEvent(progress: { type: string; toolName?: string; iteration?: number; maxIterations?: number; content?: string }, state: ProgressState) {
@@ -32,6 +32,8 @@ function handleProgressEvent(progress: { type: string; toolName?: string; iterat
   if (progress.type === "thinking" && progress.content) {
     state.onConversationMessage?.("assistant", progress.content, "thinking");
   } else if (progress.type === "tool_start") {
+    // Skip showing the "finish" tool in the conversation
+    if (progress.toolName === "finish") return;
     setAgentProgress((prev) => ({ ...prev, toolName: progress.toolName }));
     setAgentProcessing(true);
     state.onConversationMessage?.("assistant", getToolLabel(progress.toolName), "tool");
@@ -48,7 +50,7 @@ function handleProgressEvent(progress: { type: string; toolName?: string; iterat
   }
 }
 
-export function useAgentProgressListener(onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool") => void) {
+export function useAgentProgressListener(onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void) {
   const [agentProgress, setAgentProgress] = useState<{ toolName?: string; iteration?: number; maxIterations?: number } | null>(null);
   const [agentProcessing, setAgentProcessing] = useState(false);
   const lastIterationRef = useRef(0);
