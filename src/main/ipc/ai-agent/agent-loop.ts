@@ -108,6 +108,7 @@ async function runIteration(iter: IterationContext, iteration: number, maxIterat
     // No tool calls — the model should have called finish. Nudge it.
     const content = response.content || "";
     log("Agent responded without tool calls, nudging:", content.slice(0, 100));
+    if (content) iter.onProgress?.({ type: "thinking", content });
     iter.messages.push({ role: "assistant", content });
     if (iteration < maxIterations) {
       iter.messages.push({ role: "user", content: "You must call the `finish` tool when you are done, or use tools to continue making changes. Do not respond with just text." });
