@@ -50,43 +50,63 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function MessageBubble({ msg }: { msg: ConversationMessage }) {
-  const isUser = msg.role === "user";
-  const isThinking = msg.type === "thinking";
-  const isTool = msg.type === "tool";
-  const isDone = msg.type === "done";
-  
-  // Determine styling based on message type
-  let bgClass = "bg-slate-700/50 text-slate-300";
-  let icon = "";
-  
-  if (isUser) {
-    bgClass = "bg-violet-600/30 text-violet-200";
-  } else if (isThinking) {
-    bgClass = "bg-blue-600/20 text-blue-200 border border-blue-600/30";
-    icon = "💭 ";
-  } else if (isTool) {
-    bgClass = "bg-amber-600/20 text-amber-200 border border-amber-600/30";
-    icon = "🔧 ";
-  } else if (isDone) {
-    bgClass = "bg-green-600/20 text-green-200 border border-green-600/30";
-    icon = "✓ ";
-  }
-  
+function ToolPill({ content }: { content: string }) {
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${bgClass}`}>
-        <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[14px] break-words">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{icon + msg.content}</ReactMarkdown>
-        </div>
-        {isUser && (
-          <div className="mt-1 flex items-center justify-end">
-            <CopyButton text={msg.content} />
-          </div>
-        )}
+    <div className="flex justify-start">
+      <div className="flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800/50 px-2.5 py-1">
+        <span className="material-symbols-outlined text-violet-400" style={{ fontSize: "14px" }}>construction</span>
+        <span className="font-mono text-[11px] text-slate-400">{content}</span>
       </div>
     </div>
   );
+}
+
+function DoneBubble({ content }: { content: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
+      <div className="absolute top-0 left-0 h-full w-1 bg-violet-500"></div>
+      <div className="flex items-start gap-2">
+        <span className="material-symbols-outlined text-violet-400" style={{ fontSize: "18px" }}>task_alt</span>
+        <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 prose-ul:pl-4 max-w-none flex-1 text-[13px] break-words text-slate-300">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UserBubble({ content }: { content: string }) {
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[85%] rounded-lg border border-violet-500/30 bg-slate-800/50 px-3 py-2">
+        <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[13px] break-words text-slate-200">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        </div>
+        <div className="mt-1 flex items-center justify-end">
+          <CopyButton text={content} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssistantBubble({ content }: { content: string }) {
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[90%] rounded-lg border border-slate-700 bg-slate-800/30 px-3 py-2">
+        <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[13px] break-words text-slate-300">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MessageBubble({ msg }: { msg: ConversationMessage }) {
+  if (msg.type === "tool") return <ToolPill content={msg.content} />;
+  if (msg.type === "done") return <DoneBubble content={msg.content} />;
+  if (msg.role === "user") return <UserBubble content={msg.content} />;
+  return <AssistantBubble content={msg.content} />;
 }
 
 export function ConversationPanel({ messages, agentProcessing, awaitingContinue, currentTool, onClose, onContinue }: ConversationPanelProps) {
