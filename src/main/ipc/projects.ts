@@ -17,35 +17,26 @@ type ProjectHistoryData = { entries: { label: string; timestamp: number }[]; poi
 
 function projectFilePath(id: string, filename: string) { return path.join(getProjectDir(id), filename); }
 
-function updateProjectTimestamp(id: string) {
-  const projects = getProjectsIndex();
-  const p = projects.find((e) => e.id === id);
+function updateProjectTimestampAndThumbnail(id: string, event: Electron.IpcMainInvokeEvent) {
+  const projects = getProjectsIndex(), p = projects.find((e) => e.id === id);
   if (p) { p.updatedAt = new Date().toISOString(); p.thumbnailStale = true; saveProjectsIndex(projects); }
+  handleRegenerateProjectThumbnail(event, id).catch(() => { /* Thumbnail generation failed, but update succeeded */ });
 }
 
 function removeSnapshots(id: string, startIndex = 0) {
   for (let i = startIndex; fs.existsSync(projectFilePath(id, `snap.${i}.html`)); i++) fs.unlinkSync(projectFilePath(id, `snap.${i}.html`));
 }
 
-function listProjects() { return getProjectsIndex(); }
-
 async function handleSaveProject(_event: Electron.IpcMainInvokeEvent, data: SaveProjectData) {
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  const meta: ProjectMeta = { id, title: data.title, url: data.url, createdAt: now, updatedAt: now };
+  const id = crypto.randomUUID(), now = new Date().toISOString(), meta: ProjectMeta = { id, title: data.title, url: data.url, createdAt: now, updatedAt: now };
   ensureProjectDir(id);
-  let processedHtml = extractAndSaveAssets(id, data.html);
-  processedHtml = await downloadExternalAssets(id, processedHtml);
+  const processedHtml = await downloadExternalAssets(id, extractAndSaveAssets(id, data.html));
   fs.writeFileSync(projectFilePath(id, "project.html"), processedHtml, "utf-8");
-  if (data.thumbnail) {
-    const base64Data = data.thumbnail.replace(/^data:image\/png;base64,/, "");
-    fs.writeFileSync(projectFilePath(id, "thumbnail.png"), base64Data, "base64");
-  }
+  if (data.thumbnail) fs.writeFileSync(projectFilePath(id, "thumbnail.png"), data.thumbnail.replace(/^data:image\/png;base64,/, ""), "base64");
   const projects = getProjectsIndex();
   projects.unshift(meta);
   saveProjectsIndex(projects);
-  const fontFaceCss = extractFontFaceCss(processedHtml);
-  return { ...meta, fontFaceCss };
+  return { ...meta, fontFaceCss: extractFontFaceCss(processedHtml) };
 }
 
 function handleLoadProject(_event: Electron.IpcMainInvokeEvent, id: string) {
@@ -54,20 +45,18 @@ function handleLoadProject(_event: Electron.IpcMainInvokeEvent, id: string) {
   return { success: true, html: fs.readFileSync(htmlPath, "utf-8"), assetsBasePath: `mp-asset://assets/${id}/` };
 }
 
-function handleUpdateProjectHtml(_event: Electron.IpcMainInvokeEvent, id: string, html: string) {
+async function handleUpdateProjectHtml(_event: Electron.IpcMainInvokeEvent, id: string, html: string) {
   const htmlPath = projectFilePath(id, "project.html");
   if (!fs.existsSync(htmlPath)) return { success: false };
   fs.writeFileSync(htmlPath, extractAndSaveAssets(id, html), "utf-8");
-  updateProjectTimestamp(id);
+  updateProjectTimestampAndThumbnail(id, _event);
   return { success: true };
 }
 
 function handleSaveProjectAssets(_event: Electron.IpcMainInvokeEvent, id: string, assets: ProjectAssets) {
   try {
     ensureProjectDir(id);
-    if (assets.components) {
-      assets.components = (assets.components as { html: string }[]).map((c) => ({ ...c, html: extractAndSaveAssets(id, c.html) }));
-    }
+    if (assets.components) assets.components = (assets.components as { html: string }[]).map((c) => ({ ...c, html: extractAndSaveAssets(id, c.html) }));
     if (assets.componentsCss) assets.componentsCss = extractAndSaveAssets(id, assets.componentsCss);
     fs.writeFileSync(projectFilePath(id, "assets.json"), JSON.stringify(assets, null, 2), "utf-8");
     return { success: true };
@@ -79,8 +68,9 @@ function handleSaveProjectAssets(_event: Electron.IpcMainInvokeEvent, id: string
 function handleLoadProjectAssets(_event: Electron.IpcMainInvokeEvent, id: string) {
   try {
     const assetsPath = projectFilePath(id, "assets.json");
-    if (!fs.existsSync(assetsPath)) return { success: true, assets: { typography: [], colors: [] } };
-    return { success: true, assets: JSON.parse(fs.readFileSync(assetsPath, "utf-8")) };
+    return fs.existsSync(assetsPath) 
+      ? { success: true, assets: JSON.parse(fs.readFileSync(assetsPath, "utf-8")) }
+      : { success: true, assets: { typography: [], colors: [] } };
   } catch (error) {
     return { success: false, error: String(error) };
   }
@@ -90,9 +80,7 @@ function handleSaveProjectHistory(_event: Electron.IpcMainInvokeEvent, id: strin
   try {
     ensureProjectDir(id);
     fs.writeFileSync(projectFilePath(id, "history.json"), JSON.stringify({ entries: data.entries, pointer: data.pointer }), "utf-8");
-    for (let index = 0; index < data.htmlSnapshots.length; index += 1) {
-      fs.writeFileSync(projectFilePath(id, `snap.${index}.html`), extractAndSaveAssets(id, data.htmlSnapshots[index]), "utf-8");
-    }
+    for (let index = 0; index < data.htmlSnapshots.length; index += 1) fs.writeFileSync(projectFilePath(id, `snap.${index}.html`), extractAndSaveAssets(id, data.htmlSnapshots[index]), "utf-8");
     removeSnapshots(id, data.htmlSnapshots.length);
     return { success: true };
   } catch {
@@ -117,8 +105,7 @@ function handleLoadProjectHistory(_event: Electron.IpcMainInvokeEvent, id: strin
 }
 
 function handleRenameProject(_event: Electron.IpcMainInvokeEvent, id: string, newTitle: string) {
-  const projects = getProjectsIndex();
-  const project = projects.find((entry) => entry.id === id);
+  const projects = getProjectsIndex(), project = projects.find((entry) => entry.id === id);
   if (!project) return { success: false };
   project.title = newTitle;
   project.updatedAt = new Date().toISOString();
@@ -133,26 +120,21 @@ function handleDeleteProject(_event: Electron.IpcMainInvokeEvent, id: string) {
   return { success: true };
 }
 
-function handleDuplicateProject(_event: Electron.IpcMainInvokeEvent, id: string) {
-  return duplicateProject(id);
-}
-
 function handleGetProjectThumbnail(_event: Electron.IpcMainInvokeEvent, id: string) {
   const p = projectFilePath(id, "thumbnail.png");
   return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p, "base64")}` : null;
 }
 
-async function handleExtractIconFontGlyphs(_event: Electron.IpcMainInvokeEvent, id: string) {
+function handleExtractIconFontGlyphs(_event: Electron.IpcMainInvokeEvent, id: string) {
   try {
-    const results = await extractProjectIconFontGlyphs(getProjectDir(id));
-    return { success: true, fonts: results };
+    return extractProjectIconFontGlyphs(getProjectDir(id)).then((fonts) => ({ success: true, fonts }));
   } catch (err) {
     return { success: false, error: String(err) };
   }
 }
 
 export function registerProjectHandlers() {
-  ipcMain.handle("list-projects", listProjects);
+  ipcMain.handle("list-projects", () => getProjectsIndex());
   ipcMain.handle("save-project", handleSaveProject);
   ipcMain.handle("load-project", handleLoadProject);
   ipcMain.handle("update-project-html", handleUpdateProjectHtml);
@@ -162,7 +144,7 @@ export function registerProjectHandlers() {
   ipcMain.handle("load-project-history", handleLoadProjectHistory);
   ipcMain.handle("rename-project", handleRenameProject);
   ipcMain.handle("delete-project", handleDeleteProject);
-  ipcMain.handle("duplicate-project", handleDuplicateProject);
+  ipcMain.handle("duplicate-project", (_e, id: string) => duplicateProject(id));
   ipcMain.handle("get-project-thumbnail", handleGetProjectThumbnail);
   ipcMain.handle("regenerate-project-thumbnail", handleRegenerateProjectThumbnail);
   ipcMain.handle("extract-icon-font-glyphs", handleExtractIconFontGlyphs);
