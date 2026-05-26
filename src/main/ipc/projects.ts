@@ -9,6 +9,7 @@ import type { ProjectMeta } from "../projects";
 import { ensureProjectDir, getProjectDir, getProjectsIndex, saveProjectsIndex, duplicateProject } from "../projects";
 import { extractFontFaceCss } from "./FontFaceUtils";
 import { extractProjectIconFontGlyphs } from "./FontGlyphUtils";
+import { handleRegenerateProjectThumbnail } from "./thumbnail";
 
 type SaveProjectData = { url: string; title: string; html: string; thumbnail?: string };
 type ProjectAssets = { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] }; components?: unknown[]; componentsCss?: string };
@@ -19,7 +20,7 @@ function projectFilePath(id: string, filename: string) { return path.join(getPro
 function updateProjectTimestamp(id: string) {
   const projects = getProjectsIndex();
   const p = projects.find((e) => e.id === id);
-  if (p) { p.updatedAt = new Date().toISOString(); saveProjectsIndex(projects); }
+  if (p) { p.updatedAt = new Date().toISOString(); p.thumbnailStale = true; saveProjectsIndex(projects); }
 }
 
 function removeSnapshots(id: string, startIndex = 0) {
@@ -163,5 +164,6 @@ export function registerProjectHandlers() {
   ipcMain.handle("delete-project", handleDeleteProject);
   ipcMain.handle("duplicate-project", handleDuplicateProject);
   ipcMain.handle("get-project-thumbnail", handleGetProjectThumbnail);
+  ipcMain.handle("regenerate-project-thumbnail", handleRegenerateProjectThumbnail);
   ipcMain.handle("extract-icon-font-glyphs", handleExtractIconFontGlyphs);
 }

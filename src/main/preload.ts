@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld("api", {
   deleteProject: (id: string) => ipcRenderer.invoke("delete-project", id),
   duplicateProject: (id: string) => ipcRenderer.invoke("duplicate-project", id),
   getProjectThumbnail: (id: string) => ipcRenderer.invoke("get-project-thumbnail", id),
+  regenerateProjectThumbnail: (id: string) => ipcRenderer.invoke("regenerate-project-thumbnail", id),
   aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) =>
     ipcRenderer.invoke("ai-modify-element", data),
   aiModifyPage: (data: { prompt: string; fullHTML: string; images?: { name: string; dataUrl: string }[] }) =>

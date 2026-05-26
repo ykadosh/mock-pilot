@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useImperativeHandle, forwardRef } from "react";
 
 import { type AvailableFonts, getWeightLabel } from "./fontFaceParser";
 
@@ -8,7 +8,10 @@ interface TypographyFormProps {
   initial?: TypographyFormValues;
   availableFonts: AvailableFonts;
   onSave: (values: TypographyFormValues) => void;
-  onCancel: () => void;
+}
+
+export interface TypographyFormRef {
+  submit: () => void;
 }
 
 const DEFAULT_VALUES: TypographyFormValues = {
@@ -22,7 +25,10 @@ const DEFAULT_VALUES: TypographyFormValues = {
   textTransform: "none",
 };
 
-export function TypographyForm({ initial, availableFonts, onSave, onCancel }: TypographyFormProps) {
+export const TypographyForm = forwardRef<TypographyFormRef, TypographyFormProps>(function TypographyForm(
+  { initial, availableFonts, onSave },
+  ref
+) {
   const [values, setValues] = useState<TypographyFormValues>(() => getInitialValues(initial, availableFonts));
 
   const fontFamilyOptions = useMemo(() => [...availableFonts.textFonts.keys()], [availableFonts]);
@@ -44,14 +50,13 @@ export function TypographyForm({ initial, availableFonts, onSave, onCancel }: Ty
     });
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSave(values);
-  };
+  useImperativeHandle(ref, () => ({
+    submit: () => onSave(values),
+  }));
 
   return (
-    <form onSubmit={handleSubmit} className="border-outline/20 bg-surface mb-3 space-y-3 rounded-lg border p-4">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
         <TextFormField label="Label" value={values.label} onChange={(v) => handleChange("label", v)} />
         <SelectFormField label="Font Family" value={values.fontFamily} options={fontFamilyOptions} onChange={(v) => handleChange("fontFamily", v)} />
         <TextFormField label="Font Size" value={values.fontSize} onChange={(v) => handleChange("fontSize", v)} />
@@ -61,10 +66,10 @@ export function TypographyForm({ initial, availableFonts, onSave, onCancel }: Ty
         <TextFormField label="Letter Spacing" value={values.letterSpacing} onChange={(v) => handleChange("letterSpacing", v)} />
         <SelectFormField label="Text Transform" value={values.textTransform} options={["none", "uppercase", "lowercase", "capitalize"]} onChange={(v) => handleChange("textTransform", v)} />
       </div>
-      <TypographyFormActions onCancel={onCancel} />
-    </form>
+      <TypographyFormPreview values={values} />
+    </div>
   );
-}
+});
 
 function getInitialValues(initial: TypographyFormValues | undefined, availableFonts: AvailableFonts): TypographyFormValues {
   const merged = { ...DEFAULT_VALUES, ...initial };
@@ -74,14 +79,35 @@ function getInitialValues(initial: TypographyFormValues | undefined, availableFo
   return merged;
 }
 
+function TypographyFormPreview({ values }: { values: TypographyFormValues }) {
+  const previewStyle = {
+    fontFamily: values.fontFamily,
+    fontSize: values.fontSize,
+    fontWeight: values.fontWeight,
+    fontStyle: values.fontStyle,
+    lineHeight: values.lineHeight,
+    letterSpacing: values.letterSpacing,
+    textTransform: values.textTransform as React.CSSProperties["textTransform"],
+  };
+
+  return (
+    <div className="border-outline/20 bg-surface-variant/30 rounded-lg border p-4">
+      <p className="text-ui-small text-outline mb-2">Preview</p>
+      <p className="text-on-surface" style={previewStyle}>
+        The quick brown fox jumps over the lazy dog
+      </p>
+    </div>
+  );
+}
+
 function TextFormField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="text-ui-small text-outline mb-1 block">{label}</label>
+      <label className="font-ui-small text-ui-small text-on-surface-variant mb-1.5 block font-medium">{label}</label>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1"
+        className="border-outline-variant bg-surface text-on-surface text-ui-small focus:border-primary w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none"
       />
     </div>
   );
@@ -105,11 +131,11 @@ function SelectFormField({
 
   return (
     <div>
-      <label className="text-ui-small text-outline mb-1 block">{label}</label>
+      <label className="font-ui-small text-ui-small text-on-surface-variant mb-1.5 block font-medium">{label}</label>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="border-outline/30 bg-background text-on-surface text-ui-small w-full rounded border px-2 py-1"
+        className="border-outline-variant bg-surface text-on-surface text-ui-small focus:border-primary w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none"
       >
         {allOptions.map((option) => (
           <option key={option} value={option}>
@@ -121,22 +147,3 @@ function SelectFormField({
   );
 }
 
-function TypographyFormActions({ onCancel }: { onCancel: () => void }) {
-  return (
-    <div className="flex justify-end gap-2">
-      <button
-        type="button"
-        onClick={onCancel}
-        className="text-ui-small text-outline hover:text-on-surface px-3 py-1.5"
-      >
-        Cancel
-      </button>
-      <button
-        type="submit"
-        className="bg-primary text-on-primary text-ui-small rounded px-3 py-1.5 font-medium hover:opacity-90"
-      >
-        Save
-      </button>
-    </div>
-  );
-}

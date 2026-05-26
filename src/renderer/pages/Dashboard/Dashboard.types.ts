@@ -5,4 +5,5 @@ export interface SavedProject {
   createdAt: string;
   updatedAt: string;
   thumbnail?: string;
+  thumbnailStale?: boolean;
 }

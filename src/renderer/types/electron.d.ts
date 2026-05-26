@@ -7,6 +7,7 @@ interface ProjectMeta {
   url: string;
   createdAt: string;
   updatedAt: string;
+  thumbnailStale?: boolean;
 }
 
 interface TypographyAsset {
@@ -86,6 +87,7 @@ declare global {
       deleteProject: (id: string) => Promise<{ success: boolean }>;
       duplicateProject: (id: string) => Promise<{ success: boolean; project?: ProjectMeta }>;
       getProjectThumbnail: (id: string) => Promise<string | null>;
+      regenerateProjectThumbnail: (id: string) => Promise<{ success: boolean; thumbnail?: string; error?: string }>;
       aiModifyElement: (data: { prompt: string; outerHTML: string; computedStyle: Record<string, string> }) => Promise<{
         success: boolean;
         html?: string;

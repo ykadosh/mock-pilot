@@ -1,4 +1,7 @@
-import { ColorForm } from "./ColorForm";
+import { useRef } from "react";
+
+import { Drawer } from "../../components/ui/Drawer";
+import { ColorForm, type ColorFormRef } from "./ColorForm";
 import { PaletteGrid } from "./PaletteGrid";
 
 interface ColorAsset {
@@ -19,19 +22,57 @@ interface PalettePageContentProps {
 }
 
 export function PalettePageContent(props: PalettePageContentProps) {
+  const addFormRef = useRef<ColorFormRef>(null);
+  const editFormRef = useRef<ColorFormRef>(null);
+
+  const editingColor = props.colors.find((c) => c.id === props.editingId);
+
   return (
     <div className="mx-auto max-w-5xl">
       <PaletteHeader onAdd={() => props.onToggleAddForm(true)} />
-      {props.showAddForm && <ColorForm onSave={props.onAdd} onCancel={() => props.onToggleAddForm(false)} />}
       {!props.showAddForm && props.colors.length === 0 && <EmptyPaletteState />}
-      <PaletteGrid
-        colors={props.colors}
-        editingId={props.editingId}
-        onDelete={props.onDelete}
-        onEdit={props.onEdit}
+      <PaletteGrid colors={props.colors} onDelete={props.onDelete} onEdit={props.onEdit} />
+      <AddColorDrawer
+        open={props.showAddForm}
+        formRef={addFormRef}
+        onClose={() => props.onToggleAddForm(false)}
+        onSave={props.onAdd}
+      />
+      <EditColorDrawer
+        open={!!editingColor}
+        formRef={editFormRef}
+        color={editingColor}
+        onClose={() => props.onEdit(null)}
         onSave={props.onSave}
       />
     </div>
+  );
+}
+
+function AddColorDrawer({ open, formRef, onClose, onSave }: {
+  open: boolean;
+  formRef: React.RefObject<ColorFormRef>;
+  onClose: () => void;
+  onSave: (values: Omit<ColorAsset, "id">) => void;
+}) {
+  return (
+    <Drawer open={open} onClose={onClose} icon="palette" title="Add Color" confirmLabel="Add Color" onConfirm={() => formRef.current?.submit()}>
+      <ColorForm ref={formRef} onSave={onSave} />
+    </Drawer>
+  );
+}
+
+function EditColorDrawer({ open, formRef, color, onClose, onSave }: {
+  open: boolean;
+  formRef: React.RefObject<ColorFormRef>;
+  color: ColorAsset | undefined;
+  onClose: () => void;
+  onSave: (item: ColorAsset) => void;
+}) {
+  return (
+    <Drawer open={open} onClose={onClose} icon="palette" title="Edit Color" confirmLabel="Save Changes" onConfirm={() => formRef.current?.submit()}>
+      {color && <ColorForm ref={formRef} initial={color} onSave={(values) => onSave({ ...values, id: color.id })} />}
+    </Drawer>
   );
 }
 

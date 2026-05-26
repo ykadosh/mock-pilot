@@ -44,6 +44,7 @@ export interface ProjectMeta {
   url: string;
   createdAt: string;
   updatedAt: string;
+  thumbnailStale?: boolean;
 }
 
 export function getProjectsIndex(): ProjectMeta[] {

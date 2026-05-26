@@ -23,4 +23,16 @@ async function loadProjects(setSavedProjects: Dispatch<SetStateAction<SavedProje
 
   withThumbnails.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   setSavedProjects(withThumbnails);
+
+  // Regenerate stale thumbnails in the background
+  const staleProjects = withThumbnails.filter((p) => p.thumbnailStale);
+  for (const project of staleProjects) {
+    window.api.regenerateProjectThumbnail(project.id).then((result) => {
+      if (result?.success && result.thumbnail) {
+        setSavedProjects((prev) =>
+          prev.map((p) => (p.id === project.id ? { ...p, thumbnail: result.thumbnail, thumbnailStale: false } : p))
+        );
+      }
+    });
+  }
 }
