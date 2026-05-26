@@ -17,20 +17,12 @@ export function RenameProjectDialog({
   onSubmit,
 }: RenameProjectDialogProps) {
   return (
-    <Dialog open={!!project} onClose={onClose}>
-      <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">Rename Project</h2>
-      <input
-        type="text"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Project name"
-        className="bg-surface-container-lowest border-outline-variant/50 px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:border-primary mb-sm w-full rounded-lg border transition-colors focus:outline-none"
-        autoFocus
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && value.trim()) onSubmit();
-        }}
-      />
-      <div className="mt-md flex justify-end">
+    <Dialog
+      open={!!project}
+      onClose={onClose}
+      icon="edit"
+      title="Rename Project"
+      footer={
         <button
           onClick={onSubmit}
           disabled={!value.trim()}
@@ -38,7 +30,19 @@ export function RenameProjectDialog({
         >
           Rename
         </button>
-      </div>
+      }
+    >
+      <input
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Project name"
+        className="bg-surface-container-lowest border-outline-variant/50 px-md py-sm text-body-main text-on-surface placeholder-on-surface-variant/40 focus:border-primary w-full rounded-lg border transition-colors focus:outline-none"
+        autoFocus
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && value.trim()) onSubmit();
+        }}
+      />
     </Dialog>
   );
 }
