@@ -9,6 +9,10 @@ export interface ToolContext {
   projectAssets?: ProjectAssets;
   /** Abort signal for cancellation */
   signal?: AbortSignal;
+  /** Stack of HTML snapshots for undo support */
+  snapshots: string[];
+  /** Push a snapshot of the current state before a mutation */
+  pushSnapshot: () => void;
 }
 
 export interface ProjectAssets {

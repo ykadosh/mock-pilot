@@ -36,10 +36,23 @@ export interface AgentLoopResult {
   messages?: AgentMessage[];
 }
 
+const FINISH_PREFIX = "__FINISH__:";
+
 function createContext(fullHTML: string, projectAssets?: ProjectAssets, signal?: AbortSignal): ToolContext {
   const $ = cheerio.load(fullHTML);
-  return { $, getHtml: () => $.html(), projectAssets, signal };
+  const snapshots: string[] = [];
+  return {
+    $,
+    getHtml: () => $.html(),
+    projectAssets,
+    signal,
+    snapshots,
+    pushSnapshot: () => { snapshots.push($.html()); },
+  };
 }
+
+// Tools that mutate the DOM — we snapshot before executing these
+const MUTATION_TOOLS = new Set(["editHtml", "editInnerHtml", "editCss", "editText", "editAttribute", "addElement", "removeElement"]);
 
 interface ProcessToolCallsArgs {
   toolCalls: ToolCall[];
@@ -49,13 +62,31 @@ interface ProcessToolCallsArgs {
   signal?: AbortSignal;
 }
 
-async function processToolCalls(args: ProcessToolCallsArgs) {
+interface ProcessToolCallsResult {
+  cancelled: boolean;
+  finishSummary?: string;
+}
+
+async function processToolCalls(args: ProcessToolCallsArgs): Promise<ProcessToolCallsResult> {
   for (const toolCall of args.toolCalls) {
-    if (args.signal?.aborted) return false;
+    if (args.signal?.aborted) return { cancelled: true };
+
+    const toolName = toolCall.function.name;
+
+    // Snapshot before mutation tools
+    if (MUTATION_TOOLS.has(toolName)) {
+      args.context.pushSnapshot();
+    }
+
     const result = await executeToolCall(toolCall, args.context, args.onProgress);
     args.messages.push({ role: "tool", tool_call_id: toolCall.id, content: result });
+
+    // Check if this was the finish tool
+    if (toolName === "finish" && result.startsWith(FINISH_PREFIX)) {
+      return { cancelled: false, finishSummary: result.slice(FINISH_PREFIX.length) };
+    }
   }
-  return true;
+  return { cancelled: false };
 }
 
 interface IterationContext {
@@ -68,46 +99,37 @@ interface IterationContext {
   onProgress?: (p: AgentProgress) => void;
 }
 
-const INTERMEDIATE_PATTERNS = /\b(let me|i'll|i will|i need to|i'm going to|first,? i|now i|next,? i|now remove|now add|now edit|now update|now change|now replace|now delete|now modify|now create|now insert|now move|now set|now apply|now fix|now wrap|now look)\b|:\s*$/i;
-
-function looksLikeIntermediateThought(content: string): boolean {
-  if (!content || content.length < 10) return false;
-  // Check explicit patterns
-  if (INTERMEDIATE_PATTERNS.test(content)) return true;
-  // If it does NOT contain past-tense completion language, it's likely intermediate
-  const completionPatterns = /\b(done|complete|finished|applied|modified|updated|changed|removed|added|created|here'?s (a |the )?summary|successfully|all (changes|modifications))\b/i;
-  return !completionPatterns.test(content);
-}
-
 async function runIteration(iter: IterationContext, iteration: number, maxIterations: number): Promise<AgentLoopResult | null> {
   log(`--- Iteration ${iteration}/${maxIterations} ---`);
   iter.onProgress?.({ type: "iteration", iteration, maxIterations });
   const response = await requestAgentChatCompletion({ messages: iter.messages, tools: iter.toolSchemas, aiModel: iter.aiModel, apiToken: iter.apiToken, signal: iter.signal });
 
   if (!response.tool_calls || response.tool_calls.length === 0) {
+    // No tool calls — the model should have called finish. Nudge it.
     const content = response.content || "";
-    // If the response looks like an intermediate thought rather than a summary, nudge the agent to act
-    if (looksLikeIntermediateThought(content)) {
-      if (iteration < maxIterations) {
-        log("Agent returned intermediate thought, nudging to continue:", content.slice(0, 100));
-        iter.messages.push({ role: "assistant", content });
-        iter.messages.push({ role: "user", content: "Please continue and use the available tools to make the changes you described. Do not just describe what you plan to do — actually do it." });
-        return null;
-      }
-      // On last iteration with intermediate thought — treat as max iterations reached
-      log("Agent returned intermediate thought on final iteration:", content.slice(0, 100));
-      iter.messages.push({ role: "assistant", content });
-      return { success: true, html: iter.context.getHtml(), summary: "Reached maximum iterations.", iterations: iteration, maxIterationsReached: true, messages: iter.messages };
+    log("Agent responded without tool calls, nudging:", content.slice(0, 100));
+    iter.messages.push({ role: "assistant", content });
+    if (iteration < maxIterations) {
+      iter.messages.push({ role: "user", content: "You must call the `finish` tool when you are done, or use tools to continue making changes. Do not respond with just text." });
+      return null;
     }
-    log("Agent finished (no tool calls). Summary:", content.slice(0, 200));
-    return { success: true, html: iter.context.getHtml(), summary: content || "Modifications complete.", iterations: iteration };
+    // Final iteration — treat as done with whatever we have
+    return { success: true, html: iter.context.getHtml(), summary: content || "Reached maximum iterations.", iterations: iteration, maxIterationsReached: true, messages: iter.messages };
   }
 
   log(`Agent requested ${response.tool_calls.length} tool call(s):`, response.tool_calls.map(tc => tc.function.name).join(", "));
   if (response.content) iter.onProgress?.({ type: "thinking", content: response.content });
   iter.messages.push({ role: "assistant", content: response.content || undefined, tool_calls: response.tool_calls });
-  const ok = await processToolCalls({ toolCalls: response.tool_calls, messages: iter.messages, context: iter.context, onProgress: iter.onProgress, signal: iter.signal });
-  if (!ok) return { success: false, error: "Cancelled", iterations: iteration };
+
+  const result = await processToolCalls({ toolCalls: response.tool_calls, messages: iter.messages, context: iter.context, onProgress: iter.onProgress, signal: iter.signal });
+
+  if (result.cancelled) return { success: false, error: "Cancelled", iterations: iteration };
+
+  if (result.finishSummary !== undefined) {
+    log("Agent called finish. Summary:", result.finishSummary.slice(0, 200));
+    return { success: true, html: iter.context.getHtml(), summary: result.finishSummary, iterations: iteration };
+  }
+
   return null;
 }
 
@@ -190,7 +212,7 @@ async function executeToolCall(toolCall: ToolCall, context: ToolContext, onProgr
 
   const executor = getToolExecutor(name);
   if (!executor) {
-    const result = `Unknown tool: "${name}". Available tools: searchHtml, searchCss, getElementInfo, editHtml, editCss, addElement, removeElement, takeScreenshot, listFonts, listComponents, listIcons, getDesignTokens.`;
+    const result = `Unknown tool: "${name}". Available tools: searchHtml, searchCss, getElementInfo, editHtml, editInnerHtml, editCss, editText, editAttribute, addElement, removeElement, undo, takeScreenshot, listFonts, listComponents, listIcons, getDesignTokens, finish.`;
     log(`  Result: ${result}`);
     onProgress?.({ type: "tool_end", toolName: name, result });
     return result;

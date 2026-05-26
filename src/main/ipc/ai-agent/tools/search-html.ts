@@ -5,7 +5,7 @@ export const searchHtml: ToolDefinition = {
     type: "function",
     function: {
       name: "searchHtml",
-      description: "Search the HTML document by CSS selector or text content. Returns matching elements with their outerHTML (truncated if too long). Use this to explore the page structure and find elements to modify.",
+      description: "Search the HTML document by CSS selector or text content. Returns matching elements with their outerHTML. If a single result exceeds 10,000 characters, you'll be advised to use a more specific selector to drill down.",
       parameters: {
         type: "object",
         properties: {
@@ -38,9 +38,16 @@ export const searchHtml: ToolDefinition = {
       const results: string[] = [];
       elements.slice(0, limit).each(function () {
         const el = context.$(this);
-        let html = context.$.html(el) || "";
-        if (html.length > 500) html = html.slice(0, 500) + "... (truncated)";
-        results.push(html);
+        const html = context.$.html(el) || "";
+        if (html.length > 10000) {
+          const childCount = el.children().length;
+          const tag = (el.prop("tagName") || "").toLowerCase();
+          const id = el.attr("id") ? `#${el.attr("id")}` : "";
+          const cls = el.attr("class") ? `.${el.attr("class")!.split(/\s+/).join(".")}` : "";
+          results.push(`[LARGE ELEMENT: <${tag}${id}${cls}> — ${html.length} chars, ${childCount} children. Use a more specific selector to inspect its children individually, or use getElementInfo for a structural overview.]`);
+        } else {
+          results.push(html);
+        }
       });
 
       const header = `Found ${total} element(s) matching "${selector}"${text ? ` with text "${text}"` : ""}. Showing ${Math.min(total, limit)}:\n`;

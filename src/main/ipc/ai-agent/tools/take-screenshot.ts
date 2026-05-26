@@ -10,11 +10,35 @@ async function getPuppeteer(): Promise<PuppeteerModule> {
   return pup;
 }
 
-async function captureElement(page: puppeteer.Page, selector: string): Promise<string> {
+interface ScreenshotResult {
+  buffer: string;
+  width: number;
+  height: number;
+}
+
+interface CaptureOptions {
+  page: puppeteer.Page;
+  selector: string | undefined;
+  viewportWidth: number;
+  viewportHeight: number;
+}
+
+async function captureScreenshot({ page, selector, viewportWidth, viewportHeight }: CaptureOptions): Promise<ScreenshotResult | string> {
+  if (!selector) {
+    const buffer = await page.screenshot({ encoding: "base64", fullPage: false }) as string;
+    return { buffer, width: viewportWidth, height: viewportHeight };
+  }
+
   const element = await page.$(selector);
   if (!element) return `Element "${selector}" not found for screenshot.`;
-  const buffer = await element.screenshot({ encoding: "base64" });
-  return `data:image/png;base64,${buffer as string}`;
+
+  const box = await element.boundingBox();
+  const buffer = await element.screenshot({ encoding: "base64" }) as string;
+  return {
+    buffer,
+    width: box ? Math.round(box.width) : viewportWidth,
+    height: box ? Math.round(box.height) : viewportHeight,
+  };
 }
 
 export const takeScreenshot: ToolDefinition = {
@@ -22,7 +46,7 @@ export const takeScreenshot: ToolDefinition = {
     type: "function",
     function: {
       name: "takeScreenshot",
-      description: "Take a screenshot of the current page state. Returns a base64-encoded image. Use this to visually verify your changes look correct.",
+      description: "Take a screenshot of the current page state. Returns a base64-encoded image along with metadata (dimensions, byte size) for comparison. Use this to visually verify your changes look correct.",
       parameters: {
         type: "object",
         properties: {
@@ -49,9 +73,12 @@ export const takeScreenshot: ToolDefinition = {
         await page.setViewport({ width, height });
         await page.setContent(context.getHtml(), { waitUntil: "domcontentloaded", timeout: 10000 });
 
-        if (selector) return await captureElement(page, selector);
-        const buffer = await page.screenshot({ encoding: "base64", fullPage: false });
-        return `data:image/png;base64,${buffer as string}`;
+        const result = await captureScreenshot({ page, selector, viewportWidth: width, viewportHeight: height });
+        if (typeof result === "string") return result;
+
+        const byteSize = Math.round(result.buffer.length * 3 / 4);
+        const metadata = `[Screenshot: ${result.width}x${result.height}px, ${byteSize} bytes]`;
+        return `${metadata}\ndata:image/png;base64,${result.buffer}`;
       } finally {
         await browser.close();
       }

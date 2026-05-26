@@ -46,8 +46,8 @@ export const getElementInfo: ToolDefinition = {
         attributes: el.attr() || {},
         childrenCount: el.children().length,
         children: children.slice(0, 20),
-        directText: directText.slice(0, 200) || "(none)",
-        fullText: el.text().trim().slice(0, 300),
+        directText: directText || "(none)",
+        fullText: el.text().trim().slice(0, 10000) || "(none)",
         matchCount: elements.length,
       };
 

@@ -3,28 +3,38 @@ import { searchHtml } from "./search-html";
 import { searchCss } from "./search-css";
 import { getElementInfo } from "./get-element-info";
 import { editHtml } from "./edit-html";
+import { editInnerHtml } from "./edit-inner-html";
 import { editCss } from "./edit-css";
+import { editText } from "./edit-text";
+import { editAttribute } from "./edit-attribute";
 import { addElement } from "./add-element";
 import { removeElement } from "./remove-element";
+import { undo } from "./undo";
 import { takeScreenshot } from "./take-screenshot";
 import { listFonts } from "./list-fonts";
 import { listComponents } from "./list-components";
 import { listIcons } from "./list-icons";
 import { getDesignTokens } from "./get-design-tokens";
+import { finish } from "./finish";
 
 const allTools: ToolDefinition[] = [
   searchHtml,
   searchCss,
   getElementInfo,
   editHtml,
+  editInnerHtml,
   editCss,
+  editText,
+  editAttribute,
   addElement,
   removeElement,
+  undo,
   takeScreenshot,
   listFonts,
   listComponents,
   listIcons,
   getDesignTokens,
+  finish,
 ];
 
 const toolMap = new Map<string, ToolDefinition>(
