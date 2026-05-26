@@ -11,7 +11,7 @@ interface UsePromptSubmitArgs {
   getElementHTML?: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
   getFullPageHTML?: () => string | null;
   projectAssets?: object;
-  onConversationMessage?: (role: "user" | "assistant", content: string) => void;
+  onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool") => void;
   openChat?: () => void;
 }
 
@@ -47,14 +47,14 @@ async function applyPrompt(args: UsePromptSubmitArgs, trimmedPrompt: string, sta
     return;
   }
   if (result.maxIterationsReached) {
-    args.onConversationMessage?.("assistant", "⚠️ Reached the maximum number of iterations. The changes made so far have been applied. Would you like to continue?");
+    args.onConversationMessage?.("assistant", "⚠️ Reached the maximum number of iterations. The changes made so far have been applied. Would you like to continue?", "message");
     state.setAwaitingContinue(true);
     state.setPrompt(trimmedPrompt);
     args.setAttachments([]);
     return;
   }
   const summary = result.summary || "Changes applied successfully";
-  args.onConversationMessage?.("assistant", `✓ ${summary}`);
+  args.onConversationMessage?.("assistant", `✓ ${summary}`, "message");
   state.setPrompt("");
   args.setAttachments([]);
 }
@@ -63,7 +63,7 @@ async function runPromptFlow(args: UsePromptSubmitArgs, trimmedPrompt: string, s
   state.setAwaitingContinue(false);
   state.setLoading(true);
   state.clearProgress();
-  args.onConversationMessage?.("user", state.displayMessage || trimmedPrompt);
+  args.onConversationMessage?.("user", state.displayMessage || trimmedPrompt, "message");
   try {
     await applyPrompt(args, trimmedPrompt, state);
   } catch (e: unknown) {

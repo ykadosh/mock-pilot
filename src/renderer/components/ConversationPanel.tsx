@@ -52,11 +52,28 @@ function CopyButton({ text }: { text: string }) {
 
 function MessageBubble({ msg }: { msg: ConversationMessage }) {
   const isUser = msg.role === "user";
+  const isThinking = msg.type === "thinking";
+  const isTool = msg.type === "tool";
+  
+  // Determine styling based on message type
+  let bgClass = "bg-slate-700/50 text-slate-300";
+  let icon = "";
+  
+  if (isUser) {
+    bgClass = "bg-violet-600/30 text-violet-200";
+  } else if (isThinking) {
+    bgClass = "bg-blue-600/20 text-blue-200 border border-blue-600/30";
+    icon = "💭 ";
+  } else if (isTool) {
+    bgClass = "bg-amber-600/20 text-amber-200 border border-amber-600/30";
+    icon = "🔧 ";
+  }
+  
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${isUser ? "bg-violet-600/30 text-violet-200" : "bg-slate-700/50 text-slate-300"}`}>
+      <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${bgClass}`}>
         <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[14px] break-words">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{icon + msg.content}</ReactMarkdown>
         </div>
         <div className="mt-1 flex items-center justify-between">
           <span className="text-[10px] text-slate-500">
