@@ -1,4 +1,4 @@
-import { forwardRef, useRef } from "react";
+import { forwardRef, useEffect, useRef } from "react";
 import { useCanvasPreviewHandle, useCanvasHtml, useIframeSetup } from "./CanvasPreview.hooks";
 import { usePanMode, useRectSelection } from "./CanvasPreview.interactionHooks";
 import { CanvasPreviewSurface } from "./CanvasPreviewSurface";
@@ -28,6 +28,13 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   const scale = zoom / 100;
   const isPanning = usePanMode(scrollContainerRef, panActive);
   const selectionRect = useRectSelection({ iframeRef, rectSelectorActive, scale, scrollContainerRef });
+
+  useEffect(() => {
+    if (!html) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ left: 220, top: 220 });
+  }, [_projectId, html]);
 
   return <CanvasPreviewSurface assetsBasePath={assetsBasePath} html={html} iframeHeight={iframeHeight} iframeRef={iframeRef} isPanning={isPanning} onElementDeselected={onElementDeselected} onLoad={handleIframeLoad} panActive={panActive} pickerActive={pickerActive} rectSelectorActive={rectSelectorActive} scale={scale} scrollContainerRef={scrollContainerRef} selectedMpId={selectedMpId} selectedRect={selectedRect} selectedSelector={selectedSelector} selectionRect={selectionRect} viewportWidth={viewportWidth} />;
 });
