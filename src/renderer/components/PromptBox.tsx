@@ -83,7 +83,7 @@ function PromptInput({ handleApply, handleCancel, handleFileSelect, handlePaste,
 function ReadOnlyPromptBox({ onStartNewConversation }: { onStartNewConversation?: () => void }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-70 flex justify-center px-4">
-      <div className="pointer-events-auto w-full max-w-2xl rounded-2xl border border-slate-700/40 bg-[rgba(15,23,42,0.5)] p-3 shadow-2xl backdrop-blur-lg">
+      <div className="pointer-events-auto w-full max-w-2xl rounded-2xl border border-slate-700/50 bg-[rgba(15,23,42,0.5)] p-3 shadow-2xl backdrop-blur-lg">
         <div className="flex items-center gap-3 text-slate-300">
           <span className="material-symbols-outlined text-slate-400" style={{ fontSize: "20px" }}>lock</span>
           <div className="flex-1 text-[12px] leading-snug">
@@ -117,7 +117,7 @@ export function PromptBox(props: PromptBoxProps) {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-70 flex justify-center px-4">
-      <div className={`pointer-events-auto w-full max-w-2xl rounded-2xl shadow-2xl transition-colors ${props.loading ? "prompt-box-loading" : "border border-slate-600/20 bg-[rgba(15,23,42,0.5)] backdrop-blur-lg focus-within:border-slate-500/40"}`}>
+      <div className={`pointer-events-auto w-full max-w-2xl rounded-2xl shadow-2xl transition-colors ${props.loading ? "prompt-box-loading" : "border border-slate-700/50 bg-[rgba(15,23,42,0.5)] backdrop-blur-lg focus-within:border-slate-500/40"}`}>
         <div className={`rounded-2xl p-3 ${props.loading ? "prompt-box-inner backdrop-blur-lg" : ""}`}>
           <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} suggestedElement={suggestedElement} onPinSuggestion={handlePinSuggestion} />
           {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}

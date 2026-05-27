@@ -43,7 +43,7 @@ export function SidePanel({ title, headerLeft, headerRight, onClose, children }:
   return (
     <aside
       style={{ width }}
-      className="absolute top-14 right-4 bottom-4 z-50 flex flex-col overflow-hidden rounded-lg border border-[#334155] bg-slate-900/50 shadow-2xl backdrop-blur-lg"
+      className="absolute top-14 right-4 bottom-4 z-50 flex flex-col overflow-hidden rounded-lg border border-slate-700/50 bg-slate-900/50 shadow-2xl backdrop-blur-lg"
     >
       <div
         onMouseDown={onMouseDown}
