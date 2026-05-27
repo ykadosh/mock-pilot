@@ -168,7 +168,7 @@
 }
 
 .prompt-box-loading > .prompt-box-inner {
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(15, 23, 42, 0.5);
   border-radius: inherit;
 }
 
