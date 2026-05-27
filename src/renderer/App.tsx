@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 import { Dashboard } from "@/pages/Dashboard";
 import { Editor } from "@/pages/Editor";
 import { Assets } from "@/pages/Assets";
@@ -8,24 +8,24 @@ import { Export } from "@/pages/Export";
 import { CaptureBrowser } from "@/pages/CaptureBrowser";
 import { AuthProvider } from "@/hooks/useAuth";
 
+const router = createHashRouter([
+  { path: "/", element: <Dashboard /> },
+  { path: "/capture", element: <CaptureBrowser /> },
+  { path: "/editor", element: <Editor /> },
+  { path: "/editor/:projectId", element: <Editor /> },
+  { path: "/code-editor/:projectId", element: <Editor codeEditorDefault /> },
+  { path: "/assets", element: <Assets /> },
+  { path: "/assets/:projectId", element: <Assets /> },
+  { path: "/settings/:projectId", element: <Settings /> },
+  { path: "/export/:projectId", element: <Export /> },
+  { path: "/app-settings", element: <AppSettings /> },
+]);
+
 function App() {
   return (
     <div className="dark">
       <AuthProvider>
-        <HashRouter>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/capture" element={<CaptureBrowser />} />
-            <Route path="/editor" element={<Editor />} />
-            <Route path="/editor/:projectId" element={<Editor />} />
-            <Route path="/code-editor/:projectId" element={<Editor codeEditorDefault />} />
-            <Route path="/assets" element={<Assets />} />
-            <Route path="/assets/:projectId" element={<Assets />} />
-            <Route path="/settings/:projectId" element={<Settings />} />
-            <Route path="/export/:projectId" element={<Export />} />
-            <Route path="/app-settings" element={<AppSettings />} />
-          </Routes>
-        </HashRouter>
+        <RouterProvider router={router} />
       </AuthProvider>
     </div>
   );

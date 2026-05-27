@@ -5,9 +5,11 @@ import { HistoryPanel } from "../../components/HistoryPanel";
 import { PromptBox } from "../../components/PromptBox";
 import { usePromptBox } from "../../components/PromptBox.hooks";
 import { PropertiesPanel } from "../../components/PropertiesPanel";
+import { Dialog } from "../../components/ui/Dialog";
 import { buildSelectedSelector } from "./Editor.utils";
 import type { EditorState } from "./Editor.hooks";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useBlocker } from "react-router-dom";
 
 function WorkspaceContent(state: EditorState) {
   if (state.codeEditorOpen && state.currentHtml) {
@@ -74,6 +76,31 @@ function WorkspaceSidePanel(state: EditorState & { agentProcessing?: boolean; aw
   );
 }
 
+interface ExitBlockerDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function ExitBlockerDialog({ open, onClose, onConfirm }: ExitBlockerDialogProps) {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      icon="warning"
+      title="Leave while AI is working?"
+      cancelLabel="Stay"
+      confirmLabel="Leave and stop"
+      confirmVariant="danger"
+      onConfirm={onConfirm}
+    >
+      <p className="font-body-md text-body-md text-on-surface-variant">
+        The AI agent is still processing your request. Leaving now will stop the current run and discard any unsaved progress.
+      </p>
+    </Dialog>
+  );
+}
+
 export function EditorWorkspace({ state }: { state: EditorState }) {
   const readOnlyConversation = !state.conversation.isActiveLatest;
   const promptBox = usePromptBox({
@@ -86,29 +113,33 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
     getPreviousAgentMessages: state.conversation.getAgentMessages,
     onAgentMessagesUpdate: state.conversation.setAgentMessages,
     readOnly: readOnlyConversation,
+    projectId: state.projectId,
+    getActiveSessionId: () => state.conversation.activeSessionId,
   });
 
   const agentBusy = promptBox.agentProcessing || promptBox.loading;
   const { setSelectedElement } = state;
-  useEffect(() => {
-    if (agentBusy) setSelectedElement(null);
-  }, [agentBusy, setSelectedElement]);
+  useEffect(() => { if (agentBusy) setSelectedElement(null); }, [agentBusy, setSelectedElement]);
+
+  const blocker = useBlocker(agentBusy);
+  const handleConfirmExit = useCallback(async () => {
+    await promptBox.handleCancel();
+    blocker.proceed?.();
+  }, [blocker, promptBox]);
 
   return (
     <>
       <WorkspaceContent {...state} />
-      <WorkspaceSidePanel {...state} agentProcessing={promptBox.agentProcessing || promptBox.loading} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
+      <WorkspaceSidePanel {...state} agentProcessing={agentBusy} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
       {!state.codeEditorOpen && (
         <PromptBox
           {...promptBox}
           selectedElement={state.selectedElement}
           readOnly={readOnlyConversation}
-          onStartNewConversation={() => {
-            void state.conversation.newConversation();
-            state.openChat();
-          }}
+          onStartNewConversation={() => { void state.conversation.newConversation(); state.openChat(); }}
         />
       )}
+      <ExitBlockerDialog open={blocker.state === "blocked"} onClose={() => blocker.reset?.()} onConfirm={handleConfirmExit} />
     </>
   );
 }
