@@ -10,6 +10,8 @@ interface AgentModifyArgs {
   projectAssets?: object;
   previousAgentMessages?: AgentMessage[];
   continueFromMaxIterations?: boolean;
+  projectId?: string;
+  sessionId?: string;
 }
 
 export interface AgentModifyResult {
@@ -19,32 +21,31 @@ export interface AgentModifyResult {
   messages?: AgentMessage[];
 }
 
+function buildAttachmentPayloads(attachments: Attachment[]) {
+  const images = attachments
+    .filter((a): a is ImageAttachment => a.type === "image")
+    .map((a) => ({ name: a.name, dataUrl: a.dataUrl }));
+
+  const attachedElements = attachments
+    .filter((a) => a.type === "element")
+    .map((a) => {
+      if (a.type !== "element") return null;
+      return { mpId: a.element.mpId, selector: buildElementSelector(a.element), outerHTML: a.element.outerHTML };
+    })
+    .filter(Boolean) as { mpId: string; selector: string; outerHTML: string }[];
+
+  return { images, attachedElements };
+}
+
 export async function applyAgentModification(args: AgentModifyArgs): Promise<AgentModifyResult> {
   const fullHtml = args.getFullPageHTML?.();
   if (!fullHtml) return { error: "No page content available" };
 
-  const images = args.attachments
-    .filter((a): a is ImageAttachment => a.type === "image")
-    .map((a) => ({ name: a.name, dataUrl: a.dataUrl }));
+  const { images, attachedElements } = buildAttachmentPayloads(args.attachments);
 
-  const attachedElements = args.attachments
-    .filter((a) => a.type === "element")
-    .map((a) => {
-      if (a.type !== "element") return null;
-      return {
-        mpId: a.element.mpId,
-        selector: buildElementSelector(a.element),
-        outerHTML: a.element.outerHTML,
-      };
-    })
-    .filter(Boolean) as { mpId: string; selector: string; outerHTML: string }[];
-
-  // Live-apply HTML snapshots as the agent makes mutations, so the editor reflects changes
-  // in real-time instead of jumping to the final state when the agent finishes.
+  // Live-apply HTML snapshots as the agent mutates, so the editor reflects changes in real-time.
   const unsubscribe = window.api.onAiAgentProgress((progress) => {
-    if (progress.type === "html_update" && progress.html) {
-      args.onApply?.(progress.html, args.prompt);
-    }
+    if (progress.type === "html_update" && progress.html) args.onApply?.(progress.html, args.prompt);
   });
 
   try {
@@ -56,6 +57,8 @@ export async function applyAgentModification(args: AgentModifyArgs): Promise<Age
       projectAssets: args.projectAssets,
       previousAgentMessages: args.previousAgentMessages,
       continueFromMaxIterations: args.continueFromMaxIterations,
+      projectId: args.projectId,
+      sessionId: args.sessionId,
     });
 
     if (!result.success || !result.html) return { error: result.error || "Agent modification failed", messages: result.messages as AgentMessage[] | undefined };

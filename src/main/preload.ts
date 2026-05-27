@@ -34,7 +34,7 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("ai-extract-components", data),
   aiCancelRequest: () => ipcRenderer.invoke("ai-cancel-request"),
   // AI Agent
-  aiAgentModify: (data: { prompt: string; fullHTML: string; projectId?: string; attachedElements?: { mpId: string; selector: string; outerHTML: string }[]; images?: { name: string; dataUrl: string }[]; projectAssets?: object; previousAgentMessages?: unknown[]; continueFromMaxIterations?: boolean }) =>
+  aiAgentModify: (data: { prompt: string; fullHTML: string; projectId?: string; sessionId?: string; attachedElements?: { mpId: string; selector: string; outerHTML: string }[]; images?: { name: string; dataUrl: string }[]; projectAssets?: object; previousAgentMessages?: unknown[]; continueFromMaxIterations?: boolean }) =>
     ipcRenderer.invoke("ai-agent-modify", data),
   aiAgentCancel: () => ipcRenderer.invoke("ai-agent-cancel"),
   onAiAgentProgress: (callback: (progress: { type: string; toolName?: string; iteration?: number; maxIterations?: number; result?: string; error?: string; html?: string }) => void) => {

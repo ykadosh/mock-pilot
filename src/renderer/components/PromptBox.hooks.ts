@@ -16,6 +16,8 @@ interface UsePromptBoxArgs {
   getPreviousAgentMessages?: () => AgentMessage[];
   onAgentMessagesUpdate?: (messages: AgentMessage[]) => void;
   readOnly?: boolean;
+  projectId?: string;
+  getActiveSessionId?: () => string | null;
 }
 
 function useImageAttachment(setAttachments: React.Dispatch<React.SetStateAction<Attachment[]>>) {

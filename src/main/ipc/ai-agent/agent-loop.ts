@@ -293,7 +293,7 @@ async function runIteration(iter: IterationContext, iteration: number, maxIterat
 
   const result = await processToolCalls({ toolCalls: response.tool_calls, messages: iter.messages, context: iter.context, state: iter.state, onProgress: iter.onProgress, signal: iter.signal });
 
-  if (result.cancelled) return { success: false, error: "Cancelled", iterations: iteration };
+  if (result.cancelled) return { success: false, error: "Cancelled", iterations: iteration, messages: iter.messages };
 
   if (iter.state.phase !== phaseBefore) {
     log(`Phase transition: ${phaseBefore} → ${iter.state.phase}`);
@@ -371,7 +371,7 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
 
   const startTime = Date.now();
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
-    if (signal?.aborted) return { success: false, error: "Cancelled", iterations: iteration };
+    if (signal?.aborted) return { success: false, error: "Cancelled", iterations: iteration, messages };
     const result = await runIteration(iter, iteration, maxIterations);
     if (result) {
       logMetrics({ state, iterations: result.iterations, durationMs: Date.now() - startTime, result });

@@ -138,6 +138,7 @@ declare global {
         prompt: string;
         fullHTML: string;
         projectId?: string;
+        sessionId?: string;
         attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
         images?: { name: string; dataUrl: string }[];
         projectAssets?: object;

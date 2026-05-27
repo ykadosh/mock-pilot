@@ -17,6 +17,8 @@ interface UsePromptSubmitArgs {
   getPreviousAgentMessages?: () => AgentMessage[];
   onAgentMessagesUpdate?: (messages: AgentMessage[]) => void;
   readOnly?: boolean;
+  projectId?: string;
+  getActiveSessionId?: () => string | null;
 }
 
 async function executeModification(args: UsePromptSubmitArgs, trimmedPrompt: string, continueFromMaxIterations?: boolean): Promise<AgentModifyResult> {
@@ -28,6 +30,8 @@ async function executeModification(args: UsePromptSubmitArgs, trimmedPrompt: str
     projectAssets: args.projectAssets,
     previousAgentMessages: args.getPreviousAgentMessages?.(),
     continueFromMaxIterations,
+    projectId: args.projectId,
+    sessionId: args.getActiveSessionId?.() ?? undefined,
   });
 }
 
