@@ -1,7 +1,6 @@
 const TOOL_LABELS: Record<string, string> = {
   planChanges: "Planning changes...",
   reinspect: "Re-inspecting...",
-  verifyPlanItem: "Verifying plan item...",
   searchHtml: "Searching HTML...",
   searchCss: "Searching CSS...",
   getElementInfo: "Inspecting element...",

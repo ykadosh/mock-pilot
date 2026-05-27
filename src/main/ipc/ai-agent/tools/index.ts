@@ -18,12 +18,10 @@ import { listIcons } from "./list-icons";
 import { getDesignTokens } from "./get-design-tokens";
 import { finish } from "./finish";
 import { planChanges, reinspect } from "./phase-control";
-import { verifyPlanItem } from "./verify-plan-item";
 
 const allTools: ToolDefinition[] = [
   planChanges,
   reinspect,
-  verifyPlanItem,
   searchHtml,
   searchCss,
   getElementInfo,

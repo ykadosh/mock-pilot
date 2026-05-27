@@ -46,8 +46,8 @@ export const PHASES: Record<AgentPhase, PhaseDefinition> = {
   },
   VERIFY: {
     name: "VERIFY",
-    description: "Confirm the result is correct. Take a screenshot and/or inspect the changed elements. Call verifyPlanItem for EACH plan item (status 'ok' or 'wrong'). If anything is wrong, call reinspect or undo + reinspect, then re-apply and re-verify. Call finish only after ALL items are verified 'ok'.",
-    allowedTools: [...INSPECT_TOOLS, "undo", "reinspect", "verifyPlanItem", "finish"],
+    description: "Confirm the result is correct. Take a screenshot and/or inspect the changed elements. Then call `finish` with a `verifications` array — one entry per plan item with status 'ok' and concrete evidence describing what you literally see. If anything is wrong, mark those items 'wrong' and finish will reject; then reinspect / undo + reinspect, re-apply, and re-verify.",
+    allowedTools: [...INSPECT_TOOLS, "undo", "reinspect", "finish"],
     canTransitionTo: ["INSPECT", "MODIFY"],
   },
 };
@@ -70,7 +70,7 @@ export const READ_ONLY_TOOLS = new Set<string>([
 export const MUTATION_TOOLS = new Set<string>(MODIFY_TOOLS.filter((t) => t !== "undo"));
 
 /** Tools that transition between phases (the loop reads requestPhase from context). */
-export const TRANSITION_TOOLS = new Set<string>(["planChanges", "reinspect", "verifyPlanItem"]);
+export const TRANSITION_TOOLS = new Set<string>(["planChanges", "reinspect"]);
 
 export function isToolAllowedInPhase(phase: AgentPhase, toolName: string): boolean {
   // `finish` is always allowed as a final exit hatch, but the system prompt steers

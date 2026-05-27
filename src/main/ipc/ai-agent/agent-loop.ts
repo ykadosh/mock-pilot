@@ -224,7 +224,7 @@ async function processToolCalls(args: ProcessToolCallsArgs): Promise<ProcessTool
       if (finished) return finished;
     }
 
-    phaseChanged = phaseChanged || executable.some((tc) => ["planChanges", "reinspect", "verifyPlanItem"].includes(tc.function.name));
+    phaseChanged = phaseChanged || executable.some((tc) => ["planChanges", "reinspect"].includes(tc.function.name));
   }
 
   return { cancelled: false, phaseChanged };
@@ -246,7 +246,7 @@ function nudgeHintForPhase(phase: AgentPhase): string {
     case "PLAN": return "Call `planChanges` with a JSON array of {target, action} describing what you intend to change.";
     case "INSPECT": return "Use read-only tools in parallel to gather info, then just call your edit tool — the loop will move to MODIFY automatically.";
     case "MODIFY": return "Apply your planned edits (batch into the fewest tool calls). When done, take a screenshot — that moves you to VERIFY automatically.";
-    case "VERIFY": return "Take a screenshot or inspect the result, then call `finish` (or `reinspect` if the result is wrong).";
+    case "VERIFY": return "Call `finish` directly, passing a `verifications` array (one entry per plan item: {planItemIndex, status:'ok', evidence}) describing what you literally see in the screenshot. Or `reinspect` if the result is wrong.";
   }
 }
 
@@ -470,7 +470,7 @@ function buildUserContent(
   return text;
 }
 
-const HINT_SKIP_TOOLS = new Set(["planChanges", "reinspect", "verifyPlanItem", "finish"]);
+const HINT_SKIP_TOOLS = new Set(["planChanges", "reinspect", "finish"]);
 
 function nextActionHint(toolName: string, state: LoopState): string {
   if (HINT_SKIP_TOOLS.has(toolName)) return "";
@@ -488,9 +488,11 @@ function nextActionHint(toolName: string, state: LoopState): string {
     case "MODIFY":
       return "\n→ Next: apply remaining edits (batch into the fewest editCss/editHtml calls). After your last edit, take a screenshot — that moves you to VERIFY automatically. Use `reinspect` if you need more info.";
     case "VERIFY": {
-      const unverified = state.plan.map((_, i) => i).filter((i) => !state.verifiedItems.has(i));
-      if (unverified.length === 0) return "\n→ Next: all items verified — call `finish`.";
-      return `\n→ Next: call \`verifyPlanItem\` for each unverified item (indices: ${unverified.join(", ")}). Look at the actual screenshot/inspected state — don't mark items 'ok' you haven't checked.`;
+      const indices = state.plan.map((_, i) => i);
+      const example = indices.length > 0
+        ? `[${indices.map((i) => `{"planItemIndex":${i},"status":"ok","evidence":"…what you literally see…"}`).join(",")}]`
+        : "[]";
+      return `\n→ Next: call \`finish\` with a \`verifications\` array covering all ${indices.length} plan item(s). Example: verifications=${example}. Describe the actual rendered state, not a paraphrase of the plan.`;
     }
   }
 }
