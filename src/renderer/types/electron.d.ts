@@ -123,12 +123,13 @@ declare global {
       }>;
       aiAgentCancel: () => Promise<{ success: boolean }>;
       onAiAgentProgress: (callback: (progress: {
-        type: "tool_start" | "tool_end" | "iteration" | "complete" | "error";
+        type: "tool_start" | "tool_end" | "iteration" | "complete" | "error" | "thinking" | "phase" | "html_update";
         toolName?: string;
         iteration?: number;
         maxIterations?: number;
         result?: string;
         error?: string;
+        html?: string;
       }) => void) => () => void;
       // Auth
       authGetStatus: () => Promise<{ authenticated: boolean; login?: string; avatar_url?: string }>;

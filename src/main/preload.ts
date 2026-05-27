@@ -33,7 +33,7 @@ contextBridge.exposeInMainWorld("api", {
   aiAgentModify: (data: { prompt: string; fullHTML: string; projectId?: string; attachedElements?: { mpId: string; selector: string; outerHTML: string }[]; images?: { name: string; dataUrl: string }[]; projectAssets?: object; continueFromPrevious?: boolean }) =>
     ipcRenderer.invoke("ai-agent-modify", data),
   aiAgentCancel: () => ipcRenderer.invoke("ai-agent-cancel"),
-  onAiAgentProgress: (callback: (progress: { type: string; toolName?: string; iteration?: number; maxIterations?: number; result?: string; error?: string }) => void) => {
+  onAiAgentProgress: (callback: (progress: { type: string; toolName?: string; iteration?: number; maxIterations?: number; result?: string; error?: string; html?: string }) => void) => {
     const handler = (_event: unknown, progress: Parameters<typeof callback>[0]) => callback(progress);
     ipcRenderer.on("ai-agent-progress", handler);
     return () => { ipcRenderer.removeListener("ai-agent-progress", handler); };

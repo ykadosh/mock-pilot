@@ -30,16 +30,28 @@ export async function applyAgentModification(args: AgentModifyArgs): Promise<{ e
     })
     .filter(Boolean) as { mpId: string; selector: string; outerHTML: string }[];
 
-  const result = await window.api.aiAgentModify({
-    prompt: args.prompt,
-    fullHTML: fullHtml,
-    attachedElements: attachedElements.length > 0 ? attachedElements : undefined,
-    images: images.length > 0 ? images : undefined,
-    projectAssets: args.projectAssets,
-    continueFromPrevious: args.continueFromPrevious,
+  // Live-apply HTML snapshots as the agent makes mutations, so the editor reflects changes
+  // in real-time instead of jumping to the final state when the agent finishes.
+  const unsubscribe = window.api.onAiAgentProgress((progress) => {
+    if (progress.type === "html_update" && progress.html) {
+      args.onApply?.(progress.html, args.prompt);
+    }
   });
 
-  if (!result.success || !result.html) return { error: result.error || "Agent modification failed" };
-  args.onApply?.(result.html, args.prompt);
-  return { summary: result.summary, maxIterationsReached: result.maxIterationsReached };
+  try {
+    const result = await window.api.aiAgentModify({
+      prompt: args.prompt,
+      fullHTML: fullHtml,
+      attachedElements: attachedElements.length > 0 ? attachedElements : undefined,
+      images: images.length > 0 ? images : undefined,
+      projectAssets: args.projectAssets,
+      continueFromPrevious: args.continueFromPrevious,
+    });
+
+    if (!result.success || !result.html) return { error: result.error || "Agent modification failed" };
+    args.onApply?.(result.html, args.prompt);
+    return { summary: result.summary, maxIterationsReached: result.maxIterationsReached };
+  } finally {
+    unsubscribe();
+  }
 }

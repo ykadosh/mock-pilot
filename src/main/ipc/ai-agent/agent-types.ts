@@ -106,7 +106,7 @@ export interface PlannedChange {
 }
 
 export interface AgentProgress {
-  type: "tool_start" | "tool_end" | "iteration" | "complete" | "error" | "thinking" | "phase";
+  type: "tool_start" | "tool_end" | "iteration" | "complete" | "error" | "thinking" | "phase" | "html_update";
   toolName?: string;
   iteration?: number;
   maxIterations?: number;
@@ -116,4 +116,6 @@ export interface AgentProgress {
   phase?: AgentPhase;
   planTotal?: number;
   verifiedCount?: number;
+  /** Full HTML snapshot after a mutation (only on type "html_update"). */
+  html?: string;
 }

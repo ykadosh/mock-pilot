@@ -140,12 +140,18 @@ function planExecution(toolCalls: ToolCall[]): ToolCall[][] {
   return batches;
 }
 
+/** Tools that modify the document (snapshots are pushed for MUTATION_TOOLS; undo pops snapshots). */
+const HTML_CHANGING_TOOLS = new Set<string>([...Array.from(MUTATION_TOOLS), "undo"]);
+
 async function runSequentialBatch(executable: ToolCall[], args: ProcessToolCallsArgs, phaseChanged: boolean): Promise<ProcessToolCallsResult | null> {
   for (const tc of executable) {
     const toolName = tc.function.name;
     if (MUTATION_TOOLS.has(toolName)) args.context.pushSnapshot();
     const result = await executeToolCall({ toolCall: tc, context: args.context, state: args.state, onProgress: args.onProgress });
-    if (MUTATION_TOOLS.has(toolName)) args.state.hasMutated = true;
+    if (HTML_CHANGING_TOOLS.has(toolName)) {
+      args.state.hasMutated = true;
+      args.onProgress?.({ type: "html_update", html: args.context.getHtml() });
+    }
     if (toolName === "finish" && result.startsWith(FINISH_PREFIX)) {
       args.messages.push({ role: "tool", tool_call_id: tc.id, content: result });
       return { cancelled: false, finishSummary: result.slice(FINISH_PREFIX.length), phaseChanged };
@@ -167,11 +173,16 @@ async function runParallelReadOnlyBatch(executable: ToolCall[], args: ProcessToo
   }
 }
 
+/** Tools that, when called after a mutation in MODIFY, signal the agent is inspecting the result.
+ *  Triggers MODIFY → VERIFY auto-transition. Broader than READ_ONLY_TOOLS because takeScreenshot
+ *  is not a cheerio read (it renders the browser) but is still a verification action. */
+const VERIFY_TRIGGER_TOOLS = new Set<string>([...Array.from(READ_ONLY_TOOLS), "takeScreenshot"]);
+
 function maybeAutoTransition(toolName: string, state: LoopState): void {
   if (state.phase === "INSPECT" && MUTATION_TOOLS.has(toolName)) {
     log(`  [AUTO-TRANSITION] INSPECT → MODIFY (triggered by ${toolName})`);
     state.phase = "MODIFY";
-  } else if (state.phase === "MODIFY" && state.hasMutated && READ_ONLY_TOOLS.has(toolName)) {
+  } else if (state.phase === "MODIFY" && state.hasMutated && VERIFY_TRIGGER_TOOLS.has(toolName)) {
     log(`  [AUTO-TRANSITION] MODIFY → VERIFY (triggered by ${toolName})`);
     state.phase = "VERIFY";
   }
