@@ -17,13 +17,11 @@ import { listComponents } from "./list-components";
 import { listIcons } from "./list-icons";
 import { getDesignTokens } from "./get-design-tokens";
 import { finish } from "./finish";
-import { planChanges, beginModify, beginVerify, reinspect } from "./phase-control";
+import { planChanges, reinspect } from "./phase-control";
 import { verifyPlanItem } from "./verify-plan-item";
 
 const allTools: ToolDefinition[] = [
   planChanges,
-  beginModify,
-  beginVerify,
   reinspect,
   verifyPlanItem,
   searchHtml,

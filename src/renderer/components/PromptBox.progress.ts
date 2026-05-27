@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 const TOOL_LABELS: Record<string, string> = {
   planChanges: "Planning changes",
-  beginModify: "Starting edits",
-  beginVerify: "Verifying result",
   reinspect: "Re-inspecting",
   verifyPlanItem: "Verifying plan item",
   searchHtml: "Searching HTML structure",

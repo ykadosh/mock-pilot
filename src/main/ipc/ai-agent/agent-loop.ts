@@ -53,6 +53,14 @@ interface LoopState {
   lastInspectionIteration: number;
   /** When true (set by planChanges mode:"single-shot"), loop skips INSPECT and VERIFY phases. */
   singleShot: boolean;
+  /** Cumulative time spent waiting on LLM chat completions (ms). */
+  llmMs: number;
+  /** Cumulative time spent inside tool executors (ms). */
+  toolMs: number;
+  /** Per-tool aggregated stats. */
+  toolStats: Map<string, { count: number; ms: number }>;
+  /** True once any mutation tool has run. Used to drive MODIFY→VERIFY auto-transition. */
+  hasMutated: boolean;
 }
 
 interface CreateContextArgs {
@@ -136,7 +144,8 @@ async function runSequentialBatch(executable: ToolCall[], args: ProcessToolCalls
   for (const tc of executable) {
     const toolName = tc.function.name;
     if (MUTATION_TOOLS.has(toolName)) args.context.pushSnapshot();
-    const result = await executeToolCall(tc, args.context, args.onProgress);
+    const result = await executeToolCall({ toolCall: tc, context: args.context, state: args.state, onProgress: args.onProgress });
+    if (MUTATION_TOOLS.has(toolName)) args.state.hasMutated = true;
     if (toolName === "finish" && result.startsWith(FINISH_PREFIX)) {
       args.messages.push({ role: "tool", tool_call_id: tc.id, content: result });
       return { cancelled: false, finishSummary: result.slice(FINISH_PREFIX.length), phaseChanged };
@@ -148,7 +157,7 @@ async function runSequentialBatch(executable: ToolCall[], args: ProcessToolCalls
 
 async function runParallelReadOnlyBatch(executable: ToolCall[], args: ProcessToolCallsArgs): Promise<void> {
   log(`  [PARALLEL] Running ${executable.length} read-only tools in parallel`);
-  const results = await Promise.all(executable.map((tc) => executeToolCall(tc, args.context, args.onProgress)));
+  const results = await Promise.all(executable.map((tc) => executeToolCall({ toolCall: tc, context: args.context, state: args.state, onProgress: args.onProgress })));
   for (let i = 0; i < executable.length; i++) {
     const toolName = executable[i].function.name;
     // Only append hint to the LAST result to avoid duplication
@@ -158,10 +167,21 @@ async function runParallelReadOnlyBatch(executable: ToolCall[], args: ProcessToo
   }
 }
 
+function maybeAutoTransition(toolName: string, state: LoopState): void {
+  if (state.phase === "INSPECT" && MUTATION_TOOLS.has(toolName)) {
+    log(`  [AUTO-TRANSITION] INSPECT → MODIFY (triggered by ${toolName})`);
+    state.phase = "MODIFY";
+  } else if (state.phase === "MODIFY" && state.hasMutated && READ_ONLY_TOOLS.has(toolName)) {
+    log(`  [AUTO-TRANSITION] MODIFY → VERIFY (triggered by ${toolName})`);
+    state.phase = "VERIFY";
+  }
+}
+
 function validateBatch(batch: ToolCall[], args: ProcessToolCallsArgs): ToolCall[] {
   const executable: ToolCall[] = [];
   for (const tc of batch) {
     const toolName = tc.function.name;
+    maybeAutoTransition(toolName, args.state);
     if (!isToolAllowedInPhase(args.state.phase, toolName)) {
       args.state.rejectedToolCount++;
       const errorMsg = `Tool "${toolName}" is not allowed in phase ${args.state.phase}. ${describePhaseForError(args.state.phase)}`;
@@ -193,7 +213,7 @@ async function processToolCalls(args: ProcessToolCallsArgs): Promise<ProcessTool
       if (finished) return finished;
     }
 
-    phaseChanged = phaseChanged || executable.some((tc) => ["planChanges", "beginModify", "beginVerify", "reinspect", "verifyPlanItem"].includes(tc.function.name));
+    phaseChanged = phaseChanged || executable.some((tc) => ["planChanges", "reinspect", "verifyPlanItem"].includes(tc.function.name));
   }
 
   return { cancelled: false, phaseChanged };
@@ -213,8 +233,8 @@ interface IterationContext {
 function nudgeHintForPhase(phase: AgentPhase): string {
   switch (phase) {
     case "PLAN": return "Call `planChanges` with a JSON array of {target, action} describing what you intend to change.";
-    case "INSPECT": return "Use read-only tools in parallel to gather info, then call `beginModify` when ready.";
-    case "MODIFY": return "Apply your planned edits (batch into the fewest tool calls). Call `beginVerify` when done.";
+    case "INSPECT": return "Use read-only tools in parallel to gather info, then just call your edit tool — the loop will move to MODIFY automatically.";
+    case "MODIFY": return "Apply your planned edits (batch into the fewest tool calls). When done, take a screenshot — that moves you to VERIFY automatically.";
     case "VERIFY": return "Take a screenshot or inspect the result, then call `finish` (or `reinspect` if the result is wrong).";
   }
 }
@@ -229,7 +249,11 @@ async function runIteration(iter: IterationContext, iteration: number, maxIterat
   log(`--- Iteration ${iteration}/${maxIterations} [phase: ${iter.state.phase}] ---`);
   iter.onProgress?.({ type: "iteration", iteration, maxIterations, phase: iter.state.phase, planTotal: iter.state.plan.length, verifiedCount: iter.state.verifiedItems.size });
 
+  const llmStart = Date.now();
   const response = await requestAgentChatCompletion({ messages: iter.messages, tools: iter.toolSchemas, aiModel: iter.aiModel, apiToken: iter.apiToken, signal: iter.signal });
+  const llmMs = Date.now() - llmStart;
+  iter.state.llmMs += llmMs;
+  log(`  LLM: ${llmMs}ms`);
 
   if (!response.tool_calls || response.tool_calls.length === 0) {
     iter.state.nudgeCount++;
@@ -306,6 +330,10 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
     verificationFailures: [],
     lastInspectionIteration: -999,
     singleShot: false,
+    llmMs: 0,
+    toolMs: 0,
+    toolStats: new Map(),
+    hasMutated: false,
   };
 
   const defaultSelector = options.attachedElements?.[0]?.selector;
@@ -337,9 +365,23 @@ interface LogMetricsArgs {
 }
 
 function logMetrics({ state, iterations, durationMs, result }: LogMetricsArgs): void {
+  const llmMs = state.llmMs;
+  const toolMs = state.toolMs;
+  const otherMs = Math.max(0, durationMs - llmMs - toolMs);
+  const pct = (n: number) => durationMs > 0 ? `${Math.round((n / durationMs) * 100)}%` : "—";
   log("==== Run metrics ====");
   log(`  Iterations:        ${iterations}`);
   log(`  Duration:          ${(durationMs / 1000).toFixed(1)}s`);
+  log(`  LLM time:          ${(llmMs / 1000).toFixed(1)}s (${pct(llmMs)})`);
+  log(`  Tool time:         ${(toolMs / 1000).toFixed(1)}s (${pct(toolMs)})`);
+  log(`  Other/overhead:    ${(otherMs / 1000).toFixed(1)}s (${pct(otherMs)})`);
+  if (state.toolStats.size > 0) {
+    const sorted = Array.from(state.toolStats.entries()).sort((a, b) => b[1].ms - a[1].ms);
+    log("  Tool breakdown:");
+    for (const [name, s] of sorted) {
+      log(`    ${name.padEnd(22)} ${s.count}× ${(s.ms / 1000).toFixed(1)}s (avg ${Math.round(s.ms / s.count)}ms)`);
+    }
+  }
   log(`  Final phase:       ${state.phase}`);
   log(`  Plan items:        ${state.plan.length}`);
   log(`  Nudges:            ${state.nudgeCount}`);
@@ -359,8 +401,7 @@ function describeNode(el: cheerio.Element, $: cheerio.CheerioAPI): string | null
   // Prefer a class that looks identifying (not a utility hash like fk6fouc)
   const namedClass = cls.find((c) => /[a-z]+-\d+$/i.test(c) || /^scc-|^ms-/.test(c)) || cls[0] || "";
   const sel = `${tag}${id}${namedClass ? "." + namedClass : ""}`;
-  const truncated = ownText.length > 60 ? ownText.slice(0, 60) + "…" : ownText;
-  return `  • ${sel} → ${JSON.stringify(truncated)}`;
+  return `  • ${sel} → ${JSON.stringify(ownText)}`;
 }
 
 function extractVisibleText(outerHTML: string): string[] {
@@ -404,7 +445,7 @@ function buildUserContent(
         text += `\nVisible text inside this element (selector → text):\n${visibleLines.join("\n")}`;
         text += `\nIf the user request mentions "text", "letters", "label", "title", "name", or similar, the target is almost certainly one of the items above — use editText on its selector.`;
       }
-      text += `\nFull outerHTML:\n${el.outerHTML.slice(0, 1000)}`;
+      text += `\nFull outerHTML:\n${el.outerHTML}`;
     }
   }
 
@@ -418,7 +459,7 @@ function buildUserContent(
   return text;
 }
 
-const HINT_SKIP_TOOLS = new Set(["planChanges", "beginModify", "beginVerify", "reinspect", "verifyPlanItem", "finish"]);
+const HINT_SKIP_TOOLS = new Set(["planChanges", "reinspect", "verifyPlanItem", "finish"]);
 
 function nextActionHint(toolName: string, state: LoopState): string {
   if (HINT_SKIP_TOOLS.has(toolName)) return "";
@@ -431,10 +472,10 @@ function nextActionHint(toolName: string, state: LoopState): string {
       const tip = planCount > 1
         ? " Tip: use batchSearchHtml/batchSearchCss/batchGetElementInfo to look up multiple selectors in ONE call."
         : "";
-      return `\n→ Next: gather any remaining info (${planCount} plan item(s)), then call \`beginModify\`.${tip}`;
+      return `\n→ Next: gather any remaining info (${planCount} plan item(s)), then call your edit tool directly — the loop will move you to MODIFY automatically.${tip}`;
     }
     case "MODIFY":
-      return "\n→ Next: apply remaining edits (batch into the fewest editCss/editHtml calls), then call `beginVerify`. Use `reinspect` if you need more info.";
+      return "\n→ Next: apply remaining edits (batch into the fewest editCss/editHtml calls). After your last edit, take a screenshot — that moves you to VERIFY automatically. Use `reinspect` if you need more info.";
     case "VERIFY": {
       const unverified = state.plan.map((_, i) => i).filter((i) => !state.verifiedItems.has(i));
       if (unverified.length === 0) return "\n→ Next: all items verified — call `finish`.";
@@ -444,7 +485,22 @@ function nextActionHint(toolName: string, state: LoopState): string {
 }
 
 
-async function executeToolCall(toolCall: ToolCall, context: ToolContext, onProgress?: (progress: AgentProgress) => void): Promise<string> {
+function recordToolTiming(state: LoopState, name: string, ms: number): void {
+  state.toolMs += ms;
+  const prev = state.toolStats.get(name) || { count: 0, ms: 0 };
+  prev.count += 1;
+  prev.ms += ms;
+  state.toolStats.set(name, prev);
+}
+
+interface ExecuteToolCallArgs {
+  toolCall: ToolCall;
+  context: ToolContext;
+  state: LoopState;
+  onProgress?: (progress: AgentProgress) => void;
+}
+
+async function executeToolCall({ toolCall, context, state, onProgress }: ExecuteToolCallArgs): Promise<string> {
   const { name, arguments: argsStr } = toolCall.function;
 
   log(`  Tool: ${name} | Args: ${argsStr.slice(0, 200)}`);
@@ -468,14 +524,19 @@ async function executeToolCall(toolCall: ToolCall, context: ToolContext, onProgr
     return result;
   }
 
+  const start = Date.now();
   try {
     const result = await executor(args, context);
-    log(`  Result (${result.length} chars): ${result.slice(0, 300)}`);
+    const ms = Date.now() - start;
+    recordToolTiming(state, name, ms);
+    log(`  Result (${result.length} chars, ${ms}ms): ${result.slice(0, 300)}`);
     onProgress?.({ type: "tool_end", toolName: name, result: result.slice(0, 200) });
     return result;
   } catch (e) {
+    const ms = Date.now() - start;
+    recordToolTiming(state, name, ms);
     const result = `Tool "${name}" threw an error: ${e instanceof Error ? e.message : String(e)}`;
-    log(`  Error: ${result}`);
+    log(`  Error (${ms}ms): ${result}`);
     onProgress?.({ type: "tool_end", toolName: name, result });
     return result;
   }

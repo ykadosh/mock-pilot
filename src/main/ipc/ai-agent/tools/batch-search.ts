@@ -145,7 +145,7 @@ function summarizeInfo($: CheerioAPI, sel: string): string {
     tag: (el.prop("tagName") || "unknown").toLowerCase(),
     attributes: el.attr() || {},
     childrenCount: el.children().length,
-    children: childDescriptors.slice(0, 20),
+    children: childDescriptors,
     directText: directText || "(none)",
     matchCount: elements.length,
   };

@@ -59,37 +59,7 @@ export const planChanges: ToolDefinition = {
     if (singleShot) {
       return `Plan accepted in SINGLE-SHOT mode (${parsed.length} change(s)):\n${formatted}\n\nNow in MODIFY phase. Apply the edit directly using the appropriate edit tool (e.g., editText, editCss, editAttribute), then call \`finish\`. INSPECT and VERIFY are skipped. If you realise mid-edit that you actually need to inspect first, call \`reinspect\` to drop into the full flow.`;
     }
-    return `Plan accepted (${parsed.length} change(s)):\n${formatted}\n\nNow in INSPECT phase. Use read-only tools (searchHtml, searchCss, getElementInfo, takeScreenshot) — batch them in parallel — to gather everything you need for ALL planned changes. Call beginModify when ready.`;
-  },
-};
-
-export const beginModify: ToolDefinition = {
-  schema: {
-    type: "function",
-    function: {
-      name: "beginModify",
-      description: "Signal that inspection is complete and you have enough information to apply ALL planned changes. Transitions INSPECT → MODIFY. Only call once you understand the relevant selectors, classes, and current styles.",
-      parameters: { type: "object", properties: {}, required: [] },
-    },
-  },
-  async execute(_args: Record<string, unknown>, context: ToolContext): Promise<string> {
-    context.requestPhase?.("MODIFY");
-    return "Now in MODIFY phase. Apply your planned changes using edit tools. Batch related edits when possible (e.g., one editCss call with multiple rules). Call beginVerify when all edits are applied.";
-  },
-};
-
-export const beginVerify: ToolDefinition = {
-  schema: {
-    type: "function",
-    function: {
-      name: "beginVerify",
-      description: "Signal that all planned changes have been applied. Transitions MODIFY → VERIFY. After this, take a screenshot or inspect the modified elements to confirm correctness.",
-      parameters: { type: "object", properties: {}, required: [] },
-    },
-  },
-  async execute(_args: Record<string, unknown>, context: ToolContext): Promise<string> {
-    context.requestPhase?.("VERIFY");
-    return "Now in VERIFY phase. Take a screenshot and/or inspect the changed elements to confirm the result matches the plan. Call finish if correct, or reinspect / undo + reinspect if something is wrong.";
+    return `Plan accepted (${parsed.length} change(s)):\n${formatted}\n\nNow in INSPECT phase. Use read-only tools (searchHtml, searchCss, getElementInfo, takeScreenshot) — batch them in parallel — to gather everything you need for ALL planned changes. When you're ready to edit, just call your edit tool — the loop will move you to MODIFY automatically. No separate transition tool is needed.`;
   },
 };
 
@@ -111,6 +81,6 @@ export const reinspect: ToolDefinition = {
   async execute(args: Record<string, unknown>, context: ToolContext): Promise<string> {
     const reason = (args.reason as string) || "unspecified";
     context.requestPhase?.("INSPECT");
-    return `Back in INSPECT phase (reason: ${reason}). Gather what you need with read-only tools, then call beginModify to resume editing.`;
+    return `Back in INSPECT phase (reason: ${reason}). Gather what you need with read-only tools, then just call your edit tool to resume editing — the loop will move you to MODIFY automatically.`;
   },
 };

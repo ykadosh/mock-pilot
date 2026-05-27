@@ -28,7 +28,7 @@ function handleOk({ index, label, evidence, context, plan }: HandleArgs): string
 
 function handleWrong({ index, label, notes, context }: HandleArgs): string {
   context.markItemFailed?.(index, notes || "");
-  return `✗ Item ${index} marked WRONG: ${label}. Notes: ${notes || "(none provided)"}. Next: call \`reinspect\` to gather more info, or \`undo\` to revert the bad edit and then \`reinspect\`. After fixing, re-run \`beginVerify\` and call \`verifyPlanItem\` again with status='ok'.`;
+  return `✗ Item ${index} marked WRONG: ${label}. Notes: ${notes || "(none provided)"}. Next: call \`reinspect\` to gather more info, or \`undo\` to revert the bad edit and then \`reinspect\`. After fixing the edit, take a screenshot or inspect the result, then call \`verifyPlanItem\` again with status='ok'.`;
 }
 
 function validateInspectionFreshness(context: ToolContext): string | null {

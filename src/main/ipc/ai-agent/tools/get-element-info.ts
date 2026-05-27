@@ -46,9 +46,9 @@ export const getElementInfo: ToolDefinition = {
         tag: (el.prop("tagName") || "unknown").toLowerCase(),
         attributes: el.attr() || {},
         childrenCount: el.children().length,
-        children: children.slice(0, 20),
+        children,
         directText: directText || "(none)",
-        fullText: el.text().trim().slice(0, 10000) || "(none)",
+        fullText: el.text().trim() || "(none)",
         matchCount: elements.length,
       };
 
