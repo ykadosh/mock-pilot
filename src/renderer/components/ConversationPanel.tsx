@@ -1,140 +1,84 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import type { ConversationMessage } from "../hooks/useConversation";
+import { useState } from "react";
+import type { ConversationMessage, SessionMeta } from "../hooks/useConversation";
+import { DetailView, ListView } from "./ConversationPanel.views";
 import { SidePanel } from "./ui/SidePanel";
 
 interface ConversationPanelProps {
+  sessions: SessionMeta[];
+  activeSessionId: string | null;
+  activeTitle: string;
   messages: ConversationMessage[];
   agentProcessing?: boolean;
   awaitingContinue?: boolean;
   currentTool?: string;
+  isReadOnly?: boolean;
   onClose: () => void;
   onContinue?: () => void;
+  onNewConversation: () => void;
+  onSelectSession: (id: string) => void;
 }
 
-function TypingIndicator({ toolName }: { toolName?: string }) {
+type View = "list" | "detail";
+
+function DetailHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
-    <div className="flex justify-start">
-      <div className="rounded-lg bg-slate-700/50 px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms]" />
-          </div>
-          {toolName && <span className="text-[10px] text-slate-500">{toolName}</span>}
-        </div>
-      </div>
-    </div>
+    <>
+      <button onClick={onBack} className="flex cursor-pointer items-center text-slate-400 hover:text-slate-200" title="Show conversations">
+        <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>arrow_back</span>
+      </button>
+      <span className="truncate text-[12px] font-medium text-slate-200">{title}</span>
+    </>
   );
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
+function ListHeader() {
+  return <span className="font-label-caps text-label-caps text-slate-300">CONVERSATIONS</span>;
+}
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }, [text]);
-
+function NewConversationButton({ onClick }: { onClick: () => void }) {
   return (
-    <button
-      onClick={handleCopy}
-      className="ml-1 shrink-0 cursor-pointer text-violet-400/60 transition-colors hover:text-violet-300"
-      title="Copy prompt"
-    >
-      <span className="material-symbols-outlined text-[12px]">{copied ? "check" : "content_copy"}</span>
+    <button onClick={onClick} className="flex cursor-pointer items-center text-slate-400 hover:text-violet-300" title="New conversation">
+      <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>add</span>
     </button>
   );
 }
 
-function ToolPill({ content }: { content: string }) {
-  return (
-    <div className="flex justify-start">
-      <div className="flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800/50 px-2.5 py-1">
-        <span className="material-symbols-outlined text-violet-400" style={{ fontSize: "14px" }}>construction</span>
-        <span className="font-mono text-[11px] text-slate-400">{content}</span>
-      </div>
-    </div>
-  );
-}
+export function ConversationPanel(props: ConversationPanelProps) {
+  const [view, setView] = useState<View>("detail");
 
-function DoneBubble({ content }: { content: string }) {
+  const headerLeft = view === "detail"
+    ? <DetailHeader title={props.activeTitle} onBack={() => setView("list")} />
+    : <ListHeader />;
+  const headerRight = view === "list"
+    ? <NewConversationButton onClick={() => { props.onNewConversation(); setView("detail"); }} />
+    : undefined;
+
+  const handleSelect = (id: string) => {
+    props.onSelectSession(id);
+    setView("detail");
+  };
+
   return (
-    <div className="relative overflow-hidden rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
-      <div className="absolute top-0 left-0 h-full w-1 bg-violet-500"></div>
-      <div className="flex items-start gap-2">
-        <span className="material-symbols-outlined text-violet-400" style={{ fontSize: "18px" }}>task_alt</span>
-        <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 prose-ul:pl-4 max-w-none flex-1 text-[13px] break-words text-slate-300">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    <SidePanel headerLeft={headerLeft} headerRight={headerRight} onClose={props.onClose}>
+      <div className="relative h-full overflow-hidden">
+        <div
+          className="flex h-full w-[200%] transition-transform duration-300 ease-out"
+          style={{ transform: view === "detail" ? "translateX(-50%)" : "translateX(0%)" }}
+        >
+          <div className="h-full w-1/2 shrink-0">
+            <ListView sessions={props.sessions} activeSessionId={props.activeSessionId} onSelectSession={handleSelect} />
+          </div>
+          <div className="h-full w-1/2 shrink-0">
+            <DetailView
+              messages={props.messages}
+              agentProcessing={props.agentProcessing}
+              awaitingContinue={props.awaitingContinue}
+              currentTool={props.currentTool}
+              isReadOnly={props.isReadOnly}
+              onContinue={props.onContinue}
+            />
+          </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function UserBubble({ content }: { content: string }) {
-  return (
-    <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-lg border border-violet-500/30 bg-slate-800/50 px-3 py-2">
-        <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[13px] break-words text-slate-200">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-        </div>
-        <div className="mt-1 flex items-center justify-end">
-          <CopyButton text={content} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AssistantBubble({ content }: { content: string }) {
-  return (
-    <div className="flex justify-start">
-      <div className="max-w-[90%] rounded-lg border border-slate-700 bg-slate-800/30 px-3 py-2">
-        <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[13px] break-words text-slate-300">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MessageBubble({ msg }: { msg: ConversationMessage }) {
-  if (msg.type === "tool") return <ToolPill content={msg.content} />;
-  if (msg.type === "done") return <DoneBubble content={msg.content} />;
-  if (msg.role === "user") return <UserBubble content={msg.content} />;
-  return <AssistantBubble content={msg.content} />;
-}
-
-export function ConversationPanel({ messages, agentProcessing, awaitingContinue, currentTool, onClose, onContinue }: ConversationPanelProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current?.parentElement;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length, agentProcessing, currentTool, awaitingContinue]);
-
-  return (
-    <SidePanel title="CONVERSATION" onClose={onClose}>
-      <div ref={scrollRef} className="flex flex-col gap-2 p-3">
-        {messages.length === 0 && !agentProcessing ? (
-          <p className="mt-4 text-center text-xs text-slate-500">No conversation yet</p>
-        ) : (
-          <>
-            {messages.map((msg, idx) => <MessageBubble key={idx} msg={msg} />)}
-            {awaitingContinue && (
-              <div className="flex justify-start">
-                <button onClick={onContinue} className="cursor-pointer rounded-lg bg-violet-600/30 px-4 py-2 text-xs font-medium text-violet-200 transition-colors hover:bg-violet-600/50">
-                  Continue →
-                </button>
-              </div>
-            )}
-            {agentProcessing && <TypingIndicator toolName={currentTool} />}
-          </>
-        )}
       </div>
     </SidePanel>
   );

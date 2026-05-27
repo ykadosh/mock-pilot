@@ -24,6 +24,13 @@ export interface AgentLoopOptions {
   apiToken: string;
   /** If provided, resume from these messages instead of starting fresh. */
   previousMessages?: AgentMessage[];
+  /**
+   * How to use previousMessages:
+   * - "new-prompt" (default): append the current prompt as a new user turn, start in PLAN phase.
+   * - "resume-max-iterations": append a synthetic "please continue" user turn, start in INSPECT phase.
+   * Ignored when previousMessages is empty.
+   */
+  continueMode?: "new-prompt" | "resume-max-iterations";
 }
 
 export interface AgentLoopResult {
@@ -295,7 +302,7 @@ async function runIteration(iter: IterationContext, iteration: number, maxIterat
 
   if (result.finishSummary !== undefined) {
     log("Agent called finish. Summary:", result.finishSummary.slice(0, 200));
-    return { success: true, html: iter.context.getHtml(), summary: result.finishSummary, iterations: iteration };
+    return { success: true, html: iter.context.getHtml(), summary: result.finishSummary, iterations: iteration, messages: iter.messages };
   }
 
   return null;
@@ -303,9 +310,17 @@ async function runIteration(iter: IterationContext, iteration: number, maxIterat
 
 function initialMessages(options: AgentLoopOptions, isContinuation: boolean): AgentMessage[] {
   if (isContinuation) {
+    const mode = options.continueMode ?? "new-prompt";
+    if (mode === "resume-max-iterations") {
+      return [
+        ...options.previousMessages!,
+        { role: "user", content: "Please continue making the changes. Pick up where you left off (currently in INSPECT phase)." },
+      ];
+    }
+    const userContent = buildUserContent(options.prompt, options.attachedElements, options.images);
     return [
       ...options.previousMessages!,
-      { role: "user", content: "Please continue making the changes. Pick up where you left off (currently in INSPECT phase)." },
+      { role: "user", content: userContent },
     ];
   }
   const userContent = buildUserContent(options.prompt, options.attachedElements, options.images);
@@ -330,8 +345,10 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
   logStart(options);
 
   const isContinuation = Boolean(options.previousMessages && options.previousMessages.length > 0);
+  const continueMode = options.continueMode ?? "new-prompt";
+  const initialPhase: AgentPhase = !isContinuation || continueMode === "new-prompt" ? "PLAN" : "INSPECT";
   const state: LoopState = {
-    phase: isContinuation ? "INSPECT" : "PLAN",
+    phase: initialPhase,
     plan: [],
     lastScreenshotIteration: new Map(),
     currentIteration: 0,

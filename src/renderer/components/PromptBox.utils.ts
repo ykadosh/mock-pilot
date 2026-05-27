@@ -1,4 +1,5 @@
 import type { Attachment, ImageAttachment } from "./PromptBox.types";
+import type { AgentMessage } from "../hooks/useConversation";
 import { buildElementSelector } from "./PropertiesPanel.utils";
 
 interface AgentModifyArgs {
@@ -7,10 +8,18 @@ interface AgentModifyArgs {
   getFullPageHTML?: () => string | null;
   onApply?: (newHTML: string, label?: string) => void;
   projectAssets?: object;
-  continueFromPrevious?: boolean;
+  previousAgentMessages?: AgentMessage[];
+  continueFromMaxIterations?: boolean;
 }
 
-export async function applyAgentModification(args: AgentModifyArgs): Promise<{ error?: string; summary?: string; maxIterationsReached?: boolean }> {
+export interface AgentModifyResult {
+  error?: string;
+  summary?: string;
+  maxIterationsReached?: boolean;
+  messages?: AgentMessage[];
+}
+
+export async function applyAgentModification(args: AgentModifyArgs): Promise<AgentModifyResult> {
   const fullHtml = args.getFullPageHTML?.();
   if (!fullHtml) return { error: "No page content available" };
 
@@ -45,13 +54,15 @@ export async function applyAgentModification(args: AgentModifyArgs): Promise<{ e
       attachedElements: attachedElements.length > 0 ? attachedElements : undefined,
       images: images.length > 0 ? images : undefined,
       projectAssets: args.projectAssets,
-      continueFromPrevious: args.continueFromPrevious,
+      previousAgentMessages: args.previousAgentMessages,
+      continueFromMaxIterations: args.continueFromMaxIterations,
     });
 
-    if (!result.success || !result.html) return { error: result.error || "Agent modification failed" };
+    if (!result.success || !result.html) return { error: result.error || "Agent modification failed", messages: result.messages as AgentMessage[] | undefined };
     args.onApply?.(result.html, args.prompt);
-    return { summary: result.summary, maxIterationsReached: result.maxIterationsReached };
+    return { summary: result.summary, maxIterationsReached: result.maxIterationsReached, messages: result.messages as AgentMessage[] | undefined };
   } finally {
     unsubscribe();
   }
 }
+

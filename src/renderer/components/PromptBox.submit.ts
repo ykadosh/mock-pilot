@@ -1,7 +1,8 @@
 import { useCallback, useState, type KeyboardEvent } from "react";
 import type { Attachment } from "./PromptBox.types";
+import type { AgentMessage } from "../hooks/useConversation";
 import { useAgentProgressListener } from "./PromptBox.progress";
-import { applyAgentModification } from "./PromptBox.utils";
+import { applyAgentModification, type AgentModifyResult } from "./PromptBox.utils";
 
 interface UsePromptSubmitArgs {
   attachments: Attachment[];
@@ -13,16 +14,21 @@ interface UsePromptSubmitArgs {
   projectAssets?: object;
   onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void;
   openChat?: () => void;
+  getPreviousAgentMessages?: () => AgentMessage[];
+  onAgentMessagesUpdate?: (messages: AgentMessage[]) => void;
+  readOnly?: boolean;
 }
 
-interface ModificationResult {
-  error?: string;
-  summary?: string;
-  maxIterationsReached?: boolean;
-}
-
-async function executeModification(args: UsePromptSubmitArgs, trimmedPrompt: string, continueFromPrevious?: boolean): Promise<ModificationResult> {
-  return applyAgentModification({ prompt: trimmedPrompt, attachments: args.attachments, getFullPageHTML: args.getFullPageHTML, onApply: args.onApplyPageModification, projectAssets: args.projectAssets, continueFromPrevious });
+async function executeModification(args: UsePromptSubmitArgs, trimmedPrompt: string, continueFromMaxIterations?: boolean): Promise<AgentModifyResult> {
+  return applyAgentModification({
+    prompt: trimmedPrompt,
+    attachments: args.attachments,
+    getFullPageHTML: args.getFullPageHTML,
+    onApply: args.onApplyPageModification,
+    projectAssets: args.projectAssets,
+    previousAgentMessages: args.getPreviousAgentMessages?.(),
+    continueFromMaxIterations,
+  });
 }
 
 function isCancelError(e: unknown): boolean {
@@ -35,13 +41,14 @@ interface SubmitState {
   setPrompt: (v: string) => void;
   clearProgress: () => void;
   setAwaitingContinue: (v: boolean) => void;
-  continueFromPrevious?: boolean;
+  continueFromMaxIterations?: boolean;
 }
 
 async function applyPrompt(args: UsePromptSubmitArgs, trimmedPrompt: string, state: SubmitState) {
   args.openChat?.();
 
-  const result = await executeModification(args, trimmedPrompt, state.continueFromPrevious);
+  const result = await executeModification(args, trimmedPrompt, state.continueFromMaxIterations);
+  if (result.messages) args.onAgentMessagesUpdate?.(result.messages);
   if (result.error) {
     if (!isCancelError(new Error(result.error))) state.setError(result.error);
     return;
@@ -89,6 +96,7 @@ export function usePromptSubmit(args: UsePromptSubmitArgs) {
   }, [clearProgress]);
 
   const handleApply = async () => {
+    if (args.readOnly) return;
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) return;
     setError("");
@@ -96,17 +104,19 @@ export function usePromptSubmit(args: UsePromptSubmitArgs) {
   };
 
   const handleContinue = async () => {
+    if (args.readOnly) return;
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) return;
-    await runPromptFlow(args, trimmedPrompt, { ...state, displayMessage: "Continue", continueFromPrevious: true });
+    await runPromptFlow(args, trimmedPrompt, { ...state, displayMessage: "Continue", continueFromMaxIterations: true });
   };
 
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && event.shiftKey) { event.stopPropagation(); return; }
-    if (event.key !== "Enter" || !prompt.trim() || loading) return;
+    if (event.key !== "Enter" || !prompt.trim() || loading || args.readOnly) return;
     event.preventDefault();
     void handleApply();
   };
 
   return { agentProcessing, agentProgress, awaitingContinue, error, handleApply, handleCancel, handleContinue, handlePromptKeyDown, loading, prompt, setPrompt };
 }
+

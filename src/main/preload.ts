@@ -14,9 +14,13 @@ contextBridge.exposeInMainWorld("api", {
   saveProjectHistory: (id: string, data: { entries: { label: string; timestamp: number }[]; pointer: number; htmlSnapshots: string[] }) =>
     ipcRenderer.invoke("save-project-history", id, data),
   loadProjectHistory: (id: string) => ipcRenderer.invoke("load-project-history", id),
-  saveProjectConversation: (id: string, messages: { role: string; content: string; timestamp: number }[]) =>
-    ipcRenderer.invoke("save-project-conversation", id, messages),
-  loadProjectConversation: (id: string) => ipcRenderer.invoke("load-project-conversation", id),
+  saveProjectConversation: (id: string, sessionId: string, payload: { displayMessages?: { role: string; content: string; timestamp: number; type?: string }[]; agentMessages?: unknown[]; title?: string }) =>
+    ipcRenderer.invoke("save-project-conversation", { projectId: id, sessionId, ...payload }),
+  loadProjectConversation: (id: string, sessionId: string) =>
+    ipcRenderer.invoke("load-project-conversation", id, sessionId),
+  listProjectConversations: (id: string) => ipcRenderer.invoke("list-project-conversations", id),
+  createProjectConversation: (id: string, title?: string) => ipcRenderer.invoke("create-project-conversation", id, title),
+  deleteProjectConversation: (id: string, sessionId: string) => ipcRenderer.invoke("delete-project-conversation", id, sessionId),
   renameProject: (id: string, newTitle: string) => ipcRenderer.invoke("rename-project", id, newTitle),
   deleteProject: (id: string) => ipcRenderer.invoke("delete-project", id),
   duplicateProject: (id: string) => ipcRenderer.invoke("duplicate-project", id),
@@ -30,7 +34,7 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("ai-extract-components", data),
   aiCancelRequest: () => ipcRenderer.invoke("ai-cancel-request"),
   // AI Agent
-  aiAgentModify: (data: { prompt: string; fullHTML: string; projectId?: string; attachedElements?: { mpId: string; selector: string; outerHTML: string }[]; images?: { name: string; dataUrl: string }[]; projectAssets?: object; continueFromPrevious?: boolean }) =>
+  aiAgentModify: (data: { prompt: string; fullHTML: string; projectId?: string; attachedElements?: { mpId: string; selector: string; outerHTML: string }[]; images?: { name: string; dataUrl: string }[]; projectAssets?: object; previousAgentMessages?: unknown[]; continueFromMaxIterations?: boolean }) =>
     ipcRenderer.invoke("ai-agent-modify", data),
   aiAgentCancel: () => ipcRenderer.invoke("ai-agent-cancel"),
   onAiAgentProgress: (callback: (progress: { type: string; toolName?: string; iteration?: number; maxIterations?: number; result?: string; error?: string; html?: string }) => void) => {

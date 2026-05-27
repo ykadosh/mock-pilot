@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SelectedElement } from "../pages/Editor";
 import type { Attachment, ImageAttachment } from "./PromptBox.types";
+import type { AgentMessage } from "../hooks/useConversation";
 import { usePromptSubmit } from "./PromptBox.submit";
 import { buildElementSelector } from "./PropertiesPanel.utils";
 
@@ -12,6 +13,9 @@ interface UsePromptBoxArgs {
   projectAssets?: object;
   onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void;
   openChat?: () => void;
+  getPreviousAgentMessages?: () => AgentMessage[];
+  onAgentMessagesUpdate?: (messages: AgentMessage[]) => void;
+  readOnly?: boolean;
 }
 
 function useImageAttachment(setAttachments: React.Dispatch<React.SetStateAction<Attachment[]>>) {

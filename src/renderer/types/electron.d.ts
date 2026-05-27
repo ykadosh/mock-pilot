@@ -47,6 +47,32 @@ interface ProjectAssets {
   componentsCss?: string;
 }
 
+interface ConversationDisplayMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+  type?: "message" | "thinking" | "tool" | "done";
+}
+
+interface ConversationAgentMessage {
+  role: "system" | "user" | "assistant" | "tool";
+  content?: string | object[];
+  tool_calls?: unknown[];
+  tool_call_id?: string;
+}
+
+interface ConversationSessionMeta {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface ConversationSession extends ConversationSessionMeta {
+  displayMessages: ConversationDisplayMessage[];
+  agentMessages: ConversationAgentMessage[];
+}
+
 declare global {
   interface Window {
     api: {
@@ -81,8 +107,11 @@ declare global {
         pointer?: number;
         htmlSnapshots?: string[];
       }>;
-      saveProjectConversation: (id: string, messages: { role: string; content: string; timestamp: number }[]) => Promise<{ success: boolean }>;
-      loadProjectConversation: (id: string) => Promise<{ success: boolean; messages?: { role: string; content: string; timestamp: number }[] }>;
+      saveProjectConversation: (id: string, sessionId: string, payload: { displayMessages?: ConversationDisplayMessage[]; agentMessages?: ConversationAgentMessage[]; title?: string }) => Promise<{ success: boolean; session?: ConversationSession }>;
+      loadProjectConversation: (id: string, sessionId: string) => Promise<{ success: boolean; session?: ConversationSession }>;
+      listProjectConversations: (id: string) => Promise<{ success: boolean; sessions: ConversationSessionMeta[] }>;
+      createProjectConversation: (id: string, title?: string) => Promise<{ success: boolean; session?: ConversationSession }>;
+      deleteProjectConversation: (id: string, sessionId: string) => Promise<{ success: boolean }>;
       renameProject: (id: string, newTitle: string) => Promise<{ success: boolean }>;
       deleteProject: (id: string) => Promise<{ success: boolean }>;
       duplicateProject: (id: string) => Promise<{ success: boolean; project?: ProjectMeta }>;
@@ -112,13 +141,15 @@ declare global {
         attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
         images?: { name: string; dataUrl: string }[];
         projectAssets?: object;
-        continueFromPrevious?: boolean;
+        previousAgentMessages?: ConversationAgentMessage[];
+        continueFromMaxIterations?: boolean;
       }) => Promise<{
         success: boolean;
         html?: string;
         summary?: string;
         iterations?: number;
         maxIterationsReached?: boolean;
+        messages?: ConversationAgentMessage[];
         error?: string;
       }>;
       aiAgentCancel: () => Promise<{ success: boolean }>;

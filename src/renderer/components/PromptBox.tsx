@@ -22,6 +22,8 @@ interface PromptBoxProps {
   selectedElement: SelectedElement | null;
   setPrompt: (value: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  readOnly?: boolean;
+  onStartNewConversation?: () => void;
 }
 
 function SubmitButton({ handleApply, handleCancel, loading, prompt }: Pick<PromptBoxProps, "handleApply" | "handleCancel" | "loading" | "prompt">) {
@@ -78,6 +80,29 @@ function PromptInput({ handleApply, handleCancel, handleFileSelect, handlePaste,
   );
 }
 
+function ReadOnlyPromptBox({ onStartNewConversation }: { onStartNewConversation?: () => void }) {
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-70 flex justify-center px-4">
+      <div className="pointer-events-auto w-full max-w-2xl rounded-2xl border border-slate-700/40 bg-[rgba(15,23,42,0.85)] p-3 shadow-2xl backdrop-blur-xl">
+        <div className="flex items-center gap-3 text-slate-300">
+          <span className="material-symbols-outlined text-slate-400" style={{ fontSize: "20px" }}>lock</span>
+          <div className="flex-1 text-[12px] leading-snug">
+            This conversation is read-only. Start a new conversation to make changes.
+          </div>
+          {onStartNewConversation && (
+            <button
+              onClick={onStartNewConversation}
+              className="cursor-pointer rounded-lg bg-violet-600/80 px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-violet-500"
+            >
+              New conversation
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PromptBox(props: PromptBoxProps) {
   // Show selected element as suggestion only if it's not already pinned
   const isPinned = props.selectedElement && props.attachments.some((a) => a.type === "element" && a.element.mpId === props.selectedElement!.mpId);
@@ -85,6 +110,10 @@ export function PromptBox(props: PromptBoxProps) {
   const handlePinSuggestion = () => {
     if (suggestedElement) props.addElementAttachment(suggestedElement);
   };
+
+  if (props.readOnly) {
+    return <ReadOnlyPromptBox onStartNewConversation={props.onStartNewConversation} />;
+  }
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-70 flex justify-center px-4">

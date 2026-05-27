@@ -47,7 +47,22 @@ function WorkspaceSidePanel(state: EditorState & { agentProcessing?: boolean; aw
   }
 
   if (state.chatOpen) {
-    return <ConversationPanel messages={state.conversationMessages} agentProcessing={state.agentProcessing} awaitingContinue={state.awaitingContinue} currentTool={state.currentTool} onClose={() => state.handleToolClick("Chat")} onContinue={state.onContinue} />;
+    return (
+      <ConversationPanel
+        sessions={state.conversation.sessions}
+        activeSessionId={state.conversation.activeSessionId}
+        activeTitle={state.conversation.activeSessionMeta?.title ?? "Conversation"}
+        messages={state.conversationMessages}
+        agentProcessing={state.agentProcessing}
+        awaitingContinue={state.awaitingContinue}
+        currentTool={state.currentTool}
+        isReadOnly={!state.conversation.isActiveLatest}
+        onClose={() => state.handleToolClick("Chat")}
+        onContinue={state.onContinue}
+        onNewConversation={() => { void state.conversation.newConversation(); }}
+        onSelectSession={(id) => { void state.conversation.switchSession(id); }}
+      />
+    );
   }
 
   if (!state.selectedElement) return null;
@@ -60,6 +75,7 @@ function WorkspaceSidePanel(state: EditorState & { agentProcessing?: boolean; aw
 }
 
 export function EditorWorkspace({ state }: { state: EditorState }) {
+  const readOnlyConversation = !state.conversation.isActiveLatest;
   const promptBox = usePromptBox({
     onApplyModification: state.handleApplyModification,
     onApplyPageModification: state.handleApplyPageModification,
@@ -67,6 +83,9 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
     getFullPageHTML: () => state.currentHtml ?? null,
     onConversationMessage: state.addConversationMessage,
     openChat: state.openChat,
+    getPreviousAgentMessages: state.conversation.getAgentMessages,
+    onAgentMessagesUpdate: state.conversation.setAgentMessages,
+    readOnly: readOnlyConversation,
   });
 
   const agentBusy = promptBox.agentProcessing || promptBox.loading;
@@ -79,7 +98,17 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
     <>
       <WorkspaceContent {...state} />
       <WorkspaceSidePanel {...state} agentProcessing={promptBox.agentProcessing || promptBox.loading} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
-      {!state.codeEditorOpen && <PromptBox {...promptBox} selectedElement={state.selectedElement} />}
+      {!state.codeEditorOpen && (
+        <PromptBox
+          {...promptBox}
+          selectedElement={state.selectedElement}
+          readOnly={readOnlyConversation}
+          onStartNewConversation={() => {
+            void state.conversation.newConversation();
+            state.openChat();
+          }}
+        />
+      )}
     </>
   );
 }

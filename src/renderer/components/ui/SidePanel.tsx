@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 
 interface SidePanelProps {
-  title: string;
+  title?: string;
+  headerLeft?: React.ReactNode;
+  headerRight?: React.ReactNode;
   onClose: () => void;
   children: React.ReactNode;
 }
@@ -35,7 +37,7 @@ function useResizable(minWidth: number) {
   return { width, onMouseDown };
 }
 
-export function SidePanel({ title, onClose, children }: SidePanelProps) {
+export function SidePanel({ title, headerLeft, headerRight, onClose, children }: SidePanelProps) {
   const { width, onMouseDown } = useResizable(MIN_WIDTH);
 
   return (
@@ -47,16 +49,21 @@ export function SidePanel({ title, onClose, children }: SidePanelProps) {
         onMouseDown={onMouseDown}
         className="absolute top-0 bottom-0 left-0 z-10 w-1.5 cursor-col-resize hover:bg-violet-500/30"
       />
-      <div className="p-sm flex items-center justify-between rounded-t-lg border-b border-slate-700 bg-slate-800">
-        <span className="font-label-caps text-label-caps text-slate-300">
-          {title}
-        </span>
-        <button
-          onClick={onClose}
-          className="cursor-pointer text-slate-500 hover:text-slate-200"
-        >
-          <span className="material-symbols-outlined text-sm">close</span>
-        </button>
+      <div className="p-sm flex items-center justify-between gap-2 rounded-t-lg border-b border-slate-700 bg-slate-800">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {headerLeft ?? (
+            <span className="font-label-caps text-label-caps text-slate-300">{title}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {headerRight}
+          <button
+            onClick={onClose}
+            className="cursor-pointer text-slate-500 hover:text-slate-200"
+          >
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto">
         {children}

@@ -13,8 +13,6 @@ function log(...args: unknown[]) {
 }
 
 let activeAgentAbortController: AbortController | null = null;
-/** Stored conversation messages from previous run, for continuation. */
-let pendingContinuationMessages: AgentMessage[] | null = null;
 
 interface AgentModifyRequest {
   prompt: string;
@@ -23,7 +21,10 @@ interface AgentModifyRequest {
   attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
   images?: { name: string; dataUrl: string }[];
   projectAssets?: ProjectAssets;
-  continueFromPrevious?: boolean;
+  /** Previous LLM conversation messages from the active session, sent to enable continuation. */
+  previousAgentMessages?: AgentMessage[];
+  /** If true, treat as max-iterations resume (synthetic continue + INSPECT). Else new-prompt continuation. */
+  continueFromMaxIterations?: boolean;
 }
 
 function createProgressHandler(getMainWindow: () => BrowserWindow | null) {
@@ -44,6 +45,11 @@ function getMaxIterations(): number | undefined {
   return undefined;
 }
 
+function pickContinueMode(hasPrevious: boolean, fromMaxIterations: boolean): AgentLoopOptions["continueMode"] {
+  if (!hasPrevious) return undefined;
+  return fromMaxIterations ? "resume-max-iterations" : "new-prompt";
+}
+
 async function handleAgentModify(_event: Electron.IpcMainInvokeEvent, data: AgentModifyRequest, getMainWindow: () => BrowserWindow | null) {
   if (activeAgentAbortController) activeAgentAbortController.abort();
 
@@ -55,8 +61,13 @@ async function handleAgentModify(_event: Electron.IpcMainInvokeEvent, data: Agen
   log("  HTML length:", data.fullHTML.length);
   log("  Attached elements:", data.attachedElements?.length ?? 0);
   log("  Images:", data.images?.length ?? 0);
+  log("  Previous agent messages:", data.previousAgentMessages?.length ?? 0);
+  log("  Continue from max-iterations:", Boolean(data.continueFromMaxIterations));
 
   const { aiModel, apiToken } = await getAgentCredentials();
+
+  const hasPrevious = (data.previousAgentMessages?.length ?? 0) > 0;
+  const continueMode = pickContinueMode(hasPrevious, Boolean(data.continueFromMaxIterations));
 
   const options: AgentLoopOptions = {
     prompt: data.prompt,
@@ -69,18 +80,12 @@ async function handleAgentModify(_event: Electron.IpcMainInvokeEvent, data: Agen
     onProgress: createProgressHandler(getMainWindow),
     aiModel,
     apiToken,
-    previousMessages: data.continueFromPrevious ? (pendingContinuationMessages ?? undefined) : undefined,
+    previousMessages: hasPrevious ? data.previousAgentMessages : undefined,
+    continueMode,
   };
 
   const result = await runAgentLoop(options);
   activeAgentAbortController = null;
-
-  // Store or clear continuation messages
-  if (result.maxIterationsReached && result.messages) {
-    pendingContinuationMessages = result.messages;
-  } else {
-    pendingContinuationMessages = null;
-  }
 
   log("Agent result - success:", result.success, "| iterations:", result.iterations, "| html length:", result.html?.length);
   if (result.summary) log("  Summary:", result.summary);
@@ -89,8 +94,8 @@ async function handleAgentModify(_event: Electron.IpcMainInvokeEvent, data: Agen
     log("  HTML changed:", changed, changed ? `(input: ${data.fullHTML.length}, output: ${result.html.length})` : "");
   }
 
-  if (!result.success) return { success: false, error: result.error || "Agent loop failed" };
-  return { success: true, html: result.html, summary: result.summary, iterations: result.iterations, maxIterationsReached: result.maxIterationsReached };
+  if (!result.success) return { success: false, error: result.error || "Agent loop failed", messages: result.messages };
+  return { success: true, html: result.html, summary: result.summary, iterations: result.iterations, maxIterationsReached: result.maxIterationsReached, messages: result.messages };
 }
 
 export function registerAgentHandlers(getMainWindow: () => BrowserWindow | null) {
