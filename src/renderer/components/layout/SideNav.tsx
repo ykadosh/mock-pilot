@@ -32,10 +32,7 @@ interface SideNavProps {
 
 export function SideNav({ activeTool, onToolClick }: SideNavProps) {
   return (
-    <div
-      className="fixed top-1/2 left-4 z-[60] flex -translate-y-1/2 flex-col gap-2 rounded-xl border border-slate-700/50 p-2 shadow-2xl"
-      style={{ backdropFilter: "blur(12px)", background: "rgba(15, 23, 42, 0.5)" }}
-    >
+    <div className="fixed top-1/2 left-4 z-[60] flex -translate-y-1/2 flex-col gap-2 rounded-xl border border-slate-700/50 bg-slate-900/50 p-2 shadow-2xl backdrop-blur-lg">
       <ToolButton icon="ads_click" label="Element Picker" active={activeTool === "Element Picker"} onClick={() => onToolClick?.("Element Picker")} />
       <ToolButton icon="select" label="Rectangle Selector" active={activeTool === "Rectangle Selector"} onClick={() => onToolClick?.("Rectangle Selector")} />
       <ToolButton icon="pan_tool" label="Pan Tool" active={activeTool === "Pan Tool"} onClick={() => onToolClick?.("Pan Tool")} />
