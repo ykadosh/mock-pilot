@@ -25,7 +25,7 @@ export const editCss: ToolDefinition = {
     type: "function",
     function: {
       name: "editCss",
-      description: "Add, modify, or remove CSS rules. Adds rules to an existing <style> block or creates one. To remove a rule, set the 'action' to 'remove'.",
+      description: "Add, modify, or remove CSS rules. Adds rules to an existing <style> block or creates one. To remove a rule, set the 'action' to 'remove'. BATCHING: You can include MULTIPLE CSS rules in a single 'css' string — prefer one editCss call with all your styling changes over many small calls.",
       parameters: {
         type: "object",
         properties: {

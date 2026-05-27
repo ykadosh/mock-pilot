@@ -2,6 +2,7 @@ import type { ToolDefinition, ToolSchema } from "../agent-types";
 import { searchHtml } from "./search-html";
 import { searchCss } from "./search-css";
 import { getElementInfo } from "./get-element-info";
+import { batchSearchCss, batchSearchHtml, batchGetElementInfo } from "./batch-search";
 import { editHtml } from "./edit-html";
 import { editInnerHtml } from "./edit-inner-html";
 import { editCss } from "./edit-css";
@@ -16,11 +17,21 @@ import { listComponents } from "./list-components";
 import { listIcons } from "./list-icons";
 import { getDesignTokens } from "./get-design-tokens";
 import { finish } from "./finish";
+import { planChanges, beginModify, beginVerify, reinspect } from "./phase-control";
+import { verifyPlanItem } from "./verify-plan-item";
 
 const allTools: ToolDefinition[] = [
+  planChanges,
+  beginModify,
+  beginVerify,
+  reinspect,
+  verifyPlanItem,
   searchHtml,
   searchCss,
   getElementInfo,
+  batchSearchHtml,
+  batchSearchCss,
+  batchGetElementInfo,
   editHtml,
   editInnerHtml,
   editCss,

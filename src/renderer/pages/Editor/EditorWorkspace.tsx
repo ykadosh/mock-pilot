@@ -7,6 +7,7 @@ import { usePromptBox } from "../../components/PromptBox.hooks";
 import { PropertiesPanel } from "../../components/PropertiesPanel";
 import { buildSelectedSelector } from "./Editor.utils";
 import type { EditorState } from "./Editor.hooks";
+import { useEffect } from "react";
 
 function WorkspaceContent(state: EditorState) {
   if (state.codeEditorOpen && state.currentHtml) {
@@ -67,6 +68,12 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
     onConversationMessage: state.addConversationMessage,
     openChat: state.openChat,
   });
+
+  const agentBusy = promptBox.agentProcessing || promptBox.loading;
+  const { setSelectedElement } = state;
+  useEffect(() => {
+    if (agentBusy) setSelectedElement(null);
+  }, [agentBusy, setSelectedElement]);
 
   return (
     <>

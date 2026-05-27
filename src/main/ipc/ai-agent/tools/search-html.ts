@@ -5,7 +5,7 @@ export const searchHtml: ToolDefinition = {
     type: "function",
     function: {
       name: "searchHtml",
-      description: "Search the HTML document by CSS selector or text content. Returns matching elements with their outerHTML. If a single result exceeds 10,000 characters, you'll be advised to use a more specific selector to drill down.",
+      description: "Search the HTML document by CSS selector or text content. Returns matching elements with their outerHTML. For MULTIPLE selectors in one call, prefer batchSearchHtml — it's one iteration instead of N.",
       parameters: {
         type: "object",
         properties: {

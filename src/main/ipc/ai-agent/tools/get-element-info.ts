@@ -15,7 +15,7 @@ export const getElementInfo: ToolDefinition = {
     type: "function",
     function: {
       name: "getElementInfo",
-      description: "Get detailed information about a specific element: tag name, attributes, direct children summary, and text content. Use a specific selector to target a single element (use :nth-of-type or :eq() for disambiguation).",
+      description: "Get detailed information about a specific element: tag name, attributes, direct children summary, and text content. For MULTIPLE selectors in one call, prefer batchGetElementInfo.",
       parameters: {
         type: "object",
         properties: {
@@ -30,6 +30,7 @@ export const getElementInfo: ToolDefinition = {
   async execute(args: Record<string, unknown>, context: ToolContext): Promise<string> {
     const selector = args.selector as string;
     const index = parseInt(args.index as string) || 0;
+    context.markInspection?.();
 
     try {
       const elements = context.$(selector);
