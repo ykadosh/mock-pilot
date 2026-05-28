@@ -14,23 +14,21 @@ export function ComponentsPage() {
       {components.length === 0 && <EmptyState />}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {components.map((component) => (
-          <ComponentCard
-            key={component.id}
-            component={component}
-            css={componentsCss}
-            projectId={projectId}
-            isEditing={editingId === component.id}
-            onDelete={handleDelete}
-            onEdit={setEditingId}
-            onRename={handleRename}
-          />
+          <ComponentCard key={component.id} component={component} css={componentsCss} projectId={projectId} isEditing={editingId === component.id} onDelete={handleDelete} onEdit={setEditingId} onRename={handleRename} />
         ))}
       </div>
-      {projectId && (
-        <div aria-hidden="true" style={{ position: "absolute", width: 1280, height: 800, left: -99999, top: -99999, pointerEvents: "none" }}>
-          <webview ref={scanWebviewRef as LegacyRef<Electron.WebviewTag>} src={`mp-asset://assets/${projectId}/project.html`} style={{ width: "1280px", height: "800px", display: "inline-flex" }} />
-        </div>
-      )}
+      {isAnalyzing && projectId && <ScanOverlay projectId={projectId} scanWebviewRef={scanWebviewRef} />}
+    </div>
+  );
+}
+
+function ScanOverlay({ projectId, scanWebviewRef }: { projectId: string; scanWebviewRef: React.RefObject<Electron.WebviewTag | null> }) {
+  return (
+    <div className="bg-background/95 fixed inset-0 z-50 flex flex-col items-center justify-center">
+      <div className="text-on-surface mb-md text-ui-small font-medium">Scanning page for components…</div>
+      <div className="border-outline/30 bg-surface relative overflow-hidden rounded-lg border shadow-2xl" style={{ width: 1024, height: 640 }}>
+        <webview ref={scanWebviewRef as LegacyRef<Electron.WebviewTag>} src={`mp-asset://assets/${projectId}/project.html`} style={{ width: "1024px", height: "640px", display: "inline-flex" }} />
+      </div>
     </div>
   );
 }

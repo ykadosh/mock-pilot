@@ -46,22 +46,59 @@ export function useComponentAssets(projectId?: string) {
     setEditingId(null);
   }, [persistComponents, components]);
 
-  const handleScan = useCallback(async () => {
+  const handleScan = useCallback(() => {
     if (!projectId || isAnalyzing) return;
-    const webview = scanWebviewRef.current;
-    if (!webview) return;
     setIsAnalyzing(true);
-    try {
-      const result = await runComponentScan(webview);
-      const scanned = result.components.map(mapExtractedComponent);
-      setComponentsCss(result.pageCss || "");
-      await persistComponents(scanned, result.pageCss || "");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }, [projectId, isAnalyzing, persistComponents]);
+  }, [projectId, isAnalyzing]);
+
+  useRunComponentScan({ isAnalyzing, projectId, scanWebviewRef, persistComponents, setComponentsCss, setIsAnalyzing });
 
   return { components, componentsCss, editingId, setEditingId, handleDelete, handleRename, isAnalyzing, handleScan, scanWebviewRef };
+}
+
+interface RunScanOptions {
+  isAnalyzing: boolean;
+  projectId?: string;
+  scanWebviewRef: React.MutableRefObject<Electron.WebviewTag | null>;
+  persistComponents: (updated: ComponentAsset[], cssOverride?: string) => Promise<void>;
+  setComponentsCss: (v: string) => void;
+  setIsAnalyzing: (v: boolean) => void;
+}
+
+function useRunComponentScan({ isAnalyzing, projectId, scanWebviewRef, persistComponents, setComponentsCss, setIsAnalyzing }: RunScanOptions) {
+  useEffect(() => {
+    if (!isAnalyzing || !projectId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const webview = await waitForScanWebview(scanWebviewRef);
+        if (cancelled || !webview) return;
+        await waitForWebviewReady(webview);
+        if (cancelled) return;
+        const log = (...logArgs: unknown[]) => window.api.captureLog(...logArgs);
+        const result = await extractComponents(webview, log);
+        if (cancelled) return;
+        const scanned = result.components.map(mapExtractedComponent);
+        setComponentsCss(result.pageCss || "");
+        await persistComponents(scanned, result.pageCss || "");
+      } finally {
+        if (!cancelled) setIsAnalyzing(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isAnalyzing, projectId, scanWebviewRef, persistComponents, setComponentsCss, setIsAnalyzing]);
+}
+
+function waitForScanWebview(ref: React.MutableRefObject<Electron.WebviewTag | null>): Promise<Electron.WebviewTag | null> {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const tick = () => {
+      if (ref.current) return resolve(ref.current);
+      if (Date.now() - start > 5000) return resolve(null);
+      setTimeout(tick, 16);
+    };
+    tick();
+  });
 }
 
 function useLoadComponentAssets(projectId: string | undefined, setComponents: (v: ComponentAsset[]) => void, setComponentsCss: (v: string) => void) {
@@ -75,12 +112,6 @@ function useLoadComponentAssets(projectId: string | undefined, setComponents: (v
       }
     })();
   }, [projectId, setComponents, setComponentsCss]);
-}
-
-async function runComponentScan(webview: Electron.WebviewTag) {
-  await waitForWebviewReady(webview);
-  const log = (...logArgs: unknown[]) => window.api.captureLog(...logArgs);
-  return extractComponents(webview, log);
 }
 
 function mapExtractedComponent(component: { label: string; html: string; count: number; hash: string; description?: string; props?: ComponentProp[] }, index: number): ComponentAsset {
@@ -97,11 +128,16 @@ function mapExtractedComponent(component: { label: string; html: string; count: 
 
 function waitForWebviewReady(webview: Electron.WebviewTag): Promise<void> {
   return new Promise((resolve) => {
-    if (!webview.isLoading?.()) return resolve();
-    const onReady = () => {
-      webview.removeEventListener("did-stop-loading", onReady);
-      resolve();
+    let domReady = false;
+    let stopped = false;
+    const finish = () => { if (domReady && stopped) { cleanup(); resolve(); } };
+    const onDom = () => { domReady = true; finish(); };
+    const onStop = () => { stopped = true; finish(); };
+    const cleanup = () => {
+      webview.removeEventListener("dom-ready", onDom);
+      webview.removeEventListener("did-stop-loading", onStop);
     };
-    webview.addEventListener("did-stop-loading", onReady);
+    webview.addEventListener("dom-ready", onDom);
+    webview.addEventListener("did-stop-loading", onStop);
   });
 }
