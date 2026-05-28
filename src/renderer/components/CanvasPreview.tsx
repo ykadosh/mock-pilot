@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useRef } from "react";
-import { useCanvasPreviewHandle, useCanvasHtml, useIframeSetup } from "./CanvasPreview.hooks";
+import { useCanvasHtml, useIframeSetup } from "./CanvasPreview.hooks";
+import { useCanvasPreviewHandle } from "./CanvasPreview.handle";
 import { usePanMode, useRectSelection } from "./CanvasPreview.interactionHooks";
 import { CanvasPreviewSurface } from "./CanvasPreviewSurface";
 import type { CanvasPreviewHandle, CanvasPreviewProps } from "./CanvasPreview.types";
@@ -23,9 +24,11 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   const html = useCanvasHtml(htmlContent);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  useCanvasPreviewHandle(ref, iframeRef);
-  const { handleIframeLoad, iframeHeight, selectedRect } = useIframeSetup({ iframeRef, pickerActive, selectedMpId, viewportWidth, onElementSelected, onElementDeselected });
   const scale = zoom / 100;
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
+  useCanvasPreviewHandle(ref, { iframeRef, scrollContainerRef, scaleRef });
+  const { handleIframeLoad, iframeHeight, selectedRect } = useIframeSetup({ iframeRef, pickerActive, selectedMpId, viewportWidth, onElementSelected, onElementDeselected });
   const isPanning = usePanMode(scrollContainerRef, panActive);
   const selectionRect = useRectSelection({ iframeRef, rectSelectorActive, scale, scrollContainerRef });
 

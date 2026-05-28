@@ -101,6 +101,21 @@ function ExitBlockerDialog({ open, onClose, onConfirm }: ExitBlockerDialogProps)
   );
 }
 
+function WorkspacePromptBox({ state, promptBox, readOnly }: { state: EditorState; promptBox: ReturnType<typeof usePromptBox>; readOnly: boolean }) {
+  return (
+    <PromptBox
+      {...promptBox}
+      selectedElement={state.selectedElement}
+      readOnly={readOnly}
+      onStartNewConversation={() => { void state.conversation.newConversation(); state.openChat(); }}
+      onSelectElementAttachment={(attachment) => {
+        state.setSelectedElement(attachment.element);
+        state.canvasRef.current?.scrollToElement(attachment.element.mpId);
+      }}
+    />
+  );
+}
+
 export function EditorWorkspace({ state }: { state: EditorState }) {
   const readOnlyConversation = !state.conversation.isActiveLatest;
   const promptBox = usePromptBox({
@@ -131,14 +146,7 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
     <>
       <WorkspaceContent {...state} />
       <WorkspaceSidePanel {...state} agentProcessing={agentBusy} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
-      {!state.codeEditorOpen && (
-        <PromptBox
-          {...promptBox}
-          selectedElement={state.selectedElement}
-          readOnly={readOnlyConversation}
-          onStartNewConversation={() => { void state.conversation.newConversation(); state.openChat(); }}
-        />
-      )}
+      {!state.codeEditorOpen && <WorkspacePromptBox state={state} promptBox={promptBox} readOnly={readOnlyConversation} />}
       <ExitBlockerDialog open={blocker.state === "blocked"} onClose={() => blocker.reset?.()} onConfirm={handleConfirmExit} />
     </>
   );
