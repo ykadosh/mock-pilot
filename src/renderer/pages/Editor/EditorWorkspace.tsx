@@ -70,13 +70,16 @@ function WorkspaceSidePanel(state: EditorState & { agentProcessing?: boolean; aw
     );
   }
 
-  if (!state.selectedElement) return null;
-  return (
-    <PropertiesPanel
-      element={state.selectedElement}
-      onClose={state.handleSelectionClear}
-    />
-  );
+  if (state.propertiesOpen) {
+    return (
+      <PropertiesPanel
+        element={state.selectedElement}
+        onClose={() => state.handleToolClick("Properties")}
+      />
+    );
+  }
+
+  return null;
 }
 
 interface ExitBlockerDialogProps {

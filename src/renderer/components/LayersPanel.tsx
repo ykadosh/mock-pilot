@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { CanvasPreviewHandle, ElementTreeNode } from "./CanvasPreview.types";
 import { useElementTree, useExpandedNodes, useLayerActions } from "./LayersPanel.hooks";
 import { formatLayerLabel } from "./LayersPanel.utils";
@@ -17,6 +18,7 @@ interface NodeRowHandlers {
   onLeave: () => void;
   onSelect: (mpId: string) => void;
   selectedMpId?: string | null;
+  selectedRowRef: React.RefObject<HTMLDivElement | null>;
 }
 
 function NodeChevron({ hasChildren, isExpanded, onClick }: { hasChildren: boolean; isExpanded: boolean; onClick: (e: React.MouseEvent) => void }) {
@@ -38,6 +40,7 @@ function NodeRow({ node, depth, handlers }: { node: ElementTreeNode; depth: numb
   return (
     <>
       <div
+        ref={isSelected ? handlers.selectedRowRef : undefined}
         onMouseEnter={() => handlers.onHover(node.mpId)}
         onMouseLeave={handlers.onLeave}
         onClick={() => handlers.onSelect(node.mpId)}
@@ -71,11 +74,17 @@ export function LayersPanel({ canvasRef, selectedMpId, htmlVersion, onClose }: L
   const tree = useElementTree(canvasRef, htmlVersion);
   const { expanded, toggle } = useExpandedNodes(tree, selectedMpId);
   const { onHover, onLeave, onSelect } = useLayerActions(canvasRef);
+  const selectedRowRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!selectedMpId) return;
+    selectedRowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [selectedMpId, tree, expanded]);
 
   return (
     <SidePanel title="LAYERS" onClose={onClose}>
       <div className="p-sm">
-        <LayersTree tree={tree} handlers={{ expanded, toggle, onHover, onLeave, onSelect, selectedMpId }} />
+        <LayersTree tree={tree} handlers={{ expanded, toggle, onHover, onLeave, onSelect, selectedMpId, selectedRowRef }} />
       </div>
     </SidePanel>
   );
