@@ -1,4 +1,7 @@
+import { useMemo } from "react";
+
 import { PaletteCard } from "./PaletteCard";
+import { groupSimilarColors } from "./colorGrouping";
 
 interface ColorAsset {
   id: string;
@@ -13,12 +16,14 @@ interface PaletteGridProps {
 }
 
 export function PaletteGrid({ colors, onDelete, onEdit }: PaletteGridProps) {
+  const groups = useMemo(() => groupSimilarColors(colors), [colors]);
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-      {colors.map((color) => (
+      {groups.map((group) => (
         <PaletteCard
-          key={color.id}
-          color={color}
+          key={group.representative.id}
+          color={group.representative}
+          extras={group.members.slice(1)}
           onDelete={onDelete}
           onEdit={onEdit}
         />
