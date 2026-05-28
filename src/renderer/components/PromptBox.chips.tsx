@@ -8,7 +8,7 @@ function ImageChip({ attachment, index, onRemove }: { attachment: Attachment & {
     <div className="flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-800/80 py-1 pr-2 pl-1 text-xs text-slate-300">
       <img alt="Thumb" className="h-6 w-6 rounded object-cover" src={attachment.dataUrl} />
       <span className="max-w-24 truncate font-medium">{attachment.name}</span>
-      <button className="ml-1 text-[14px] hover:text-red-400" onClick={() => onRemove(index)}><span className="material-symbols-outlined">close</span></button>
+      <button className="ml-1 inline-flex items-center hover:text-red-400" onClick={() => onRemove(index)}><span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span></button>
     </div>
   );
 }
@@ -27,7 +27,7 @@ function ElementChip({ attachment, index, onRemove, onSelect }: { attachment: El
     >
       <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>extension</span>
       <span className="max-w-32 truncate font-mono text-[10px]">{getAttachmentLabel(attachment)}</span>
-      <button className="ml-1 hover:text-violet-100" onClick={handleRemove}><span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span></button>
+      <button className="ml-1 inline-flex items-center hover:text-violet-100" onClick={handleRemove}><span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span></button>
     </div>
   );
 }
@@ -37,7 +37,7 @@ function SuggestedElementChip({ element, onPin }: { element: SelectedElement; on
     <div className="flex items-center gap-2 rounded-lg border border-dashed border-violet-500/30 bg-violet-900/20 px-2 py-1 text-xs text-violet-300/70">
       <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>extension</span>
       <span className="max-w-32 truncate font-mono text-[10px]">{buildElementSelector(element)}</span>
-      <button className="ml-1 transition-colors hover:text-violet-100" onClick={onPin} title="Add to prompt"><span className="material-symbols-outlined" style={{ fontSize: "18px" }}>add</span></button>
+      <button className="ml-1 inline-flex items-center transition-colors hover:text-violet-100" onClick={onPin} title="Add to prompt"><span className="material-symbols-outlined" style={{ fontSize: "18px" }}>add</span></button>
     </div>
   );
 }
