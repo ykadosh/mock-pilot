@@ -49,10 +49,18 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
     }
     function _shouldPrune(el) {
       var tag = el.tagName;
-      if (_REPLACED_TAGS[tag]) return false;
       // Don't descend into SVG subtrees: SVG layout/getComputedStyle is unreliable
-      // and SVG content is part of the visual.
-      if (el.ownerSVGElement || el.closest && el.closest('svg')) return false;
+      // and SVG content is part of the visual. The SVG root itself is handled
+      // below via the replaced-element branch so a 0x0 svg can still be pruned.
+      if (el.ownerSVGElement) return false;
+      // Replaced elements (and the SVG root): their subtree renders inside
+      // their own box, so a 0x0 bounding rect means nothing visible.
+      if (_REPLACED_TAGS[tag]) {
+        var rRect;
+        try { rRect = el.getBoundingClientRect(); } catch (e) { rRect = null; }
+        if (rRect && (rRect.width === 0 || rRect.height === 0)) return true;
+        return false;
+      }
       var cs;
       try { cs = getComputedStyle(el); } catch (e) { return false; }
       if (cs.display === 'none') return true;
@@ -68,12 +76,14 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
       }
       // Elements with visible (element) descendants are always preserved.
       if (hasChildElement) return false;
-      // Has meaningful text content -> preserve
-      if (_hasNonWhitespaceText(el)) return false;
-      // Zero-dimension empty element -> prune
+      // Last-resort dimension check: a childless element occupying zero
+      // width or height contributes nothing visually, regardless of its
+      // text content or visual styling. Runs after all cheap checks.
       var rect;
       try { rect = el.getBoundingClientRect(); } catch (e) { rect = null; }
       if (rect && (rect.width === 0 || rect.height === 0)) return true;
+      // Has meaningful text content -> preserve
+      if (_hasNonWhitespaceText(el)) return false;
       // Empty element with no visual styling -> prune
       if (!_hasVisualStyle(cs)) return true;
       return false;
