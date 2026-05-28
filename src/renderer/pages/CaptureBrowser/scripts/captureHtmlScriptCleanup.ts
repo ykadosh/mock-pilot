@@ -1,9 +1,9 @@
  
 export const CAPTURE_HTML_SCRIPT_CLEANUP = `
-    _log("[step:cleanup] Stripping non-visual attributes and removing hidden elements...");
+    _log("[step:cleanup] Stripping non-visual attributes and pruning redundant elements...");
     var _mpDataAttrs = ['data-original-href', 'data-adopted-stylesheet'];
     var _strippedCount = 0;
-    var hiddenCount = 0;
+    var _prunedCount = 0;
     function _stripAttrs(el) {
       var toRemove = [];
       for (var i = 0; i < el.attributes.length; i++) {
@@ -18,22 +18,79 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
       toRemove.forEach(function(attr) { el.removeAttribute(attr); });
       _strippedCount += toRemove.length;
     }
-    function _removeIfHidden(el) {
-      try {
-        var cs = getComputedStyle(el);
-        if (cs.display === 'none') {
-          el.remove();
-          hiddenCount++;
-          return true;
-        }
-      } catch (e) {}
+    document.querySelectorAll('body *').forEach(function(el) { _stripAttrs(el); });
+    // Bottom-up pruning of redundant (visually empty) elements. Walking from
+    // deepest-last to shallowest-first lets the removal of a leaf cascade so
+    // that a now-empty ancestor becomes eligible for pruning in the same pass.
+    var _REPLACED_TAGS = { IMG: 1, VIDEO: 1, CANVAS: 1, IFRAME: 1, SVG: 1, INPUT: 1,
+      TEXTAREA: 1, SELECT: 1, AUDIO: 1, PICTURE: 1, SOURCE: 1, OBJECT: 1, EMBED: 1,
+      HR: 1, BR: 1, OPTION: 1 };
+    function _hasVisualStyle(cs) {
+      if (cs.backgroundImage && cs.backgroundImage !== 'none') return true;
+      var bg = cs.backgroundColor;
+      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return true;
+      if (cs.boxShadow && cs.boxShadow !== 'none') return true;
+      var sides = ['Top', 'Right', 'Bottom', 'Left'];
+      for (var i = 0; i < 4; i++) {
+        var w = parseFloat(cs['border' + sides[i] + 'Width']);
+        var style = cs['border' + sides[i] + 'Style'];
+        if (w > 0 && style && style !== 'none' && style !== 'hidden') return true;
+      }
+      var ow = parseFloat(cs.outlineWidth);
+      if (ow > 0 && cs.outlineStyle && cs.outlineStyle !== 'none') return true;
       return false;
     }
-    document.querySelectorAll('body *').forEach(function(el) {
-      if (_removeIfHidden(el)) return;
-      _stripAttrs(el);
-    });
-    _log("Stripped " + _strippedCount + " non-visual attribute(s), removed " + hiddenCount + " hidden element(s)");
+    function _hasNonWhitespaceText(el) {
+      for (var i = 0; i < el.childNodes.length; i++) {
+        var n = el.childNodes[i];
+        if (n.nodeType === 3 && n.textContent && /\\S/.test(n.textContent)) return true;
+      }
+      return false;
+    }
+    function _shouldPrune(el) {
+      var tag = el.tagName;
+      if (_REPLACED_TAGS[tag]) return false;
+      // Don't descend into SVG subtrees: SVG layout/getComputedStyle is unreliable
+      // and SVG content is part of the visual.
+      if (el.ownerSVGElement || el.closest && el.closest('svg')) return false;
+      var cs;
+      try { cs = getComputedStyle(el); } catch (e) { return false; }
+      if (cs.display === 'none') return true;
+      var hasChildElement = el.children.length > 0;
+      // visibility:hidden / opacity:0 with no visible descendants -> prune
+      if (!hasChildElement && cs.visibility === 'hidden') return true;
+      if (!hasChildElement && parseFloat(cs.opacity) === 0) {
+        var anim = cs.animationName;
+        var trans = cs.transitionProperty || '';
+        var hasReveal = (anim && anim !== 'none') ||
+          trans === 'all' || trans.indexOf('opacity') !== -1;
+        if (!hasReveal) return true;
+      }
+      // Elements with visible (element) descendants are always preserved.
+      if (hasChildElement) return false;
+      // Has meaningful text content -> preserve
+      if (_hasNonWhitespaceText(el)) return false;
+      // Zero-dimension empty element -> prune
+      var rect;
+      try { rect = el.getBoundingClientRect(); } catch (e) { rect = null; }
+      if (rect && (rect.width === 0 || rect.height === 0)) return true;
+      // Empty element with no visual styling -> prune
+      if (!_hasVisualStyle(cs)) return true;
+      return false;
+    }
+    var _allEls = Array.prototype.slice.call(document.querySelectorAll('body *'));
+    for (var _pi = _allEls.length - 1; _pi >= 0; _pi--) {
+      var _pel = _allEls[_pi];
+      if (!_pel.isConnected) continue;
+      if (_pel === document.body) continue;
+      try {
+        if (_shouldPrune(_pel)) {
+          _pel.remove();
+          _prunedCount++;
+        }
+      } catch (e) { /* ignore */ }
+    }
+    _log("Stripped " + _strippedCount + " non-visual attribute(s), pruned " + _prunedCount + " redundant element(s)");
     _log("Removing HTML comments...");
     const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
     const comments = [];
