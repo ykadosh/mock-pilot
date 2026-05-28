@@ -3,7 +3,6 @@ import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from "reac
 import type { CaptureStep } from "../../components/CaptureProgressModal";
 import { setCapturedHtml } from "../../lib/store";
 import { captureAndInlineIframes } from "./iframeCapture";
-import { extractComponents } from "./extractComponents";
 import { createCaptureHtmlScript } from "./scripts/captureHtmlScript";
 import { EXTRACT_ASSETS_SCRIPT } from "./scripts/extractAssetsScript";
 import { EXTRACT_ICONS_SCRIPT } from "./scripts/extractIconsScript";
@@ -106,11 +105,6 @@ async function extractAssets(
   const extractedIcons = await webview.executeJavaScript(EXTRACT_ICONS_SCRIPT) as ExtractedIcons;
   await log("Detected icon libraries: " + (extractedIcons.libraries.length > 0 ? extractedIcons.libraries.join(", ") : "none"));
   extractedAssets.icons = extractedIcons;
-  advanceCaptureStep("components", progress);
-  await log("Detecting reusable components (AI)...");
-  const componentResult = await extractComponents(webview, log);
-  extractedAssets.components = componentResult.components;
-  extractedAssets.componentsCss = componentResult.pageCss;
   return extractedAssets;
 }
 
