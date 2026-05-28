@@ -1,5 +1,5 @@
 import type { SelectedElement } from "../pages/Editor";
-import type { Attachment } from "./PromptBox.types";
+import type { Attachment, ElementAttachment } from "./PromptBox.types";
 import { getAttachmentLabel } from "./PromptBox.hooks";
 import { buildElementSelector } from "./PropertiesPanel.utils";
 
@@ -13,12 +13,21 @@ function ImageChip({ attachment, index, onRemove }: { attachment: Attachment & {
   );
 }
 
-function ElementChip({ attachment, index, onRemove }: { attachment: Attachment; index: number; onRemove: (index: number) => void }) {
+function ElementChip({ attachment, index, onRemove, onSelect }: { attachment: ElementAttachment; index: number; onRemove: (index: number) => void; onSelect?: (attachment: ElementAttachment) => void }) {
+  const handleRemove = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    onRemove(index);
+  };
+  const clickable = !!onSelect;
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-900/40 px-2 py-1 text-xs text-violet-200">
+    <div
+      className={`flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-900/40 px-2 py-1 text-xs text-violet-200 ${clickable ? "cursor-pointer transition-colors hover:bg-violet-900/60" : ""}`}
+      onClick={clickable ? () => onSelect!(attachment) : undefined}
+      title={clickable ? "Select element in editor" : undefined}
+    >
       <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>extension</span>
       <span className="max-w-32 truncate font-mono text-[10px]">{getAttachmentLabel(attachment)}</span>
-      <button className="ml-1 hover:text-violet-100" onClick={() => onRemove(index)}><span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span></button>
+      <button className="ml-1 hover:text-violet-100" onClick={handleRemove}><span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span></button>
     </div>
   );
 }
@@ -33,7 +42,7 @@ function SuggestedElementChip({ element, onPin }: { element: SelectedElement; on
   );
 }
 
-export function AttachmentChips({ attachments, onRemove, suggestedElement, onPinSuggestion }: { attachments: Attachment[]; onRemove: (index: number) => void; suggestedElement?: SelectedElement | null; onPinSuggestion?: () => void }) {
+export function AttachmentChips({ attachments, onRemove, onSelectElement, suggestedElement, onPinSuggestion }: { attachments: Attachment[]; onRemove: (index: number) => void; onSelectElement?: (attachment: ElementAttachment) => void; suggestedElement?: SelectedElement | null; onPinSuggestion?: () => void }) {
   if (attachments.length === 0 && !suggestedElement) return null;
   return (
     <div className="mb-2 flex flex-wrap gap-2 px-1">
@@ -43,7 +52,7 @@ export function AttachmentChips({ attachments, onRemove, suggestedElement, onPin
       {attachments.map((attachment, index) =>
         attachment.type === "image"
           ? <ImageChip key={index} attachment={attachment} index={index} onRemove={onRemove} />
-          : <ElementChip key={index} attachment={attachment} index={index} onRemove={onRemove} />,
+          : <ElementChip key={index} attachment={attachment} index={index} onRemove={onRemove} onSelect={onSelectElement} />,
       )}
     </div>
   );

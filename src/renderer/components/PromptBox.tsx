@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { SelectedElement } from "../pages/Editor";
-import type { Attachment } from "./PromptBox.types";
+import type { Attachment, ElementAttachment } from "./PromptBox.types";
 import { AttachmentChips } from "./PromptBox.chips";
 import { AgentProgressIndicator } from "./AgentProgressIndicator";
 
@@ -24,6 +24,7 @@ interface PromptBoxProps {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   readOnly?: boolean;
   onStartNewConversation?: () => void;
+  onSelectElementAttachment?: (attachment: ElementAttachment) => void;
 }
 
 function SubmitButton({ handleApply, handleCancel, loading, prompt }: Pick<PromptBoxProps, "handleApply" | "handleCancel" | "loading" | "prompt">) {
@@ -119,7 +120,7 @@ export function PromptBox(props: PromptBoxProps) {
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-70 flex justify-center px-4">
       <div className={`pointer-events-auto w-full max-w-2xl rounded-xl shadow-2xl transition-colors ${props.loading ? "prompt-box-loading" : "border border-slate-700/50 bg-[rgba(15,23,42,0.5)] backdrop-blur-lg focus-within:border-slate-500/40"}`}>
         <div className={`rounded-xl p-3 ${props.loading ? "prompt-box-inner backdrop-blur-lg" : ""}`}>
-          <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} suggestedElement={suggestedElement} onPinSuggestion={handlePinSuggestion} />
+          <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} onSelectElement={props.onSelectElementAttachment} suggestedElement={suggestedElement} onPinSuggestion={handlePinSuggestion} />
           {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
           <AgentProgressIndicator progress={props.agentProgress} />
           <PromptInput

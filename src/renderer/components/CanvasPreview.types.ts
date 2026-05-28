@@ -17,6 +17,7 @@ export interface SelectionRect {
 export interface CanvasPreviewHandle {
   applyModification: (mpId: string, newHTML: string, label?: string) => void;
   getElementHTML: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
+  scrollToElement: (mpId: string) => void;
 }
 
 export interface CanvasPreviewProps {

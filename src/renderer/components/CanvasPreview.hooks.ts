@@ -1,9 +1,9 @@
-import { useEffect, useImperativeHandle, useRef, useState, type ForwardedRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import type { SelectedElement } from "../pages/Editor";
 import { getCapturedHtml } from "../lib/store";
 import { PICKER_SCRIPT } from "./CanvasPreview.pickerScript";
 import { RESIZE_SCRIPT } from "./CanvasPreview.resizeScript";
-import type { CanvasPreviewHandle, CanvasRect } from "./CanvasPreview.types";
+import type { CanvasRect } from "./CanvasPreview.types";
 import { cleanHtml } from "./CanvasPreview.utils";
 
 function postToIframe(iframeRef: RefObject<HTMLIFrameElement | null>, message: object) {
@@ -15,23 +15,6 @@ function injectScript(doc: Document, scriptText: string) {
   script.setAttribute("data-mp-injected", "true");
   script.textContent = scriptText;
   doc.body.appendChild(script);
-}
-
-function getElementHTML(iframeRef: RefObject<HTMLIFrameElement | null>, mpId: string) {
-  return new Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>((resolve) => {
-    if (!iframeRef.current?.contentWindow) return resolve(null);
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type !== "element-html-response" || event.data.mpId !== mpId) return;
-      window.removeEventListener("message", handler);
-      resolve(event.data.outerHTML ? { outerHTML: event.data.outerHTML, computedStyle: event.data.computedStyle } : null);
-    };
-    window.addEventListener("message", handler);
-    postToIframe(iframeRef, { type: "get-element-html", mpId });
-    setTimeout(() => {
-      window.removeEventListener("message", handler);
-      resolve(null);
-    }, 2000);
-  });
 }
 
 function getPickerMessage(pickerActive?: boolean, selectedMpId?: string | null) {
@@ -118,16 +101,7 @@ export function useCanvasHtml(htmlContent?: string | null) {
   return html;
 }
 
-export function useCanvasPreviewHandle(ref: ForwardedRef<CanvasPreviewHandle>, iframeRef: RefObject<HTMLIFrameElement | null>) {
-  useImperativeHandle(ref, () => ({
-    applyModification(mpId, newHTML, label) {
-      postToIframe(iframeRef, { type: "apply-modification", mpId, html: newHTML, label: label || "AI modification" });
-    },
-    getElementHTML(mpId) {
-      return getElementHTML(iframeRef, mpId);
-    },
-  }), [iframeRef]);
-}
+
 
 export function useIframeSetup({
   iframeRef,
