@@ -1,3 +1,5 @@
+import { LAYERS_HOVER_SCRIPT } from "./CanvasPreview.pickerScript.layers";
+
 export const PICKER_SCRIPT = `
 (function() {
   if (window.__pickerInitialized) return;
@@ -6,7 +8,7 @@ export const PICKER_SCRIPT = `
   let overlay = null;
   let label = null;
   let active = false;
-
+${LAYERS_HOVER_SCRIPT}
   function createOverlay() {
     overlay = document.createElement('div');
     overlay.setAttribute('data-mp-injected', 'true');
@@ -17,6 +19,7 @@ export const PICKER_SCRIPT = `
     document.body.appendChild(overlay);
     document.body.appendChild(label);
   }
+
 
   function getSelector(el) {
     let name = el.tagName.toLowerCase();
@@ -148,17 +151,13 @@ export const PICKER_SCRIPT = `
     if (e.data.type === 'picker-action-move-up') { handlePickerAction(e.data, function(el) { if (!el.previousElementSibling) return; const rect = updateOverlay((el.parentNode.insertBefore(el, el.previousElementSibling), el), true); window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: 'Move element up' }, '*'); window.parent.postMessage({ type: 'element-rect-update', rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height } }, '*'); }); return; }
     if (e.data.type === 'picker-action-move-down') { handlePickerAction(e.data, function(el) { if (!el.nextElementSibling) return; el.parentNode.insertBefore(el.nextElementSibling, el); const rect = updateOverlay(el, true); window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: 'Move element down' }, '*'); window.parent.postMessage({ type: 'element-rect-update', rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height } }, '*'); }); return; }
     if (e.data.type === 'picker-action-select-parent') { handlePickerAction(e.data, function(el) { var parent = el.parentElement; if (!parent || parent === document.body || parent === document.documentElement) return; var parentMpId = parent.getAttribute('data-mp-id'); if (!parentMpId) { parentMpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); parent.setAttribute('data-mp-id', parentMpId); } postSelected(parent, parentMpId, updateOverlay(parent, true)); }); return; }
+    if (e.data.type === 'layers-hover') { handlePickerAction(e.data, function(el) { updateHoverOverlay(el, getSelector); }); return; }
+    if (e.data.type === 'layers-hover-clear') { hideHoverOverlay(); return; }
+    if (e.data.type === 'layers-select') { handlePickerAction(e.data, function(el, mpId) { hideHoverOverlay(); postSelected(el, mpId, updateOverlay(el, true)); }); return; }
     if (e.data.type === 'apply-modification') { try { handlePickerAction(e.data, function(el, mpId) { if (e.data.html === '__REMOVE_ELEMENT__') el.remove(); else { const temp = document.createElement('div'); temp.innerHTML = e.data.html; const newEl = temp.firstElementChild; if (newEl) { newEl.setAttribute('data-mp-id', mpId); el.outerHTML = newEl.outerHTML; } else { el.outerHTML = e.data.html; } } window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: e.data.label || 'AI modification' }, '*'); }); } catch (err) { window.parent.postMessage({ type: 'modification-applied', success: false, error: err.message }, '*'); } return; }
     if (e.data.type === 'get-element-html') { handlePickerAction(e.data, function(el, mpId) { window.parent.postMessage({ type: 'element-html-response', mpId: mpId, outerHTML: el.outerHTML, computedStyle: getStyleMap(el) }, '*'); }); if (!document.querySelector('[data-mp-id="' + e.data.mpId + '"]')) window.parent.postMessage({ type: 'element-html-response', mpId: e.data.mpId, outerHTML: null }, '*'); return; }
-    if (e.data.type !== 'rect-select') return;
-    var bestEl = findRectSelection(e.data.rect);
-    if (!bestEl) return;
-    var mpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-    bestEl.setAttribute('data-mp-id', mpId);
-    postSelected(bestEl, mpId, updateOverlay(bestEl, true));
+    if (e.data.type === 'rect-select') { var bestEl = findRectSelection(e.data.rect); if (!bestEl) return; var rectMpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); bestEl.setAttribute('data-mp-id', rectMpId); postSelected(bestEl, rectMpId, updateOverlay(bestEl, true)); }
   });
-
-  document.addEventListener('mousemove', handleMouseMove, true);
-  document.addEventListener('click', handleClick, true);
+  document.addEventListener('mousemove', handleMouseMove, true); document.addEventListener('click', handleClick, true);
 })();
 `;

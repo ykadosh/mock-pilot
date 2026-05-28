@@ -14,10 +14,22 @@ export interface SelectionRect {
   h: number;
 }
 
+export interface ElementTreeNode {
+  mpId: string;
+  tagName: string;
+  id: string;
+  className: string;
+  children: ElementTreeNode[];
+}
+
 export interface CanvasPreviewHandle {
   applyModification: (mpId: string, newHTML: string, label?: string) => void;
   getElementHTML: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
   scrollToElement: (mpId: string) => void;
+  getElementTree: () => ElementTreeNode[];
+  highlightElement: (mpId: string) => void;
+  clearHighlight: () => void;
+  selectElement: (mpId: string) => void;
 }
 
 export interface CanvasPreviewProps {

@@ -1,7 +1,7 @@
 import type { SelectedElement } from "./Editor";
 
 export type DevicePreset = "mobile" | "tablet" | "laptop" | "widescreen";
-export type EditorTool = "Element Picker" | "Rectangle Selector" | "Pan Tool" | "History" | "Chat";
+export type EditorTool = "Element Picker" | "Rectangle Selector" | "Pan Tool" | "History" | "Layers" | "Chat";
 
 export const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number; icon: string; label: string }> = {
   mobile: { width: 390, height: 844, icon: "smartphone", label: "Mobile" },

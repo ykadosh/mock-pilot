@@ -2,6 +2,7 @@ import { CanvasPreview } from "../../components/CanvasPreview";
 import { CodeEditor } from "../../components/CodeEditor";
 import { ConversationPanel } from "../../components/ConversationPanel";
 import { HistoryPanel } from "../../components/HistoryPanel";
+import { LayersPanel } from "../../components/LayersPanel";
 import { PromptBox } from "../../components/PromptBox";
 import { usePromptBox } from "../../components/PromptBox.hooks";
 import { PropertiesPanel } from "../../components/PropertiesPanel";
@@ -47,7 +48,9 @@ function WorkspaceSidePanel(state: EditorState & { agentProcessing?: boolean; aw
   if (state.historyOpen) {
     return <HistoryPanel entries={state.entries} pointer={state.pointer} onGoTo={state.goTo} onClose={() => state.handleToolClick("History")} />;
   }
-
+  if (state.layersOpen) {
+    return <LayersPanel canvasRef={state.canvasRef} selectedMpId={state.selectedElement?.mpId || null} htmlVersion={state.currentHtml} onClose={() => state.handleToolClick("Layers")} />;
+  }
   if (state.chatOpen) {
     return (
       <ConversationPanel
