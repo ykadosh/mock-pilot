@@ -20,11 +20,14 @@ interface ConversationPanelProps {
 
 type View = "list" | "detail";
 
-function DetailHeader({ title, onBack }: { title: string; onBack: () => void }) {
+function DetailHeader({ title, onBack, onNew }: { title: string; onBack: () => void; onNew: () => void }) {
   return (
     <>
       <button onClick={onBack} className="flex cursor-pointer items-center text-slate-400 hover:text-slate-200" title="Show conversations">
         <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>arrow_back</span>
+      </button>
+      <button onClick={onNew} className="flex cursor-pointer items-center text-slate-400 hover:text-violet-300" title="New conversation">
+        <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>add</span>
       </button>
       <span className="truncate text-[12px] font-medium text-slate-200">{title}</span>
     </>
@@ -47,7 +50,7 @@ export function ConversationPanel(props: ConversationPanelProps) {
   const [view, setView] = useState<View>("detail");
 
   const headerLeft = view === "detail"
-    ? <DetailHeader title={props.activeTitle} onBack={() => setView("list")} />
+    ? <DetailHeader title={props.activeTitle} onBack={() => setView("list")} onNew={() => { props.onNewConversation(); setView("detail"); }} />
     : <ListHeader />;
   const headerRight = view === "list"
     ? <NewConversationButton onClick={() => { props.onNewConversation(); setView("detail"); }} />
