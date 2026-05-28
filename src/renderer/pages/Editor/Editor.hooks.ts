@@ -67,19 +67,19 @@ function useEditorToolState() {
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
 
   const handleToolClick = useCallback((tool: string) => {
-    if (tool !== "Element Picker" && tool !== "Rectangle Selector" && tool !== "Pan Tool" && tool !== "History" && tool !== "Chat") return;
+    if (tool !== "Element Picker" && tool !== "Rectangle Selector" && tool !== "Pan Tool" && tool !== "History" && tool !== "Layers" && tool !== "Properties" && tool !== "Chat") return;
     setActiveTool((current) => (current === tool ? null : tool));
-    setSelectedElement(null);
+    if (tool === "Element Picker" || tool === "Rectangle Selector") setSelectedElement(null);
   }, []);
 
   const handleElementSelected = useCallback((element: SelectedElement) => {
     setSelectedElement(element);
-    setActiveTool(null);
+    setActiveTool((current) => (current === "Layers" ? "Layers" : "Properties"));
   }, []);
 
   const handleSelectionClear = useCallback(() => {
     setSelectedElement(null);
-    setActiveTool((current) => (current === "Element Picker" ? null : current));
+    setActiveTool((current) => (current === "Element Picker" || current === "Properties" ? null : current));
   }, []);
 
   const openChat = useCallback(() => setActiveTool("Chat"), []);
@@ -157,13 +157,12 @@ export function useEditorState(codeEditorDefault = false) {
     handleApplyPageModification,
     handleCodeUpdate,
     historyOpen: tools.activeTool === "History",
+    layersOpen: tools.activeTool === "Layers",
     openChat: tools.openChat,
     panActive: tools.activeTool === "Pan Tool",
     pickerActive: tools.activeTool === "Element Picker",
-    projectId,
-    rectSelectorActive: tools.activeTool === "Rectangle Selector",
-    viewportHeight: DEVICE_SIZES[viewport.device].height,
-    viewportWidth: DEVICE_SIZES[viewport.device].width,
+    projectId, propertiesOpen: tools.activeTool === "Properties", rectSelectorActive: tools.activeTool === "Rectangle Selector",
+    viewportHeight: DEVICE_SIZES[viewport.device].height, viewportWidth: DEVICE_SIZES[viewport.device].width,
   };
 }
 
