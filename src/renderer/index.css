@@ -153,6 +153,14 @@
 }
 
 .prompt-box-loading {
+  position: relative;
+  isolation: isolate;
+}
+
+.prompt-box-loading::before,
+.prompt-box-loading::after {
+  content: "";
+  position: absolute;
   background: conic-gradient(
     from var(--gradient-angle),
     #7c3aed 0%,
@@ -164,11 +172,47 @@
     #7c3aed 100%
   );
   animation: rotate-gradient 2s linear infinite;
+  pointer-events: none;
+}
+
+.prompt-box-loading::before {
+  inset: 0;
+  border-radius: inherit;
   padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  z-index: 2;
+}
+
+.prompt-box-loading::after {
+  inset: -20px;
+  border-radius: calc(0.75rem + 20px);
+  padding: 32px;
+  filter: blur(16px);
+  opacity: 0.28;
+  z-index: 0;
+  -webkit-mask:
+    radial-gradient(ellipse at center, #000 30%, transparent 75%),
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: source-in, xor;
+  mask:
+    radial-gradient(ellipse at center, #000 30%, transparent 75%),
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: intersect, exclude;
 }
 
 .prompt-box-loading > .prompt-box-inner {
+  position: relative;
   background: rgba(15, 23, 42, 0.5);
   border-radius: inherit;
+  z-index: 1;
 }
 
