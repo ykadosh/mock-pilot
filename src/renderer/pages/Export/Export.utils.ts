@@ -1,4 +1,4 @@
-export type DevicePreset = "laptop" | "tablet" | "mobile";
+export type DevicePreset = "mobile" | "tablet" | "laptop" | "widescreen";
 export type DeployTarget = "codesandbox" | "stackblitz";
 
 export interface ProjectMeta {
@@ -10,9 +10,10 @@ export interface ProjectMeta {
 }
 
 export const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number; icon: string; label: string }> = {
-  laptop: { width: 1920, height: 1080, icon: "laptop", label: "Laptop" },
-  tablet: { width: 768, height: 1024, icon: "tablet_android", label: "Tablet" },
   mobile: { width: 390, height: 844, icon: "smartphone", label: "Mobile" },
+  tablet: { width: 768, height: 1024, icon: "tablet_android", label: "Tablet" },
+  laptop: { width: 1280, height: 800, icon: "laptop", label: "Laptop" },
+  widescreen: { width: 1536, height: 960, icon: "desktop_windows", label: "Widescreen" },
 };
 
 export function extractExportMetrics(html: string | null) {

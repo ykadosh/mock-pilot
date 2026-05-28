@@ -51,7 +51,7 @@ function DevicePresetSelector({ device, setDevice }: Pick<ExportImageSectionProp
   return (
     <div>
       <span className="text-ui-small text-outline mb-sm block uppercase">DEVICE PRESETS</span>
-      <div className="gap-xs grid grid-cols-3">
+      <div className="gap-xs grid grid-cols-2 sm:grid-cols-4">
         {(Object.entries(DEVICE_SIZES) as [DevicePreset, (typeof DEVICE_SIZES)[DevicePreset]][]).map(([key, preset]) => (
           <button
             key={key}

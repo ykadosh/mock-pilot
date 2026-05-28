@@ -1,12 +1,13 @@
 import type { SelectedElement } from "./Editor";
 
-export type DevicePreset = "desktop" | "tablet" | "phone";
+export type DevicePreset = "mobile" | "tablet" | "laptop" | "widescreen";
 export type EditorTool = "Element Picker" | "Rectangle Selector" | "Pan Tool" | "History" | "Chat";
 
-export const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number }> = {
-  desktop: { width: 1280, height: 800 },
-  tablet: { width: 768, height: 1024 },
-  phone: { width: 390, height: 844 },
+export const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number; icon: string; label: string }> = {
+  mobile: { width: 390, height: 844, icon: "smartphone", label: "Mobile" },
+  tablet: { width: 768, height: 1024, icon: "tablet_mac", label: "Tablet" },
+  laptop: { width: 1280, height: 800, icon: "laptop", label: "Laptop" },
+  widescreen: { width: 1536, height: 960, icon: "desktop_windows", label: "Widescreen" },
 };
 
 const MAX_SELECTOR_LENGTH = 25;

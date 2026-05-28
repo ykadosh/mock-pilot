@@ -46,7 +46,7 @@ export function CanvasDottedBackground({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div ref={wrapperRef} className="relative mx-auto w-fit p-[240px]" style={wrapperStyle} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+    <div ref={wrapperRef} className="relative flex min-h-full w-fit min-w-full items-center justify-center p-[240px]" style={wrapperStyle} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
       <div ref={overlayRef} aria-hidden className="pointer-events-none absolute inset-0" style={overlayStyle} />
       {children}
     </div>

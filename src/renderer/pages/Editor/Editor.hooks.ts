@@ -90,7 +90,7 @@ function useEditorToolState() {
 function useEditorViewportState(codeEditorDefault: boolean) {
   const [codeTab, setCodeTab] = useState<"html" | "css">("html");
   const [codeDirty, setCodeDirty] = useState(false);
-  const [device, setDevice] = useState<DevicePreset>("desktop");
+  const [device, setDevice] = useState<DevicePreset>("laptop");
   const [zoom, setZoom] = useState(100);
 
   const zoomIn = useCallback(() => setZoom((value) => Math.min(value + 25, 200)), []);

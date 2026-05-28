@@ -26,8 +26,8 @@ export function useProjectExportData(projectId?: string) {
 
 export function useImageExportSettings() {
   const [device, setDevice] = useState<DevicePreset>("laptop");
-  const [customWidth, setCustomWidth] = useState(1920);
-  const [customHeight, setCustomHeight] = useState(1080);
+  const [customWidth, setCustomWidth] = useState(1280);
+  const [customHeight, setCustomHeight] = useState(800);
   const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {

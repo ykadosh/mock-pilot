@@ -2,9 +2,10 @@ import type { EditorState } from "./Editor.hooks";
 import type { DevicePreset } from "./Editor.utils";
 
 const DEVICE_BUTTONS: Array<{ device: DevicePreset; icon: string }> = [
-  { device: "desktop", icon: "desktop_windows" },
+  { device: "mobile", icon: "smartphone" },
   { device: "tablet", icon: "tablet_mac" },
-  { device: "phone", icon: "smartphone" },
+  { device: "laptop", icon: "laptop" },
+  { device: "widescreen", icon: "desktop_windows" },
 ];
 
 function TabButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
