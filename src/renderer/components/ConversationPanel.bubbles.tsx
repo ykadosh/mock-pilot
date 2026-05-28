@@ -6,7 +6,7 @@ import type { ConversationMessage } from "../hooks/useConversation";
 export function TypingIndicator({ toolName }: { toolName?: string }) {
   return (
     <div className="flex justify-start">
-      <div className="rounded-lg bg-slate-700/50 px-3 py-2">
+      <div className="rounded-lg bg-[#212c40] px-3 py-2">
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
@@ -41,7 +41,7 @@ function CopyButton({ text }: { text: string }) {
 function ToolPill({ content }: { content: string }) {
   return (
     <div className="flex justify-start">
-      <div className="flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800/50 px-2.5 py-1">
+      <div className="flex items-center gap-1.5 rounded-full border border-slate-700 bg-[#172033] px-2.5 py-1">
         <span className="material-symbols-outlined text-violet-400" style={{ fontSize: "14px" }}>construction</span>
         <span className="font-mono text-[11px] text-slate-400">{content}</span>
       </div>
@@ -51,7 +51,7 @@ function ToolPill({ content }: { content: string }) {
 
 function DoneBubble({ content }: { content: string }) {
   return (
-    <div className="relative overflow-hidden rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
+    <div className="relative overflow-hidden rounded-lg border border-violet-500/20 bg-[#151a34] p-3">
       <div className="absolute top-0 left-0 h-full w-1 bg-violet-500"></div>
       <div className="flex items-start gap-2">
         <span className="material-symbols-outlined text-violet-400" style={{ fontSize: "18px" }}>task_alt</span>
@@ -66,7 +66,7 @@ function DoneBubble({ content }: { content: string }) {
 function UserBubble({ content }: { content: string }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-lg border border-violet-500/30 bg-slate-800/50 px-3 py-2">
+      <div className="max-w-[85%] rounded-lg border border-violet-500/30 bg-[#172033] px-3 py-2">
         <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[13px] break-words text-slate-200">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
@@ -81,7 +81,7 @@ function UserBubble({ content }: { content: string }) {
 function AssistantBubble({ content }: { content: string }) {
   return (
     <div className="flex justify-start">
-      <div className="max-w-[90%] rounded-lg border border-slate-700 bg-slate-800/30 px-3 py-2">
+      <div className="max-w-[90%] rounded-lg border border-slate-700 bg-[#141c2f] px-3 py-2">
         <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[13px] break-words text-slate-300">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>

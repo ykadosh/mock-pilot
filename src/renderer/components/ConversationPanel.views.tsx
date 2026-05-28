@@ -26,7 +26,7 @@ interface DetailViewProps {
 
 function ReadOnlyBanner() {
   return (
-    <div className="mb-1 flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-800/40 p-2 text-[11px] text-slate-400">
+    <div className="mb-1 flex items-center gap-2 rounded-lg border border-slate-700/60 bg-[#151e31] p-2 text-[11px] text-slate-400">
       <span className="material-symbols-outlined text-slate-400" style={{ fontSize: "14px" }}>lock</span>
       <span>Read-only — only the latest conversation can be continued.</span>
     </div>
