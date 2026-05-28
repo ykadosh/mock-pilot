@@ -36,7 +36,7 @@ function PaletteMainSwatch({ color, onEdit, onDelete }: {
         type="button"
         onClick={() => onEdit(color.id)}
         aria-label={`Edit ${color.label || color.value}`}
-        className="border-outline/20 hover:ring-on-surface/40 block h-16 w-full cursor-pointer border-b focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
+        className="hover:ring-on-surface/40 block h-16 w-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
         style={{ backgroundColor: color.value }}
       />
       <button
@@ -58,7 +58,7 @@ function PaletteExtrasStrip({ color, extras, onEdit }: {
   onEdit: (id: string) => void;
 }) {
   return (
-    <div className="border-outline/20 flex h-6 w-full border-b">
+    <div className={`border-outline/20 flex h-6 w-full border-b ${extras ? "border-t" : ""}`}>
       {extras ? (
         extras.map((extra) => (
           <button
