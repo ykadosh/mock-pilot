@@ -1,7 +1,18 @@
 import type { SelectedElement } from "./Editor";
 
 export type DevicePreset = "mobile" | "tablet" | "laptop" | "widescreen";
-export type EditorTool = "Element Picker" | "Rectangle Selector" | "Pan Tool" | "History" | "Chat";
+export type EditorTool = "Element Picker" | "Rectangle Selector" | "Pan Tool" | "History" | "Layers" | "Chat";
+
+export const EDITOR_TOOLS: ReadonlySet<EditorTool> = new Set(["Element Picker", "Rectangle Selector", "Pan Tool"]);
+export const INFORMATIONAL_TOOLS: ReadonlySet<EditorTool> = new Set(["History", "Layers", "Chat"]);
+
+export function isEditorTool(tool: string): tool is EditorTool {
+  return EDITOR_TOOLS.has(tool as EditorTool) || INFORMATIONAL_TOOLS.has(tool as EditorTool);
+}
+
+export function isInformationalTool(tool: string): boolean {
+  return INFORMATIONAL_TOOLS.has(tool as EditorTool);
+}
 
 export const DEVICE_SIZES: Record<DevicePreset, { width: number; height: number; icon: string; label: string }> = {
   mobile: { width: 390, height: 844, icon: "smartphone", label: "Mobile" },

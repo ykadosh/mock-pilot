@@ -36,6 +36,7 @@ export function SideNav({ activeTool, onToolClick }: SideNavProps) {
       <ToolButton icon="ads_click" label="Element Picker" active={activeTool === "Element Picker"} onClick={() => onToolClick?.("Element Picker")} />
       <ToolButton icon="select" label="Rectangle Selector" active={activeTool === "Rectangle Selector"} onClick={() => onToolClick?.("Rectangle Selector")} />
       <ToolButton icon="pan_tool" label="Pan Tool" active={activeTool === "Pan Tool"} onClick={() => onToolClick?.("Pan Tool")} />
+      <div className="my-1 h-px bg-slate-700/50" role="separator" />
       <ToolButton icon="history" label="History" active={activeTool === "History"} onClick={() => onToolClick?.("History")} />
       <ToolButton icon="layers" label="Layers" active={activeTool === "Layers"} onClick={() => onToolClick?.("Layers")} />
       <ToolButton icon="chat_bubble" label="Conversation" active={activeTool === "Chat"} onClick={() => onToolClick?.("Chat")} />

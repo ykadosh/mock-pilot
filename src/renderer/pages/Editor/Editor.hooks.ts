@@ -6,7 +6,7 @@ import { useConversation } from "../../hooks/useConversation";
 import { useHistory } from "../../hooks/useHistory";
 import { getAssetsBasePath, getCapturedHtml } from "../../lib/store";
 import type { SelectedElement } from "./Editor";
-import { DEVICE_SIZES, getEditorRoute, type DevicePreset, type EditorTool } from "./Editor.utils";
+import { DEVICE_SIZES, getEditorRoute, isEditorTool, isInformationalTool, type DevicePreset, type EditorTool } from "./Editor.utils";
 
 type EditorHistory = ReturnType<typeof useHistory>;
 
@@ -67,9 +67,11 @@ function useEditorToolState() {
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
 
   const handleToolClick = useCallback((tool: string) => {
-    if (tool !== "Element Picker" && tool !== "Rectangle Selector" && tool !== "Pan Tool" && tool !== "History" && tool !== "Chat") return;
+    if (!isEditorTool(tool)) return;
     setActiveTool((current) => (current === tool ? null : tool));
-    setSelectedElement(null);
+    if (!isInformationalTool(tool)) {
+      setSelectedElement(null);
+    }
   }, []);
 
   const handleElementSelected = useCallback((element: SelectedElement) => {
