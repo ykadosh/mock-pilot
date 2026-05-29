@@ -23,11 +23,17 @@ export function ComponentsPage() {
 }
 
 function ScanOverlay({ projectId, scanWebviewRef }: { projectId: string; scanWebviewRef: React.RefObject<Electron.WebviewTag | null> }) {
+  // The webview must remain on-screen and painted so webview.capturePage() (used by
+  // extractComponents) doesn't fail with UnknownVizError. We mount it inside the
+  // viewport but cover it with an opaque overlay and disable pointer events so the
+  // user neither sees the page nor can interact with it during the scan.
   return (
-    <div className="bg-background/95 fixed inset-0 z-50 flex flex-col items-center justify-center">
-      <div className="text-on-surface mb-md text-ui-small font-medium">Scanning page for components…</div>
-      <div className="border-outline/30 bg-surface relative overflow-hidden rounded-lg border shadow-2xl" style={{ width: 1024, height: 640 }}>
+    <div className="fixed inset-0 z-50">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <webview ref={scanWebviewRef as LegacyRef<Electron.WebviewTag>} src={`mp-asset://assets/${projectId}/project.html`} style={{ width: "1024px", height: "640px", display: "inline-flex" }} />
+      </div>
+      <div className="bg-background absolute inset-0 flex flex-col items-center justify-center">
+        <div className="text-on-surface text-ui-small font-medium">Scanning page for components…</div>
       </div>
     </div>
   );
