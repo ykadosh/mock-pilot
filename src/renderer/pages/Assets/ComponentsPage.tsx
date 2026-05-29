@@ -29,7 +29,7 @@ function ScanOverlay({ projectId, scanWebviewRef }: { projectId: string; scanWeb
   // user neither sees the page nor can interact with it during the scan.
   return (
     <div className="fixed inset-0 z-50">
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <webview ref={scanWebviewRef as LegacyRef<Electron.WebviewTag>} src={`mp-asset://assets/${projectId}/project.html`} style={{ width: "1024px", height: "640px", display: "inline-flex" }} />
       </div>
       <div className="bg-background absolute inset-0 flex flex-col items-center justify-center">
