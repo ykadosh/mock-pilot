@@ -24,16 +24,18 @@ export function ComponentsPage() {
 
 function ScanOverlay({ projectId, scanWebviewRef }: { projectId: string; scanWebviewRef: React.RefObject<Electron.WebviewTag | null> }) {
   // The webview must remain on-screen and painted so webview.capturePage() (used by
-  // extractComponents) doesn't fail with UnknownVizError. We mount it inside the
-  // viewport but cover it with an opaque overlay and disable pointer events so the
-  // user neither sees the page nor can interact with it during the scan.
+  // extractComponents) doesn't fail with UnknownVizError. We mount it in a fixed
+  // container and stack an opaque card on top of it so the user sees a loader card
+  // instead of the live page, but the rest of the app remains visible and interactive.
   return (
-    <div className="fixed inset-0 z-50">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center">
+    <div className="fixed right-6 bottom-6 z-50" style={{ width: 320, height: 200 }}>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <webview ref={scanWebviewRef as LegacyRef<Electron.WebviewTag>} src={`mp-asset://assets/${projectId}/project.html`} style={{ width: "1024px", height: "640px", display: "inline-flex" }} />
       </div>
-      <div className="bg-background absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-on-surface text-ui-small font-medium">Scanning page for components…</div>
+      <div className="border-outline/20 bg-surface text-on-surface absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg border shadow-xl">
+        <span className="material-symbols-outlined text-primary animate-spin" style={{ fontSize: 32 }}>progress_activity</span>
+        <div className="text-ui-small font-medium">Scanning page for components…</div>
+        <div className="text-outline text-xs">This may take a moment</div>
       </div>
     </div>
   );
