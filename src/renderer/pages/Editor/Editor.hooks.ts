@@ -36,21 +36,30 @@ function useHistoryInitialization(history: EditorHistory) {
 }
 
 function useHistoryMessageSync(history: EditorHistory, pendingLabelRef: PendingLabelRef, projectId?: string) {
-  const { push } = history;
+  const { push, replaceCurrent } = history;
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type !== "modification-applied" || !event.data.success || !event.data.fullHTML) return;
-      const fullDoc = `<!DOCTYPE html><html>${event.data.fullHTML}</html>`;
-      const label = event.data.label || pendingLabelRef.current || "AI modification";
+    const handleElementSelected = (data: { fullHTML: string }) => {
+      const fullDoc = `<!DOCTYPE html><html>${data.fullHTML}</html>`;
+      replaceCurrent(fullDoc);
+      if (projectId) window.api.updateProjectHtml(projectId, fullDoc);
+    };
+    const handleModificationApplied = (data: { fullHTML: string; label?: string }) => {
+      const fullDoc = `<!DOCTYPE html><html>${data.fullHTML}</html>`;
+      const label = data.label || pendingLabelRef.current || "AI modification";
       push(fullDoc, label);
       pendingLabelRef.current = "AI modification";
       if (projectId) window.api.updateProjectHtml(projectId, fullDoc);
     };
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (data?.type === "element-selected" && typeof data.fullHTML === "string") return handleElementSelected(data);
+      if (data?.type === "modification-applied" && data.success && data.fullHTML) return handleModificationApplied(data);
+    };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [pendingLabelRef, projectId, push]);
+  }, [pendingLabelRef, projectId, push, replaceCurrent]);
 }
 
 function useHistoryPersistence(history: EditorHistory, projectId?: string) {

@@ -96,7 +96,8 @@ ${LAYERS_HOVER_SCRIPT}
         tagName: el.tagName.toLowerCase(), id: el.id || '', className: typeof el.className === 'string' ? el.className : '',
         computedStyle: getStyleMap(el), outerHTML: el.outerHTML, cssPath: getUniquePath(el), mpId: mpId,
         rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
-      }
+      },
+      fullHTML: getCleanHTML()
     }, '*');
   }
 
