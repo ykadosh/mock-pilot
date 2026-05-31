@@ -1,45 +1,64 @@
 import { useRef, useEffect, useState } from "react";
+import type { LegacyRef } from "react";
 import { useParams } from "react-router-dom";
 import { useComponentAssets } from "./UseComponentAssets.hooks";
 import { ComponentCodeBlock, ComponentPreview } from "./ComponentWidgets";
 
 export function ComponentsPage() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { components, componentsCss, editingId, setEditingId, handleDelete, handleRename } = useComponentAssets(projectId);
+  const { components, componentsCss, editingId, setEditingId, handleDelete, handleRename, isAnalyzing, handleScan, scanWebviewRef } = useComponentAssets(projectId);
 
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="mb-lg">
-        <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">
-          Components
-        </h1>
-        <p className="text-ui-small text-outline">
-          Reusable UI components detected in the captured website.
-        </p>
-      </header>
+      <ComponentsPageHeader onScan={handleScan} isAnalyzing={isAnalyzing} disabled={!projectId} />
       {components.length === 0 && <EmptyState />}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {components.map((component) => (
-          <ComponentCard
-            key={component.id}
-            component={component}
-            css={componentsCss}
-            projectId={projectId}
-            isEditing={editingId === component.id}
-            onDelete={handleDelete}
-            onEdit={setEditingId}
-            onRename={handleRename}
-          />
+          <ComponentCard key={component.id} component={component} css={componentsCss} projectId={projectId} isEditing={editingId === component.id} onDelete={handleDelete} onEdit={setEditingId} onRename={handleRename} />
         ))}
       </div>
+      {isAnalyzing && projectId && <ScanOverlay projectId={projectId} scanWebviewRef={scanWebviewRef} />}
     </div>
+  );
+}
+
+function ScanOverlay({ projectId, scanWebviewRef }: { projectId: string; scanWebviewRef: React.RefObject<Electron.WebviewTag | null> }) {
+  // The webview must remain on-screen and painted so webview.capturePage() (used by
+  // extractComponents) doesn't fail with UnknownVizError. We mount it in a fixed
+  // container and stack an opaque card on top of it so the user sees a loader card
+  // instead of the live page, but the rest of the app remains visible and interactive.
+  return (
+    <div className="fixed right-6 bottom-6 z-50" style={{ width: 320, height: 200 }}>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <webview ref={scanWebviewRef as LegacyRef<Electron.WebviewTag>} src={`mp-asset://assets/${projectId}/project.html`} style={{ width: "1024px", height: "640px", display: "inline-flex" }} />
+      </div>
+      <div className="border-outline/20 bg-surface text-on-surface absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg border shadow-xl">
+        <span className="material-symbols-outlined text-primary animate-spin" style={{ fontSize: 32 }}>progress_activity</span>
+        <div className="text-ui-small font-medium">Scanning page for components…</div>
+        <div className="text-outline text-xs">This may take a moment</div>
+      </div>
+    </div>
+  );
+}
+
+function ComponentsPageHeader({ onScan, isAnalyzing, disabled }: { onScan: () => void; isAnalyzing: boolean; disabled: boolean }) {
+  return (
+    <header className="mb-lg flex items-center justify-between">
+      <div>
+        <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Components</h1>
+        <p className="text-ui-small text-outline">Reusable UI components detected in the captured website.</p>
+      </div>
+      <button onClick={onScan} disabled={disabled || isAnalyzing} className="bg-primary text-on-primary text-ui-small rounded-md px-4 py-2 font-medium hover:opacity-90 disabled:opacity-50">
+        {isAnalyzing ? "Scanning…" : "Scan for components"}
+      </button>
+    </header>
   );
 }
 
 function EmptyState() {
   return (
     <p className="text-outline text-ui-small">
-      No components detected. Capture a website with reusable UI patterns to see them here.
+      No components detected. Click <span className="font-medium">Scan for components</span> to analyze the captured website for reusable UI patterns.
     </p>
   );
 }

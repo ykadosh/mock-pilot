@@ -9,7 +9,6 @@ export const CAPTURE_STEPS: CaptureStepDefinition[] = [
   { key: "layout", label: "Adjusting layout" },
   { key: "cleanup", label: "Tidying up the HTML" },
   { key: "assets", label: "Extracting assets" },
-  { key: "components", label: "Detecting components" },
   { key: "screenshot", label: "Creating preview" },
   { key: "format", label: "Formatting the code" },
   { key: "save", label: "Saving your project" },
