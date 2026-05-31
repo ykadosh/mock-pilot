@@ -21,18 +21,13 @@ export const planChanges: ToolDefinition = {
     type: "function",
     function: {
       name: "planChanges",
-      description: "REQUIRED FIRST ACTION. Decompose the user's request into a concise list of concrete changes you intend to make. Keep it short (1-5 items). Each change is a brief sentence — you'll discover selectors and exact values during the INSPECT phase. Calling this tool transitions you from PLAN to INSPECT (or directly to MODIFY when mode='single-shot').",
+      description: "First action in full (multi-shot) mode. Decompose the user's request into a concise list of concrete changes you intend to make. Keep it short (1-5 items). Each change is a brief sentence — you'll discover selectors and exact values during the INSPECT phase. Calling this tool transitions you from PLAN to INSPECT. For a single trivial edit where the exact target and value are already known, skip planChanges entirely and call the edit tool directly (single-shot mode — skips PLAN and VERIFY).",
       parameters: {
         type: "object",
         properties: {
           changes: {
             type: "string",
             description: 'JSON array of {target, action, approach?} objects. Example: [{"target":"SaaS label","action":"increase contrast against dark card background"},{"target":"card header layout","action":"place SaaS label above title instead of beside it"},{"target":"impact/effort row","action":"add small gap between the two pills"}]',
-          },
-          mode: {
-            type: "string",
-            enum: ["full", "single-shot"],
-            description: 'Optional. Default "full" runs PLAN→INSPECT→MODIFY→VERIFY. Choose "single-shot" ONLY when ALL of these are true: (a) the request is a single trivial edit (text swap, one CSS property), (b) the exact target selector is already known (typically from an attached element), (c) the new value is unambiguous from the user prompt, (d) no inspection of surrounding structure is needed. Single-shot skips INSPECT and VERIFY — you go straight from planChanges to one edit tool to finish.',
           },
         },
         required: ["changes"],
@@ -48,17 +43,10 @@ export const planChanges: ToolDefinition = {
     const parsed = result.plan;
     if (parsed.length === 0) return "Plan must contain at least one change.";
 
-    const singleShot = args.mode === "single-shot";
-
     context.setPlan?.(parsed);
-    context.setSingleShot?.(singleShot);
-    context.requestPhase?.(singleShot ? "MODIFY" : "INSPECT");
+    context.requestPhase?.("INSPECT");
 
     const formatted = formatPlan(parsed);
-
-    if (singleShot) {
-      return `Plan accepted in SINGLE-SHOT mode (${parsed.length} change(s)):\n${formatted}\n\nNow in MODIFY phase. Apply the edit directly using the appropriate edit tool (e.g., editText, editCss, editAttribute), then call \`finish\`. INSPECT and VERIFY are skipped. If you realise mid-edit that you actually need to inspect first, call \`reinspect\` to drop into the full flow.`;
-    }
     return `Plan accepted (${parsed.length} change(s)):\n${formatted}\n\nNow in INSPECT phase. Use read-only tools (searchHtml, searchCss, getElementInfo, takeScreenshot) — batch them in parallel — to gather everything you need for ALL planned changes. When you're ready to edit, just call your edit tool — the loop will move you to MODIFY automatically. No separate transition tool is needed.`;
   },
 };

@@ -58,7 +58,7 @@ interface LoopState {
   verificationFailures: { index: number; notes: string }[];
   /** Iteration at which the agent last inspected (screenshot/getElementInfo). For VERIFY gating. */
   lastInspectionIteration: number;
-  /** When true (set by planChanges mode:"single-shot"), loop skips INSPECT and VERIFY phases. */
+  /** When true (auto-set when the agent calls a MODIFY tool from PLAN), loop skips PLAN, INSPECT, and VERIFY phases — only MODIFY runs. */
   singleShot: boolean;
   /** Cumulative time spent waiting on LLM chat completions (ms). */
   llmMs: number;
@@ -186,10 +186,14 @@ async function runParallelReadOnlyBatch(executable: ToolCall[], args: ProcessToo
 const VERIFY_TRIGGER_TOOLS = new Set<string>([...Array.from(READ_ONLY_TOOLS), "takeScreenshot"]);
 
 function maybeAutoTransition(toolName: string, state: LoopState): void {
-  if (state.phase === "INSPECT" && MUTATION_TOOLS.has(toolName)) {
+  if (state.phase === "PLAN" && MUTATION_TOOLS.has(toolName)) {
+    log(`  [AUTO-TRANSITION] PLAN → MODIFY (single-shot, triggered by ${toolName})`);
+    state.phase = "MODIFY";
+    state.singleShot = true;
+  } else if (state.phase === "INSPECT" && MUTATION_TOOLS.has(toolName)) {
     log(`  [AUTO-TRANSITION] INSPECT → MODIFY (triggered by ${toolName})`);
     state.phase = "MODIFY";
-  } else if (state.phase === "MODIFY" && state.hasMutated && VERIFY_TRIGGER_TOOLS.has(toolName)) {
+  } else if (state.phase === "MODIFY" && state.hasMutated && VERIFY_TRIGGER_TOOLS.has(toolName) && !state.singleShot) {
     log(`  [AUTO-TRANSITION] MODIFY → VERIFY (triggered by ${toolName})`);
     state.phase = "VERIFY";
   }
@@ -250,7 +254,7 @@ interface IterationContext {
 
 function nudgeHintForPhase(phase: AgentPhase): string {
   switch (phase) {
-    case "PLAN": return "Call `planChanges` with a JSON array of {target, action} describing what you intend to change.";
+    case "PLAN": return "Call `planChanges` with a JSON array of {target, action} describing what you intend to change. For a single trivial edit, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot — completes in one iteration, skips PLAN and VERIFY).";
     case "INSPECT": return "Use read-only tools in parallel to gather info, then just call your edit tool — the loop will move to MODIFY automatically.";
     case "MODIFY": return "Apply your planned edits (batch into the fewest tool calls). When done, take a screenshot — that moves you to VERIFY automatically.";
     case "VERIFY": return "Call `finish` directly, passing a `verifications` array (one entry per plan item: {planItemIndex, status:'ok', evidence}) describing what you literally see in the screenshot. Or `reinspect` if the result is wrong.";
@@ -477,7 +481,7 @@ function buildUserContent(
     }
   }
 
-  text += "\n\nBegin by calling `planChanges` with a JSON array decomposing the request into concrete changes.";
+  text += "\n\nBegin by calling `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot mode — completes in one iteration, skips PLAN and VERIFY).";
 
   if (parts.length > 0) {
     parts.push({ type: "text", text });
@@ -494,7 +498,7 @@ function nextActionHint(toolName: string, state: LoopState): string {
 
   switch (state.phase) {
     case "PLAN":
-      return "\n→ Next: call `planChanges` with your decomposed change list.";
+      return "\n→ Next: call `planChanges` with your decomposed change list, OR (single-shot) skip planning and call the edit tool + `finish` together in one response.";
     case "INSPECT": {
       const planCount = state.plan.length;
       const tip = planCount > 1
@@ -503,7 +507,9 @@ function nextActionHint(toolName: string, state: LoopState): string {
       return `\n→ Next: gather any remaining info (${planCount} plan item(s)), then call your edit tool directly — the loop will move you to MODIFY automatically.${tip}`;
     }
     case "MODIFY":
-      return "\n→ Next: apply remaining edits (batch into the fewest editCss/editHtml calls). After your last edit, take a screenshot — that moves you to VERIFY automatically. Use `reinspect` if you need more info.";
+      return state.singleShot
+        ? "\n→ Next: if the edit is complete, call `finish` directly (no verifications needed in single-shot mode). Otherwise apply the remaining edit(s)."
+        : "\n→ Next: apply remaining edits (batch into the fewest editCss/editHtml calls). After your last edit, take a screenshot — that moves you to VERIFY automatically. Use `reinspect` if you need more info.";
     case "VERIFY": {
       const indices = state.plan.map((_, i) => i);
       const example = indices.length > 0

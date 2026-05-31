@@ -33,6 +33,7 @@ export async function requestAgentChatCompletion(options: AgentChatOptions): Pro
     messages: messages.map(formatMessage),
     tools,
     temperature: 0.2,
+    parallel_tool_calls: true,
   };
 
   const response = await fetch("https://api.githubcopilot.com/chat/completions", {

@@ -28,9 +28,9 @@ const MODIFY_TOOLS = [
 export const PHASES: Record<AgentPhase, PhaseDefinition> = {
   PLAN: {
     name: "PLAN",
-    description: "Decompose the user request into a concise list of concrete changes. You MUST call planChanges as your only action in this phase.",
-    allowedTools: ["planChanges"],
-    canTransitionTo: ["INSPECT"],
+    description: "Decompose the user request into a concise list of concrete changes by calling planChanges. For a single trivial edit where the exact target and value are already known (single-shot mode), skip planChanges and call the edit tool directly — the loop will auto-transition to MODIFY and skip VERIFY.",
+    allowedTools: ["planChanges", ...MODIFY_TOOLS],
+    canTransitionTo: ["INSPECT", "MODIFY"],
   },
   INSPECT: {
     name: "INSPECT",
@@ -40,7 +40,7 @@ export const PHASES: Record<AgentPhase, PhaseDefinition> = {
   },
   MODIFY: {
     name: "MODIFY",
-    description: "Apply the planned changes. Batch related edits in single tool calls when possible (e.g., one editCss call with multiple rules). After your last edit, take a screenshot — that moves you to VERIFY automatically. Call reinspect if you discover you need more information. (In single-shot mode, call finish directly after the edit.)",
+    description: "Apply the planned changes. Batch related edits in single tool calls when possible (e.g., one editCss call with multiple rules). After your last edit, take a screenshot — that moves you to VERIFY automatically. Call reinspect if you discover you need more information. (In single-shot mode — i.e., when you reached MODIFY directly from PLAN without calling planChanges — call finish directly after the edit; VERIFY is skipped.)",
     allowedTools: [...MODIFY_TOOLS, ...INSPECT_TOOLS, "reinspect", "finish"],
     canTransitionTo: ["VERIFY", "INSPECT"],
   },

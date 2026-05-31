@@ -37,9 +37,9 @@ export interface ToolContext {
   lastInspectionIteration?: { value: number };
   /** Mark that an inspection happened in the current iteration. Called from screenshot/getElementInfo tools. */
   markInspection?: () => void;
-  /** True when the agent chose mode:"single-shot" in planChanges — skips INSPECT and VERIFY phases. */
+  /** True when the agent skipped planChanges and went directly to MODIFY (single-shot mode) — skips PLAN and VERIFY phases. */
   singleShot?: { value: boolean };
-  /** Set single-shot mode (called by planChanges). */
+  /** Set single-shot mode. Currently set automatically by the loop when a MODIFY tool is called from PLAN. */
   setSingleShot?: (value: boolean) => void;
 }
 
