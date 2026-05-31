@@ -50,7 +50,6 @@ function ConnectivityRow({ badgeClassName, badgeText, connected, statusText, tit
 }
 
 export function StorageSection({ storage }: { storage: StorageInfo | null }) {
-  const storageWidth = storage ? Math.min(100, (storage.totalBytes / (1024 * 1024 * 1024)) * 100) : 0;
   return (
     <section className="space-y-md">
       <div className="border-outline-variant pb-xs flex items-center justify-between border-b"><h2 className="font-headline-md text-headline-md text-on-surface">Storage</h2></div>
@@ -59,7 +58,7 @@ export function StorageSection({ storage }: { storage: StorageInfo | null }) {
           <div className="gap-sm flex items-center"><span className="material-symbols-outlined text-on-surface-variant">cloud_queue</span><span className="font-label-caps text-label-caps text-on-surface-variant">Storage Utilization</span></div>
           {storage && <span className="text-ui-small text-on-surface font-mono">{formatBytes(storage.totalBytes)}</span>}
         </div>
-        {storage && <><div className="bg-surface-container-highest mb-sm h-2 w-full overflow-hidden rounded-full"><div className="bg-primary h-full rounded-full shadow-[0_0_8px_rgba(210,187,255,0.4)]" style={{ width: `${storageWidth}%` }} /></div><p className="text-ui-small text-on-surface-variant">{storage.projectCount} project{storage.projectCount !== 1 ? "s" : ""} using {formatBytes(storage.totalBytes)} of local storage.</p></>}
+        {storage && <p className="text-ui-small text-on-surface-variant">{storage.projectCount} project{storage.projectCount !== 1 ? "s" : ""} using {formatBytes(storage.totalBytes)} of local storage.</p>}
       </div>
     </section>
   );

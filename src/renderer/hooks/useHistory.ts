@@ -8,34 +8,19 @@ export interface HistoryEntry {
 }
 
 function mergeHistoryEntries(result: Awaited<ReturnType<typeof window.api.loadProjectHistory>>) {
-  if (!result.success || !result.entries || !result.htmlSnapshots) {
-    return null;
-  }
-
+  if (!result.success || !result.entries || !result.htmlSnapshots) return null;
   const htmlSnapshots = result.htmlSnapshots;
-  return result.entries.map((entry, index) => ({
-    ...entry,
-    html: htmlSnapshots[index],
-  }));
+  return result.entries.map((entry, index) => ({ ...entry, html: htmlSnapshots[index] }));
 }
 
-function useHistoryLoader({
-  projectId,
-  setEntries,
-  setPointer,
-  setLoaded,
-}: {
+function useHistoryLoader({ projectId, setEntries, setPointer, setLoaded }: {
   projectId: string | undefined;
   setEntries: Dispatch<SetStateAction<HistoryEntry[]>>;
   setPointer: Dispatch<SetStateAction<number>>;
   setLoaded: Dispatch<SetStateAction<boolean>>;
 }) {
   useEffect(() => {
-    if (!projectId) {
-      setLoaded(true);
-      return;
-    }
-
+    if (!projectId) { setLoaded(true); return; }
     (async () => {
       const result = await window.api.loadProjectHistory(projectId);
       const loadedEntries = mergeHistoryEntries(result);
@@ -144,22 +129,29 @@ export function useHistory(projectId?: string) {
   const [pointer, setPointer] = useState(-1);
   const [loaded, setLoaded] = useState(false);
   const saveToDisk = useHistorySaver(projectId);
+  const pointerRef = useRef(pointer);
+  useEffect(() => { pointerRef.current = pointer; }, [pointer]);
 
   useHistoryLoader({ projectId, setEntries, setPointer, setLoaded });
 
   const initialize = useHistoryInitialization({ setEntries, setPointer, saveToDisk });
   const push = useHistoryPush({ pointer, setEntries, setPointer, saveToDisk });
   const { undo, redo, goTo } = useHistoryTraversal({ entries, setPointer, saveToDisk });
+  const replaceCurrent = useCallback((html: string) => {
+    setEntries((prev) => {
+      const p = pointerRef.current;
+      if (p < 0 || p >= prev.length || prev[p].html === html) return prev;
+      const next = prev.slice();
+      next[p] = { ...next[p], html };
+      saveToDisk(next, p);
+      return next;
+    });
+  }, [saveToDisk]);
 
   return {
-    entries,
-    pointer,
+    entries, pointer,
     currentHtml: pointer >= 0 && pointer < entries.length ? entries[pointer].html : null,
-    initialize,
-    push,
-    undo,
-    redo,
-    goTo,
+    initialize, push, replaceCurrent, undo, redo, goTo,
     canUndo: pointer > 0,
     canRedo: pointer < entries.length - 1,
     loaded,
