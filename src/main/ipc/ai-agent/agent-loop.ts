@@ -254,7 +254,7 @@ interface IterationContext {
 
 function nudgeHintForPhase(phase: AgentPhase): string {
   switch (phase) {
-    case "PLAN": return "Call `planChanges` with a JSON array of {target, action} describing what you intend to change. For a single trivial edit, skip `planChanges` and call the edit tool directly (single-shot — skips PLAN and VERIFY).";
+    case "PLAN": return "Call `planChanges` with a JSON array of {target, action} describing what you intend to change. For a single trivial edit, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot — completes in one iteration, skips PLAN and VERIFY).";
     case "INSPECT": return "Use read-only tools in parallel to gather info, then just call your edit tool — the loop will move to MODIFY automatically.";
     case "MODIFY": return "Apply your planned edits (batch into the fewest tool calls). When done, take a screenshot — that moves you to VERIFY automatically.";
     case "VERIFY": return "Call `finish` directly, passing a `verifications` array (one entry per plan item: {planItemIndex, status:'ok', evidence}) describing what you literally see in the screenshot. Or `reinspect` if the result is wrong.";
@@ -481,7 +481,7 @@ function buildUserContent(
     }
   }
 
-  text += "\n\nBegin by calling `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and call the edit tool directly (single-shot mode — skips PLAN and VERIFY).";
+  text += "\n\nBegin by calling `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot mode — completes in one iteration, skips PLAN and VERIFY).";
 
   if (parts.length > 0) {
     parts.push({ type: "text", text });
@@ -498,7 +498,7 @@ function nextActionHint(toolName: string, state: LoopState): string {
 
   switch (state.phase) {
     case "PLAN":
-      return "\n→ Next: call `planChanges` with your decomposed change list, OR (single-shot) skip planning and call the edit tool directly.";
+      return "\n→ Next: call `planChanges` with your decomposed change list, OR (single-shot) skip planning and call the edit tool + `finish` together in one response.";
     case "INSPECT": {
       const planCount = state.plan.length;
       const tip = planCount > 1
