@@ -75,6 +75,9 @@ export function useCanvasPreviewHandle(ref: ForwardedRef<CanvasPreviewHandle>, r
     applyModification(mpId, newHTML, label) {
       postToIframe(iframeRef, { type: "apply-modification", mpId, html: newHTML, label: label || "AI modification" });
     },
+    applyFullHtml(newHTML, label) {
+      postToIframe(iframeRef, { type: "apply-full-html", html: newHTML, label: label || "AI modification" });
+    },
     getElementHTML(mpId) {
       return getElementHTML(iframeRef, mpId);
     },

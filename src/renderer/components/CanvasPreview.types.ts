@@ -24,6 +24,7 @@ export interface ElementTreeNode {
 
 export interface CanvasPreviewHandle {
   applyModification: (mpId: string, newHTML: string, label?: string) => void;
+  applyFullHtml: (newHTML: string, label?: string) => void;
   getElementHTML: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
   scrollToElement: (mpId: string) => void;
   getElementTree: () => ElementTreeNode[];
@@ -44,5 +45,6 @@ export interface CanvasPreviewProps {
   viewportWidth?: number;
   projectId?: string;
   htmlContent?: string | null;
+  reloadEpoch?: number;
   assetsBasePath?: string | null;
 }

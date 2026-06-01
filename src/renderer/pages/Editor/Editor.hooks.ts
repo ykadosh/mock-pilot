@@ -111,12 +111,10 @@ function useEditorViewportState(codeEditorDefault: boolean) {
 interface EditorModificationsArgs {
   canvasRef: React.RefObject<CanvasPreviewHandle | null>;
   pendingLabelRef: PendingLabelRef;
-  history: EditorHistory;
   tools: ReturnType<typeof useEditorToolState>;
-  projectId?: string;
 }
 
-function useEditorModifications({ canvasRef, pendingLabelRef, history, tools, projectId }: EditorModificationsArgs) {
+function useEditorModifications({ canvasRef, pendingLabelRef, tools }: EditorModificationsArgs) {
   const handleApplyModification = useCallback((mpId: string, newHTML: string, label?: string) => {
     pendingLabelRef.current = label || "AI modification";
     canvasRef.current?.applyModification(mpId, newHTML, label);
@@ -124,9 +122,11 @@ function useEditorModifications({ canvasRef, pendingLabelRef, history, tools, pr
   }, [canvasRef, pendingLabelRef, tools]);
 
   const handleApplyPageModification = useCallback((newHTML: string, label?: string) => {
-    history.push(newHTML, label || "AI page modification");
-    if (projectId) window.api.updateProjectHtml(projectId, newHTML);
-  }, [history, projectId]);
+    pendingLabelRef.current = label || "AI page modification";
+    // Route through the iframe so it can apply the change in-place (no srcDoc reload, no white flash).
+    // The iframe will post back a `modification-applied` message which updates history + persistence.
+    canvasRef.current?.applyFullHtml(newHTML, label || "AI page modification");
+  }, [canvasRef, pendingLabelRef]);
 
   return { handleApplyModification, handleApplyPageModification };
 }
@@ -143,7 +143,7 @@ export function useEditorState(codeEditorDefault = false) {
   useHistoryMessageSync(history, pendingLabelRef, projectId);
   useHistoryPersistence(history, projectId);
 
-  const { handleApplyModification, handleApplyPageModification } = useEditorModifications({ canvasRef, pendingLabelRef, history, tools, projectId });
+  const { handleApplyModification, handleApplyPageModification } = useEditorModifications({ canvasRef, pendingLabelRef, tools });
 
   const handleCodeUpdate = useCallback((fullHtml: string, label: string) => {
     history.push(fullHtml, label);

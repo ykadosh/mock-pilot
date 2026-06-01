@@ -87,17 +87,24 @@ function useSelectedRect(selectedMpId: string | null | undefined, onElementSelec
   return selectedRect;
 }
 
-export function useCanvasHtml(htmlContent?: string | null) {
+export function useCanvasHtml(htmlContent?: string | null, reloadEpoch?: number) {
   const [html, setHtml] = useState<string | null>(null);
   const initialCleanDone = useRef(false);
+  const htmlContentRef = useRef(htmlContent);
+  htmlContentRef.current = htmlContent;
+  const lastEpochRef = useRef<number | undefined>(undefined);
+  const epochGated = reloadEpoch !== undefined;
   useEffect(() => {
-    if (htmlContent !== undefined) {
-      setHtml(initialCleanDone.current ? htmlContent : cleanHtml(htmlContent));
-      initialCleanDone.current = true;
+    const current = htmlContentRef.current;
+    if (current === undefined) {
+      setHtml(cleanHtml(getCapturedHtml()));
       return;
     }
-    setHtml(cleanHtml(getCapturedHtml()));
-  }, [htmlContent]);
+    if (epochGated && reloadEpoch === lastEpochRef.current) return;
+    lastEpochRef.current = reloadEpoch;
+    setHtml(initialCleanDone.current ? current : cleanHtml(current));
+    initialCleanDone.current = true;
+  }, [epochGated, reloadEpoch, htmlContent]);
   return html;
 }
 

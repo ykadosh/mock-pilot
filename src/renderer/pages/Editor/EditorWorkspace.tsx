@@ -39,6 +39,7 @@ function WorkspaceContent(state: EditorState) {
       viewportWidth={state.viewportWidth}
       projectId={state.projectId}
       htmlContent={state.currentHtml}
+      reloadEpoch={state.reloadEpoch}
       assetsBasePath={state.assetsBasePath}
     />
   );

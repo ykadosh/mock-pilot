@@ -19,9 +19,10 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
   viewportWidth = 1280,
   projectId: _projectId,
   htmlContent,
+  reloadEpoch,
   assetsBasePath,
 }, ref) {
-  const html = useCanvasHtml(htmlContent);
+  const html = useCanvasHtml(htmlContent, reloadEpoch);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scale = zoom / 100;

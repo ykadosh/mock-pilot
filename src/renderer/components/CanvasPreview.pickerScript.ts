@@ -1,3 +1,4 @@
+import { APPLY_FULL_HTML_SCRIPT } from "./CanvasPreview.pickerScript.applyFullHtml";
 import { LAYERS_HOVER_SCRIPT } from "./CanvasPreview.pickerScript.layers";
 
 export const PICKER_SCRIPT = `
@@ -9,6 +10,7 @@ export const PICKER_SCRIPT = `
   let label = null;
   let active = false;
 ${LAYERS_HOVER_SCRIPT}
+${APPLY_FULL_HTML_SCRIPT}
   function createOverlay() {
     overlay = document.createElement('div');
     overlay.setAttribute('data-mp-injected', 'true');
@@ -101,10 +103,7 @@ ${LAYERS_HOVER_SCRIPT}
     }, '*');
   }
 
-  function handleMouseMove(e) {
-    if (!active || e.target === overlay || e.target === label) return;
-    updateOverlay(e.target, true);
-  }
+  function handleMouseMove(e) { if (!active || e.target === overlay || e.target === label) return; updateOverlay(e.target, true); }
 
   function handleClick(e) {
     if (!active) return;
@@ -118,12 +117,7 @@ ${LAYERS_HOVER_SCRIPT}
     postSelected(el, mpId, updateOverlay(el, true));
   }
 
-  function handlePickerAction(type, cb) {
-    const mpId = type.mpId;
-    const el = document.querySelector('[data-mp-id="' + mpId + '"]');
-    if (!el) return;
-    cb(el, mpId);
-  }
+  function handlePickerAction(type, cb) { var el = document.querySelector('[data-mp-id="' + type.mpId + '"]'); if (el) cb(el, type.mpId); }
 
   function findRectSelection(selRect) {
     var allEls = document.body.querySelectorAll('*');
@@ -156,6 +150,7 @@ ${LAYERS_HOVER_SCRIPT}
     if (e.data.type === 'layers-hover-clear') { hideHoverOverlay(); return; }
     if (e.data.type === 'layers-select') { handlePickerAction(e.data, function(el, mpId) { hideHoverOverlay(); postSelected(el, mpId, updateOverlay(el, true)); }); return; }
     if (e.data.type === 'apply-modification') { try { handlePickerAction(e.data, function(el, mpId) { if (e.data.html === '__REMOVE_ELEMENT__') el.remove(); else { const temp = document.createElement('div'); temp.innerHTML = e.data.html; const newEl = temp.firstElementChild; if (newEl) { newEl.setAttribute('data-mp-id', mpId); el.outerHTML = newEl.outerHTML; } else { el.outerHTML = e.data.html; } } window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: e.data.label || 'AI modification' }, '*'); }); } catch (err) { window.parent.postMessage({ type: 'modification-applied', success: false, error: err.message }, '*'); } return; }
+    if (e.data.type === 'apply-full-html') { if (applyFullHtml(e.data.html)) { window.parent.postMessage({ type: 'modification-applied', success: true, fullHTML: getCleanHTML(), label: e.data.label || 'AI modification' }, '*'); setTimeout(function() { window.postMessage({ type: 'measure-height' }, '*'); }, 0); } else { window.parent.postMessage({ type: 'modification-applied', success: false, error: 'apply-full-html failed' }, '*'); } return; }
     if (e.data.type === 'get-element-html') { handlePickerAction(e.data, function(el, mpId) { window.parent.postMessage({ type: 'element-html-response', mpId: mpId, outerHTML: el.outerHTML, computedStyle: getStyleMap(el) }, '*'); }); if (!document.querySelector('[data-mp-id="' + e.data.mpId + '"]')) window.parent.postMessage({ type: 'element-html-response', mpId: e.data.mpId, outerHTML: null }, '*'); return; }
     if (e.data.type === 'rect-select') { var bestEl = findRectSelection(e.data.rect); if (!bestEl) return; var rectMpId = 'mp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); bestEl.setAttribute('data-mp-id', rectMpId); postSelected(bestEl, rectMpId, updateOverlay(bestEl, true)); }
   });
