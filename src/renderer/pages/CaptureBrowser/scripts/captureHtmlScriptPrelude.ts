@@ -16,31 +16,33 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
       console.log.apply(console, args);
     };
     _log("Capture script running inside webview");
-    // Snapshot all CSSOM rules immediately before any DOM mutation can trigger observers
-    var _cssomSnapshot = [];
+    // Snapshot all CSSOM rules immediately before any DOM mutation can trigger observers.
+    // Recurses into @import rules so cross-origin imported stylesheets (e.g. Google Fonts)
+    // contribute their @font-face declarations rather than being dropped when <link>/<style>
+    // tags are removed later in the pipeline.
+    var _cssomSnapshot = [], _visitedSheets = [];
     _log("[step:cssom-snapshot] Snapshotting all stylesheet rules...");
-    for (var _si = 0; _si < document.styleSheets.length; _si++) {
-      try {
-        var _sheet = document.styleSheets[_si];
-        if (_sheet.cssRules && _sheet.cssRules.length > 0) {
-          var _rules = [];
-          for (var _ri = 0; _ri < _sheet.cssRules.length; _ri++) _rules.push(_sheet.cssRules[_ri].cssText);
-          _cssomSnapshot.push({ href: _sheet.href || null, rules: _rules });
+    function _snapshotSheet(sheet, depth, adopted) {
+      if (!sheet || depth > 10 || _visitedSheets.indexOf(sheet) !== -1) return;
+      _visitedSheets.push(sheet);
+      var rules; try { rules = sheet.cssRules; } catch (e) { return; }
+      if (!rules || rules.length === 0) return;
+      var topLevelRules = [];
+      for (var _ri = 0; _ri < rules.length; _ri++) {
+        var _rule = rules[_ri], _isImport = false;
+        try { _isImport = (_rule.type === 3); } catch (e) {}
+        if (_isImport) {
+          var _imported = null; try { _imported = _rule.styleSheet; } catch (e) {}
+          var _accessible = false; if (_imported) { try { _accessible = !!_imported.cssRules; } catch (e) {} }
+          // Inline the imported sheet; @import directive kept only if sheet is cross-origin/inaccessible.
+          if (_accessible) { _snapshotSheet(_imported, depth + 1, false); continue; }
         }
-      } catch (e) { /* cross-origin sheet, will be fetched later */ }
-    }
-    if (document.adoptedStyleSheets) {
-      for (var _ai = 0; _ai < document.adoptedStyleSheets.length; _ai++) {
-        try {
-          var _as = document.adoptedStyleSheets[_ai];
-          if (_as.cssRules && _as.cssRules.length > 0) {
-            var _ar = [];
-            for (var _ari = 0; _ari < _as.cssRules.length; _ari++) _ar.push(_as.cssRules[_ari].cssText);
-            _cssomSnapshot.push({ href: null, rules: _ar, adopted: true });
-          }
-        } catch (e) {}
+        try { topLevelRules.push(_rule.cssText); } catch (e) {}
       }
+      if (topLevelRules.length > 0) _cssomSnapshot.push({ href: sheet.href || null, rules: topLevelRules, adopted: !!adopted });
     }
+    for (var _si = 0; _si < document.styleSheets.length; _si++) _snapshotSheet(document.styleSheets[_si], 0, false);
+    if (document.adoptedStyleSheets) for (var _ai = 0; _ai < document.adoptedStyleSheets.length; _ai++) _snapshotSheet(document.adoptedStyleSheets[_ai], 0, true);
     _log("Snapshotted " + _cssomSnapshot.length + " stylesheet(s) with " + _cssomSnapshot.reduce(function(a,b){return a+b.rules.length;},0) + " total rules");
     var _fontCache = {};
     async function _fetchFontAsDataUri(resolvedUrl) {
@@ -96,11 +98,13 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
           }
         } catch (e) {}
       }
-      // Prefer woff2, then woff — skip eot/truetype/opentype entirely
-      var woff2 = candidates.find(function(c) { return c.format === "woff2"; });
-      if (woff2) return woff2;
-      var woff = candidates.find(function(c) { return c.format === "woff"; });
-      if (woff) return woff;
+      // Prefer woff2 > woff, falling back to truetype/opentype so TTF/OTF-only
+      // declarations (common on Hebrew/Arabic sites) are preserved instead of dropped.
+      var _preferred = ["woff2", "woff", "truetype", "opentype"];
+      for (var _pi = 0; _pi < _preferred.length; _pi++) {
+        var _found = candidates.find(function(c) { return c.format === _preferred[_pi]; });
+        if (_found) return _found;
+      }
       return null;
     }
     async function inlineFontUrls(cssText, baseUrl) {
@@ -122,14 +126,17 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
       // Pass 2: Fetch selected URLs in parallel
       _log("  Fetching " + urlsToFetch.length + " font URL(s) (woff2 preferred)...");
       await _fetchAllFontsParallel(urlsToFetch);
-      // Pass 3: Rebuild @font-face blocks with only the inlined font
+      // Pass 3: Rebuild @font-face blocks with only the inlined font. If a face had no
+      // supported url() at all, drop it. If the fetch failed (e.g. CORS), keep the
+      // original block so the iframe can attempt the request at render time.
       var removedCount = 0;
+      var keptOriginalCount = 0;
       for (var _fi = 0; _fi < fontFaces.length; _fi++) {
         var faceMatch = fontFaces[_fi];
         var best = bestPerFace[_fi];
         if (!best) { cssText = cssText.replace(faceMatch[0], ""); removedCount++; continue; }
         var dataUri = _fontCache[best.url];
-        if (!dataUri) { cssText = cssText.replace(faceMatch[0], ""); removedCount++; continue; }
+        if (!dataUri) { keptOriginalCount++; continue; }
         // Rewrite the src: property to only include the successfully fetched font
         var faceBlock = faceMatch[0];
         var newSrc = 'src: url("' + dataUri + '") format("' + best.format + '")';
@@ -137,6 +144,7 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
         cssText = cssText.replace(faceMatch[0], faceBlock);
       }
       if (removedCount > 0) _log("  Removed " + removedCount + " @font-face block(s) with no supported format");
+      if (keptOriginalCount > 0) _log("  Kept " + keptOriginalCount + " @font-face block(s) with original src (fetch failed)");
       return cssText;
     }
 `;
