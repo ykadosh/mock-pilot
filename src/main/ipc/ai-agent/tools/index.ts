@@ -18,6 +18,8 @@ import { listIcons } from "./list-icons";
 import { getDesignTokens } from "./get-design-tokens";
 import { finish } from "./finish";
 import { planChanges, reinspect } from "./phase-control";
+import { viewImage } from "./view-image";
+import { saveAttachmentToAssets } from "./save-attachment-to-assets";
 
 const allTools: ToolDefinition[] = [
   planChanges,
@@ -41,6 +43,8 @@ const allTools: ToolDefinition[] = [
   listComponents,
   listIcons,
   getDesignTokens,
+  viewImage,
+  saveAttachmentToAssets,
   finish,
 ];
 

@@ -1,10 +1,12 @@
 /* eslint-disable max-lines, complexity */
+import path from "node:path";
 import * as cheerio from "cheerio";
 import type { AgentMessage, AgentPhase, AgentProgress, PlannedChange, ToolCall, ToolContext, ProjectAssets } from "./agent-types";
 import { AGENT_SYSTEM_PROMPT } from "./agent-system-prompt";
 import { getToolSchemas, getToolExecutor } from "./tools";
 import { requestAgentChatCompletion } from "./agent-chat";
 import { MUTATION_TOOLS, READ_ONLY_TOOLS, PHASES, describePhaseForError, isToolAllowedInPhase } from "./agent-phases";
+import { getProjectDir } from "../../projects";
 
 function log(...args: unknown[]) {
   // eslint-disable-next-line no-console
@@ -15,8 +17,9 @@ export interface AgentLoopOptions {
   prompt: string;
   fullHTML: string;
   projectAssets?: ProjectAssets;
+  projectId?: string;
   attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
-  images?: { name: string; dataUrl: string }[];
+  images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[];
   maxIterations?: number;
   signal?: AbortSignal;
   onProgress?: (progress: AgentProgress) => void;
@@ -76,9 +79,12 @@ interface CreateContextArgs {
   projectAssets?: ProjectAssets;
   signal?: AbortSignal;
   defaultSelector?: string;
+  imageAttachments: Map<string, { name: string; mimeType: string; dataUrl: string }>;
+  getMessages: () => AgentMessage[];
+  projectId?: string;
 }
 
-function createContext({ state, fullHTML, projectAssets, signal, defaultSelector }: CreateContextArgs): ToolContext {
+function createContext({ state, fullHTML, projectAssets, signal, defaultSelector, imageAttachments, getMessages, projectId }: CreateContextArgs): ToolContext {
   const $ = cheerio.load(fullHTML);
   const snapshots: string[] = [];
   return {
@@ -109,6 +115,9 @@ function createContext({ state, fullHTML, projectAssets, signal, defaultSelector
     get lastInspectionIteration() { return { value: state.lastInspectionIteration }; },
     get singleShot() { return { value: state.singleShot }; },
     setSingleShot: (value: boolean) => { state.singleShot = value; },
+    getImageAttachment: (id: string) => imageAttachments.get(id) ?? null,
+    pushUserMessageParts: (parts: object[]) => { getMessages().push({ role: "user", content: parts }); },
+    getProjectAssetsDir: () => projectId ? path.join(getProjectDir(projectId), "assets") : null,
   };
 }
 
@@ -344,14 +353,16 @@ function logStart(options: AgentLoopOptions): void {
   log("Continuing from previous:", Boolean(options.previousMessages));
 }
 
-export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoopResult> {
-  const { maxIterations = 20, signal, onProgress, aiModel, apiToken } = options;
-  logStart(options);
+function buildImageAttachmentsMap(images: AgentLoopOptions["images"]): Map<string, { name: string; mimeType: string; dataUrl: string }> {
+  const map = new Map<string, { name: string; mimeType: string; dataUrl: string }>();
+  for (const img of images ?? []) {
+    map.set(img.id, { name: img.name, mimeType: img.mimeType, dataUrl: img.dataUrl });
+  }
+  return map;
+}
 
-  const isContinuation = Boolean(options.previousMessages && options.previousMessages.length > 0);
-  const continueMode = options.continueMode ?? "new-prompt";
-  const initialPhase: AgentPhase = !isContinuation || continueMode === "new-prompt" ? "PLAN" : "INSPECT";
-  const state: LoopState = {
+function createInitialState(initialPhase: AgentPhase): LoopState {
+  return {
     phase: initialPhase,
     plan: [],
     lastScreenshotIteration: new Map(),
@@ -367,10 +378,28 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
     toolStats: new Map(),
     hasMutated: false,
   };
+}
 
-  const defaultSelector = options.attachedElements?.[0]?.selector;
-  const context = createContext({ state, fullHTML: options.fullHTML, projectAssets: options.projectAssets, signal, defaultSelector });
+export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoopResult> {
+  const { maxIterations = 20, signal, onProgress, aiModel, apiToken } = options;
+  logStart(options);
+
+  const isContinuation = Boolean(options.previousMessages && options.previousMessages.length > 0);
+  const continueMode = options.continueMode ?? "new-prompt";
+  const initialPhase: AgentPhase = !isContinuation || continueMode === "new-prompt" ? "PLAN" : "INSPECT";
+  const state = createInitialState(initialPhase);
+
   const messages = initialMessages(options, isContinuation);
+  const context = createContext({
+    state,
+    fullHTML: options.fullHTML,
+    projectAssets: options.projectAssets,
+    signal,
+    defaultSelector: options.attachedElements?.[0]?.selector,
+    imageAttachments: buildImageAttachmentsMap(options.images),
+    getMessages: () => messages,
+    projectId: options.projectId,
+  });
   const iter: IterationContext = { messages, toolSchemas: getToolSchemas(), context, state, aiModel, apiToken, signal, onProgress };
 
   const startTime = Date.now();
@@ -453,19 +482,17 @@ function extractVisibleText(outerHTML: string): string[] {
   }
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+}
+
 function buildUserContent(
   prompt: string,
   attachedElements?: { mpId: string; selector: string; outerHTML: string }[],
-  images?: { name: string; dataUrl: string }[],
-): string | object[] {
-  const parts: object[] = [];
-
-  if (images && images.length > 0) {
-    for (const img of images) {
-      parts.push({ type: "image_url", image_url: { url: img.dataUrl, detail: "low" } });
-    }
-  }
-
+  images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[],
+): string {
   let text = `User request: ${prompt}`;
 
   if (attachedElements && attachedElements.length > 0) {
@@ -481,12 +508,17 @@ function buildUserContent(
     }
   }
 
-  text += "\n\nBegin by calling `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot mode — completes in one iteration, skips PLAN and VERIFY).";
-
-  if (parts.length > 0) {
-    parts.push({ type: "text", text });
-    return parts;
+  if (images && images.length > 0) {
+    text += "\n\nAttached images (metadata only — pixels are NOT yet loaded into context):";
+    for (const img of images) {
+      text += `\n  - id="${img.id}" name="${img.name}" type=${img.mimeType} size=${formatBytes(img.sizeBytes)}`;
+    }
+    text += "\nDecide from the request what to do with each image:";
+    text += "\n  • To put the image INTO the page, call `saveAttachmentToAssets({id})` — it writes the file under the project's assets/ folder and returns a relative path like \"assets/abc.png\". Reference that path in your edit tools (e.g., addElement with `<img src=\"assets/abc.png\">`, or editCss with `background-image: url(\"assets/abc.png\")`). Do NOT embed base64/data URLs in HTML.";
+    text += "\n  • To LOOK AT the image (because the request requires understanding its contents — design-from-image, \"make it look like this\", colour/layout inference, etc.), call `viewImage({id})`. It injects the pixels into the conversation from that iteration onward. Don't call this if the user just wants the image placed on the page.";
   }
+
+  text += "\n\nBegin by calling `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot mode — completes in one iteration, skips PLAN and VERIFY).";
 
   return text;
 }

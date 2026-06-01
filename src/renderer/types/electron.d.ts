@@ -140,7 +140,7 @@ declare global {
         projectId?: string;
         sessionId?: string;
         attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
-        images?: { name: string; dataUrl: string }[];
+        images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[];
         projectAssets?: object;
         previousAgentMessages?: ConversationAgentMessage[];
         continueFromMaxIterations?: boolean;

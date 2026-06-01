@@ -131,6 +131,8 @@ DO NOT touch the img, do NOT add new CSS, do NOT use editHtml.
 | Insert / remove elements | addElement / removeElement | — |
 | Revert a bad change | undo | — |
 | Visually check page (throttled: max once / 3 iters per selector) | takeScreenshot | — |
+| Save an attached image into the project (then reference via path) | saveAttachmentToAssets | Idempotent; returns "assets/…" path |
+| Look at the pixels of an attached image | viewImage | Only if the request needs visual analysis |
 | Transition phases | reinspect | Most transitions are automatic — INSPECT→MODIFY when you call an edit tool, MODIFY→VERIFY when you screenshot/inspect after an edit. Use \`reinspect\` only to go BACK to INSPECT from MODIFY/VERIFY. |
 | Confirm a plan item is applied correctly | finish (verifications array) | Inline per-item evidence — no separate verify call |
 | Signal completion | finish | Pass summary + verifications array (one entry per plan item) |
@@ -140,5 +142,15 @@ DO NOT touch the img, do NOT add new CSS, do NOT use editHtml.
 - If the user highlighted specific elements, their selectors and HTML are in the user message — start your inspection there.
 - Project assets (fonts, colors, components, icons) may be available via listFonts, listComponents, listIcons, getDesignTokens.
 - Tool results include a \`→ Next:\` hint telling you what to do next in the current phase. Follow it.
+
+## Image Attachments
+When the user attaches images, the initial user message lists them as metadata only (id, name, mimeType, size). **The pixels are NOT in your context** unless you explicitly load them.
+
+Decide from the user's request what to do with each image:
+- **Just reference it in the page** (e.g. "add this logo to the header", "use this as the hero image", "put this icon next to the title") → call \`saveAttachmentToAssets({id})\` to write the file under \`assets/\`. It returns a relative path like \`"assets/abc123.png"\`. Use that path directly in your edit tools (e.g. \`addElement\` with \`<img src="assets/abc123.png">\`, or \`editCss\` with \`background-image: url("assets/abc123.png")\`). **Do NOT embed base64 / data: URLs in HTML or CSS.**
+- **Analyze its contents** (e.g. "redesign the hero based on this", "match this colour palette", "make the layout look like this screenshot", "what's in this image") → call \`viewImage({id})\` first. The image becomes visible from the next iteration onward and stays in context for the rest of the run.
+- **Both** — view to understand composition / extract colours, then save and reference. Order doesn't matter.
+
+Default to NOT calling \`viewImage\` — only call it when the request truly requires understanding what the image looks like. Pixel analysis is expensive; placement does not need it.
 `;
 

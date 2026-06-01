@@ -41,6 +41,12 @@ export interface ToolContext {
   singleShot?: { value: boolean };
   /** Set single-shot mode. Currently set automatically by the loop when a MODIFY tool is called from PLAN. */
   setSingleShot?: (value: boolean) => void;
+  /** Look up an image attachment by id (name, mimeType, dataUrl). Returns null if unknown. */
+  getImageAttachment?: (id: string) => { name: string; mimeType: string; dataUrl: string } | null;
+  /** Append a `{role:"user", content: parts}` message to the live conversation. Used by viewImage to inject pixel content on demand. */
+  pushUserMessageParts?: (parts: object[]) => void;
+  /** Absolute path to the current project's `assets/` directory. Undefined when no projectId is known. */
+  getProjectAssetsDir?: () => string | null;
 }
 
 export interface ProjectAssets {

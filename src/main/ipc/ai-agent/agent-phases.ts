@@ -12,6 +12,7 @@ const INSPECT_TOOLS = [
   "listIcons",
   "getDesignTokens",
   "takeScreenshot",
+  "viewImage",
 ];
 
 const MODIFY_TOOLS = [
@@ -22,6 +23,7 @@ const MODIFY_TOOLS = [
   "editAttribute",
   "addElement",
   "removeElement",
+  "saveAttachmentToAssets",
   "undo",
 ];
 
@@ -64,10 +66,13 @@ export const READ_ONLY_TOOLS = new Set<string>([
   "listComponents",
   "listIcons",
   "getDesignTokens",
+  "viewImage",
 ]);
 
 /** Tools that mutate the document (must snapshot first, must run sequentially). */
-export const MUTATION_TOOLS = new Set<string>(MODIFY_TOOLS.filter((t) => t !== "undo"));
+export const MUTATION_TOOLS = new Set<string>(
+  MODIFY_TOOLS.filter((t) => t !== "undo" && t !== "saveAttachmentToAssets"),
+);
 
 /** Tools that transition between phases (the loop reads requestPhase from context). */
 export const TRANSITION_TOOLS = new Set<string>(["planChanges", "reinspect"]);

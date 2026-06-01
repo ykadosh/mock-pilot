@@ -21,10 +21,31 @@ export interface AgentModifyResult {
   messages?: AgentMessage[];
 }
 
+function inferMimeFromDataUrl(dataUrl: string): string {
+  const match = dataUrl.match(/^data:([^;,]+)/);
+  return match ? match[1] : "application/octet-stream";
+}
+
+function approxBytesFromDataUrl(dataUrl: string): number {
+  const commaIdx = dataUrl.indexOf(",");
+  if (commaIdx < 0) return 0;
+  const b64 = dataUrl.slice(commaIdx + 1);
+  let padding = 0;
+  if (b64.endsWith("==")) padding = 2;
+  else if (b64.endsWith("=")) padding = 1;
+  return Math.max(0, Math.floor((b64.length * 3) / 4) - padding);
+}
+
 function buildAttachmentPayloads(attachments: Attachment[]) {
   const images = attachments
     .filter((a): a is ImageAttachment => a.type === "image")
-    .map((a) => ({ name: a.name, dataUrl: a.dataUrl }));
+    .map((a) => ({
+      id: a.id,
+      name: a.name,
+      dataUrl: a.dataUrl,
+      mimeType: inferMimeFromDataUrl(a.dataUrl),
+      sizeBytes: approxBytesFromDataUrl(a.dataUrl),
+    }));
 
   const attachedElements = attachments
     .filter((a) => a.type === "element")

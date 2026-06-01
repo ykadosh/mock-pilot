@@ -20,7 +20,7 @@ interface AgentModifyRequest {
   projectId?: string;
   sessionId?: string;
   attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
-  images?: { name: string; dataUrl: string }[];
+  images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[];
   projectAssets?: ProjectAssets;
   /** Previous LLM conversation messages from the active session, sent to enable continuation. */
   previousAgentMessages?: AgentMessage[];
@@ -115,6 +115,7 @@ function buildAgentLoopOptions({ data, previousMessages, signal, getMainWindow, 
     projectAssets: data.projectAssets,
     attachedElements: data.attachedElements,
     images: data.images,
+    projectId: data.projectId,
     maxIterations: getMaxIterations(),
     signal,
     onProgress: createProgressHandler(getMainWindow),
