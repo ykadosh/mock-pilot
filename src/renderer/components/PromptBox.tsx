@@ -3,6 +3,7 @@ import type { SelectedElement } from "../pages/Editor";
 import type { Attachment, ElementAttachment } from "./PromptBox.types";
 import { AttachmentChips } from "./PromptBox.chips";
 import { AgentProgressIndicator } from "./AgentProgressIndicator";
+import { DragOverlay, ReadOnlyPromptBox, getContainerClass } from "./PromptBox.parts";
 
 interface PromptBoxProps {
   addElementAttachment: (element: SelectedElement) => void;
@@ -15,6 +16,11 @@ interface PromptBoxProps {
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleFileSelect: () => void;
   handlePaste: (event: React.ClipboardEvent) => void;
+  handleDragEnter: (event: React.DragEvent) => void;
+  handleDragOver: (event: React.DragEvent) => void;
+  handleDragLeave: (event: React.DragEvent) => void;
+  handleDrop: (event: React.DragEvent) => void;
+  isDraggingOver: boolean;
   handlePromptKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement>;
   loading: boolean;
   prompt: string;
@@ -81,44 +87,24 @@ function PromptInput({ handleApply, handleCancel, handleFileSelect, handlePaste,
   );
 }
 
-function ReadOnlyPromptBox({ onStartNewConversation }: { onStartNewConversation?: () => void }) {
-  return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-70 flex justify-center px-4">
-      <div className="pointer-events-auto w-full max-w-2xl rounded-xl border border-slate-700/50 bg-[rgba(15,23,42,0.5)] p-3 shadow-2xl backdrop-blur-lg">
-        <div className="flex items-center gap-3 text-slate-300">
-          <span className="material-symbols-outlined text-slate-400" style={{ fontSize: "20px" }}>lock</span>
-          <div className="flex-1 text-[12px] leading-snug">
-            This conversation is read-only. Start a new conversation to make changes.
-          </div>
-          {onStartNewConversation && (
-            <button
-              onClick={onStartNewConversation}
-              className="cursor-pointer rounded-lg bg-violet-600/80 px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-violet-500"
-            >
-              New conversation
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
-export function PromptBox(props: PromptBoxProps) {
-  // Show selected element as suggestion only if it's not already pinned
+function PromptBoxInner(props: PromptBoxProps) {
   const isPinned = props.selectedElement && props.attachments.some((a) => a.type === "element" && a.element.mpId === props.selectedElement!.mpId);
   const suggestedElement = props.selectedElement && !isPinned ? props.selectedElement : null;
   const handlePinSuggestion = () => {
     if (suggestedElement) props.addElementAttachment(suggestedElement);
   };
 
-  if (props.readOnly) {
-    return <ReadOnlyPromptBox onStartNewConversation={props.onStartNewConversation} />;
-  }
-
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-70 flex justify-center px-4">
-      <div className={`pointer-events-auto w-full max-w-2xl rounded-xl shadow-2xl transition-colors ${props.loading ? "prompt-box-loading" : "border border-slate-700/50 bg-[rgba(15,23,42,0.5)] backdrop-blur-lg focus-within:border-slate-500/40"}`}>
+      <div
+        onDragEnter={props.handleDragEnter}
+        onDragOver={props.handleDragOver}
+        onDragLeave={props.handleDragLeave}
+        onDrop={props.handleDrop}
+        className={getContainerClass(props.loading, props.isDraggingOver)}
+      >
+        {props.isDraggingOver && !props.loading && <DragOverlay />}
         <div className={`rounded-xl p-3 ${props.loading ? "prompt-box-inner backdrop-blur-lg" : ""}`}>
           <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} onSelectElement={props.onSelectElementAttachment} suggestedElement={suggestedElement} onPinSuggestion={handlePinSuggestion} />
           {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
@@ -139,4 +125,11 @@ export function PromptBox(props: PromptBoxProps) {
       </div>
     </div>
   );
+}
+
+export function PromptBox(props: PromptBoxProps) {
+  if (props.readOnly) {
+    return <ReadOnlyPromptBox onStartNewConversation={props.onStartNewConversation} />;
+  }
+  return <PromptBoxInner {...props} />;
 }

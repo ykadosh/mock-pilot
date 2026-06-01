@@ -62,6 +62,48 @@ function useImageAttachment(setAttachments: React.Dispatch<React.SetStateAction<
   return { addImageAttachment, fileInputRef, handleFileChange, handleFileSelect, handlePaste };
 }
 
+function useDragAndDrop(addImageAttachment: (file: File) => void, disabled: boolean) {
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const dragCounter = useRef(0);
+
+  const hasFiles = (event: React.DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes("Files");
+
+  const handleDragEnter = useCallback((event: React.DragEvent) => {
+    if (disabled || !hasFiles(event)) return;
+    event.preventDefault();
+    dragCounter.current += 1;
+    setIsDraggingOver(true);
+  }, [disabled]);
+
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    if (disabled || !hasFiles(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  }, [disabled]);
+
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
+    if (disabled || !hasFiles(event)) return;
+    event.preventDefault();
+    dragCounter.current = Math.max(0, dragCounter.current - 1);
+    if (dragCounter.current === 0) setIsDraggingOver(false);
+  }, [disabled]);
+
+  const handleDrop = useCallback((event: React.DragEvent) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragCounter.current = 0;
+    setIsDraggingOver(false);
+    if (disabled) return;
+    const files = event.dataTransfer?.files;
+    if (!files) return;
+    for (const file of files) {
+      if (file.type.startsWith("image/")) addImageAttachment(file);
+    }
+  }, [addImageAttachment, disabled]);
+
+  return { handleDragEnter, handleDragOver, handleDragLeave, handleDrop, isDraggingOver };
+}
+
 function useKeyboardShortcut(textareaRef: React.RefObject<HTMLTextAreaElement | null>) {
   useEffect(() => {
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -80,6 +122,7 @@ export function usePromptBox(args: UsePromptBoxArgs) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageUtils = useImageAttachment(setAttachments);
   const submit = usePromptSubmit({ ...args, attachments, setAttachments });
+  const dnd = useDragAndDrop(imageUtils.addImageAttachment, !!args.readOnly);
 
   useKeyboardShortcut(textareaRef);
 
@@ -102,6 +145,11 @@ export function usePromptBox(args: UsePromptBoxArgs) {
     handleFileChange: imageUtils.handleFileChange,
     handleFileSelect: imageUtils.handleFileSelect,
     handlePaste: imageUtils.handlePaste,
+    handleDragEnter: dnd.handleDragEnter,
+    handleDragOver: dnd.handleDragOver,
+    handleDragLeave: dnd.handleDragLeave,
+    handleDrop: dnd.handleDrop,
+    isDraggingOver: dnd.isDraggingOver,
     removeAttachment,
     textareaRef,
   };
