@@ -2,3 +2,4 @@ node_modules/
 .vite/
 out/
 dist/
+.DS_Store

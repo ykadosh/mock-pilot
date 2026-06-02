@@ -18,12 +18,17 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 
 let mainWindow: BrowserWindow | null = null;
 
+const appIconPath = app.isPackaged
+  ? path.join(process.resourcesPath, "app-icon-1024x1024.png")
+  : path.join(__dirname, "../../resources/app-icon-1024x1024.png");
+
 const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 12, y: 18 },
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       webviewTag: true,
@@ -46,6 +51,10 @@ protocol.registerSchemesAsPrivileged([
 app.on("ready", () => {
   ensureProjectsDir();
   migrateProjectsToFolders();
+
+  if (process.platform === "darwin" && !app.isPackaged && app.dock) {
+    app.dock.setIcon(appIconPath);
+  }
 
   protocol.handle("mp-asset", (request) => {
     const url = new URL(request.url);

@@ -10,6 +10,8 @@ const config: ForgeConfig = {
     asar: true,
     name: "MockPilot",
     executableName: "mock-pilot",
+    icon: "resources/icon",
+    extraResource: ["resources/app-icon-1024x1024.png"],
   },
   rebuildConfig: {},
   makers: [
