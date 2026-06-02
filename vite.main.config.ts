@@ -3,7 +3,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
   build: {
     rollupOptions: {
-      external: ["puppeteer", "opentype.js", "wawoff2"],
+      external: ["puppeteer"],
+      output: {
+        inlineDynamicImports: true,
+      },
     },
   },
   resolve: {

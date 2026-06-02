@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import opentype from "opentype.js";
+import * as opentype from "opentype.js";
 import { decompress } from "wawoff2";
 
 export interface FontGlyph {
