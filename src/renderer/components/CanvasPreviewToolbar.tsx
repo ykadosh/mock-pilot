@@ -1,3 +1,4 @@
+import { Tooltip } from "./Tooltip";
 import type { CanvasRect } from "./CanvasPreview.types";
 
 interface CanvasPreviewToolbarProps {
@@ -12,12 +13,11 @@ interface CanvasPreviewToolbarProps {
 
 function ToolbarButton({ icon, onClick, title }: { icon: string; onClick: () => void; title: string }) {
   return (
-    <div className="group relative">
+    <Tooltip label={title} placement="bottom">
       <button onClick={onClick} className="cursor-pointer rounded p-0.5 transition-colors hover:bg-white/20" aria-label={title}>
         <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>{icon}</span>
       </button>
-      <div className="bg-surface-container-highest text-on-surface pointer-events-none absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 rounded px-2 py-1 font-sans text-xs whitespace-nowrap opacity-0 shadow-lg transition-opacity group-hover:opacity-100">{title}</div>
-    </div>
+    </Tooltip>
   );
 }
 
