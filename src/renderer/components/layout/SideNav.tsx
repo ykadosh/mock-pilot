@@ -1,3 +1,5 @@
+import { Tooltip } from "../ui/Tooltip";
+
 interface ToolButtonProps {
   icon: string;
   label: string;
@@ -7,7 +9,7 @@ interface ToolButtonProps {
 
 function ToolButton({ icon, label, active, onClick }: ToolButtonProps) {
   return (
-    <div className="group relative">
+    <Tooltip label={label} placement="right">
       <button
         onClick={onClick}
         className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition-all ${
@@ -18,10 +20,7 @@ function ToolButton({ icon, label, active, onClick }: ToolButtonProps) {
       >
         <span className="material-symbols-outlined">{icon}</span>
       </button>
-      <div className="pointer-events-none invisible absolute top-1/2 left-14 z-50 -translate-y-1/2 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] whitespace-nowrap text-white opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
-        {label}
-      </div>
-    </div>
+    </Tooltip>
   );
 }
 
