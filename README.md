@@ -1,6 +1,6 @@
 <div align="center">
 
-# MockPilot
+# ![MockPilot](resources/logo-text-128.png)
 
 [![GitHub release](https://img.shields.io/github/v/release/ykadosh/mock-pilot?style=flat-square)](https://github.com/ykadosh/mock-pilot/releases)
 [![GitHub license](https://img.shields.io/github/license/ykadosh/mock-pilot?style=flat-square)](https://github.com/ykadosh/mock-pilot/blob/main/LICENSE)
