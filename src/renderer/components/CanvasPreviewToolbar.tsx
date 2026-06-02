@@ -1,4 +1,4 @@
-import { Tooltip } from "./Tooltip";
+import { Tooltip } from "./ui/Tooltip";
 import type { CanvasRect } from "./CanvasPreview.types";
 
 interface CanvasPreviewToolbarProps {
