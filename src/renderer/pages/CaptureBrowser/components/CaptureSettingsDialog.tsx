@@ -1,29 +1,12 @@
+import { Dialog } from "../../../components/ui/Dialog";
 import { HEIGHT_MODE_OPTIONS } from "../constants";
 import type { HeightMode } from "../types";
 
-export function CaptureSettingsDialog({ heightMode, onClose, onSelect }: { heightMode: HeightMode; onClose: () => void; onSelect: (value: HeightMode) => void }) {
+export function CaptureSettingsDialog({ open, heightMode, onClose, onSelect }: { open: boolean; heightMode: HeightMode; onClose: () => void; onSelect: (value: HeightMode) => void }) {
   return (
-    <div className="bg-background/60 p-md fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="bg-surface-container-high border-outline-variant flex w-[420px] flex-col overflow-hidden rounded border shadow-2xl">
-        <SettingsDialogHeader onClose={onClose} />
-        <div className="p-md space-y-md max-h-[70vh] overflow-y-auto">
-          <HeightModeSection heightMode={heightMode} onSelect={onSelect} />
-        </div>
-        <SettingsDialogFooter onClose={onClose} />
-      </div>
-    </div>
-  );
-}
-
-function SettingsDialogHeader({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="px-md py-sm bg-surface-container-highest border-outline-variant flex items-center justify-between border-b">
-      <div className="gap-sm flex items-center">
-        <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>settings_overscan</span>
-        <span className="font-label-caps text-label-caps text-on-surface">Capture Settings</span>
-      </div>
-      <button onClick={onClose} className="text-outline hover:text-on-surface cursor-pointer transition-colors"><span className="material-symbols-outlined">close</span></button>
-    </div>
+    <Dialog open={open} onClose={onClose} icon="settings_overscan" title="Capture Settings" cancelLabel="Close">
+      <HeightModeSection heightMode={heightMode} onSelect={onSelect} />
+    </Dialog>
   );
 }
 
@@ -64,8 +47,4 @@ function HeightModeOption({ heightMode, onSelect, option }: { heightMode: Height
       <input type="radio" name="heightMode" value={option.value} checked={isSelected} onChange={() => onSelect(option.value)} className="sr-only" />
     </label>
   );
-}
-
-function SettingsDialogFooter({ onClose }: { onClose: () => void }) {
-  return <div className="px-md py-sm bg-surface-container-highest border-outline-variant gap-sm flex justify-end border-t"><button onClick={onClose} className="bg-surface-container-low border-outline-variant text-on-surface px-md text-ui-small hover:bg-surface-variant cursor-pointer rounded-sm border py-1.5 font-semibold transition-colors">Close</button></div>;
 }

@@ -56,7 +56,7 @@ function CaptureActions(props: CaptureBrowserToolbarProps) {
   return (
     <div className="gap-xs relative flex items-center">
       <button ref={props.settingsButtonRef} onClick={props.onToggleSettings} className="text-on-surface-variant hover:bg-surface-container-highest flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-colors" title="Capture settings"><span className="material-symbols-outlined text-[18px]">tune</span></button>
-      {props.captureSettingsOpen && <CaptureSettingsDialog heightMode={props.heightMode} onClose={() => props.onSetCaptureSettingsOpen(false)} onSelect={props.onUpdateHeightMode} />}
+      <CaptureSettingsDialog open={props.captureSettingsOpen} heightMode={props.heightMode} onClose={() => props.onSetCaptureSettingsOpen(false)} onSelect={props.onUpdateHeightMode} />
       <button onClick={props.onCapture} disabled={!props.hasNavigated || props.isCapturing || props.isLoading} className="bg-primary-container text-on-primary-container gap-sm font-ui-small flex h-9 cursor-pointer items-center rounded px-4 font-semibold transition-all hover:brightness-110 active:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">{props.isCapturing ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : <span className="material-symbols-outlined text-[18px]">screenshot_region</span>}{props.isCapturing ? "Capturing..." : "Capture State"}</button>
     </div>
   );
