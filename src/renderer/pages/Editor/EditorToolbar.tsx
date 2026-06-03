@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { EditorState } from "./Editor.hooks";
 import type { DevicePreset } from "./Editor.utils";
 
@@ -57,10 +59,18 @@ function CodeToolbar({ codeDirty, codeEditorRef, codeTab, setCodeTab }: Pick<Edi
 
 function VisualToolbar(state: Pick<EditorState, "canRedo" | "canUndo" | "device" | "pointer" | "redo" | "setDevice" | "undo" | "viewportHeight" | "viewportWidth" | "zoom" | "zoomIn" | "zoomOut">) {
   const { canRedo, canUndo, device, redo, setDevice, undo, viewportHeight, viewportWidth, zoom, zoomIn, zoomOut } = state;
+  const navigate = useNavigate();
 
   return (
     <>
-      <div className="left-md bg-background absolute top-0 bottom-[-5px] flex items-center rounded-b-lg border border-t-0 border-[#334155] px-1">
+      <div className="left-md absolute top-0 bottom-0 flex">
+        <Tooltip label="Back to projects" placement="bottom">
+          <button onClick={() => navigate("/")} className="flex h-full cursor-pointer items-center justify-center px-2 text-slate-500 hover:text-slate-300">
+            <span className="material-symbols-outlined text-2xl leading-none">arrow_back</span>
+          </button>
+        </Tooltip>
+      </div>
+      <div className="bg-background absolute top-0 bottom-[-5px] left-[68px] flex items-center rounded-b-lg border border-t-0 border-[#334155] px-1">
         {DEVICE_BUTTONS.map((item) => (
           <DeviceButton key={item.device} active={device === item.device} device={item.device} icon={item.icon} onClick={setDevice} />
         ))}

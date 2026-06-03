@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export type TooltipPlacement = "top" | "bottom" | "left" | "right";
 
@@ -8,20 +9,44 @@ interface TooltipProps {
   children: ReactNode;
 }
 
-const PLACEMENT_CLASSES: Record<TooltipPlacement, string> = {
-  top: "bottom-full left-1/2 mb-2 -translate-x-1/2",
-  bottom: "top-full left-1/2 mt-2 -translate-x-1/2",
-  left: "right-full top-1/2 mr-2 -translate-y-1/2",
-  right: "left-full top-1/2 ml-2 -translate-y-1/2",
-};
+const VIEWPORT_MARGIN = 8;
+const OFFSET = 8;
 
 export function Tooltip({ label, placement = "top", children }: TooltipProps) {
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!visible) return;
+    const trigger = triggerRef.current;
+    const tooltip = tooltipRef.current;
+    if (!trigger || !tooltip) return;
+    const t = trigger.getBoundingClientRect();
+    const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    let top = 0, left = 0;
+    switch (placement) {
+      case "top":    top = t.top - th - OFFSET;           left = t.left + t.width / 2 - tw / 2; break;
+      case "bottom": top = t.bottom + OFFSET;             left = t.left + t.width / 2 - tw / 2; break;
+      case "left":   top = t.top + t.height / 2 - th / 2; left = t.left - tw - OFFSET;          break;
+      case "right":  top = t.top + t.height / 2 - th / 2; left = t.right + OFFSET;              break;
+    }
+    const vw = window.innerWidth, vh = window.innerHeight;
+    left = Math.max(VIEWPORT_MARGIN, Math.min(left, vw - tw - VIEWPORT_MARGIN));
+    top = Math.max(VIEWPORT_MARGIN, Math.min(top, vh - th - VIEWPORT_MARGIN));
+    tooltip.style.top = `${top}px`;
+    tooltip.style.left = `${left}px`;
+  }, [visible, placement, label]);
+
   return (
-    <div className="group relative">
+    <div ref={triggerRef} className="relative" onMouseEnter={() => setVisible(true)} onMouseLeave={() => setVisible(false)}>
       {children}
-      <div className={`pointer-events-none invisible absolute z-50 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] whitespace-nowrap text-white opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100 ${PLACEMENT_CLASSES[placement]}`}>
-        {label}
-      </div>
+      {visible && createPortal(
+        <div ref={tooltipRef} style={{ position: "fixed", top: 0, left: 0 }} className="pointer-events-none z-50 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] whitespace-nowrap text-white shadow-lg">
+          {label}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
