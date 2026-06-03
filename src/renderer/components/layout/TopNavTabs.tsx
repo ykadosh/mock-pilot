@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tooltip } from "../ui/Tooltip";
 
@@ -20,13 +21,28 @@ function getTabRoute(tab: (typeof pageTabs)[number], projectId?: string) {
   return projectId ? `${tab.to}/${projectId}` : tab.to;
 }
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = (e: MediaQueryListEvent) => setMatches(e.matches);
+    setMatches(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
+
 export function TopNavTabs({ activeTab, projectId }: TopNavTabsProps) {
   const navigate = useNavigate();
+  const labelsVisible = useMediaQuery("(min-width: 960px)");
 
   return (
     <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1 [-webkit-app-region:no-drag]">
       {pageTabs.map((tab) => (
-        <Tooltip key={tab.key} label={tab.label} placement="bottom">
+        <Tooltip key={tab.key} label={tab.label} placement="bottom" disabled={labelsVisible}>
           <button
             onClick={() => navigate(getTabRoute(tab, projectId))}
             className={`flex cursor-pointer items-center gap-1 rounded px-2.5 py-1.5 text-[10px] font-semibold tracking-wider uppercase transition-colors ${
