@@ -33,7 +33,7 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 
 let mainWindow: BrowserWindow | null = null;
 
-const appIconFile = process.platform === "win32" ? "icon.ico" : "app-icon-1024x1024.png";
+const appIconFile = process.platform === "win32" ? "icon.ico" : "macos-icon.png";
 const appIconPath = app.isPackaged
   ? path.join(process.resourcesPath, appIconFile)
   : path.join(__dirname, "../../resources/", appIconFile);

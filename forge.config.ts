@@ -12,10 +12,8 @@ const config: ForgeConfig = {
     executableName: "mock-pilot",
     icon: "resources/icon",
     extraResource: [
-      "resources/app-icon-1024x1024.png",
-      "resources/app-icon-512x512.png",
-      "resources/app-icon-256x256.png",
       "resources/icon.ico",
+      "resources/macos-icon.png",
     ],
   },
   rebuildConfig: {},
