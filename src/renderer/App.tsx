@@ -7,6 +7,7 @@ import { AppSettings } from "@/pages/AppSettings";
 import { Export } from "@/pages/Export";
 import { CaptureBrowser } from "@/pages/CaptureBrowser";
 import { AuthProvider } from "@/hooks/useAuth";
+import { PromptAttachmentsProvider } from "@/hooks/usePromptAttachments";
 
 const router = createHashRouter([
   { path: "/", element: <Dashboard /> },
@@ -25,7 +26,9 @@ function App() {
   return (
     <div className="dark">
       <AuthProvider>
-        <RouterProvider router={router} />
+        <PromptAttachmentsProvider>
+          <RouterProvider router={router} />
+        </PromptAttachmentsProvider>
       </AuthProvider>
     </div>
   );

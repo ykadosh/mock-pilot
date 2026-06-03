@@ -33,6 +33,7 @@ export function PalettePage() {
 
   return (
     <PalettePageContent
+      projectId={projectId}
       colors={colors}
       editingId={editingId}
       showAddForm={showAddForm}

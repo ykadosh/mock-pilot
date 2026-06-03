@@ -6,6 +6,8 @@ import { usePromptSubmit } from "./PromptBox.submit";
 import { buildElementSelector } from "./PropertiesPanel.utils";
 
 interface UsePromptBoxArgs {
+  attachments: Attachment[];
+  setAttachments: React.Dispatch<React.SetStateAction<Attachment[]>>;
   onApplyModification?: (mpId: string, newHTML: string, label?: string) => void;
   onApplyPageModification?: (newHTML: string, label?: string) => void;
   getElementHTML?: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
@@ -118,7 +120,7 @@ function useKeyboardShortcut(textareaRef: React.RefObject<HTMLTextAreaElement | 
 }
 
 export function usePromptBox(args: UsePromptBoxArgs) {
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const { attachments, setAttachments } = args;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageUtils = useImageAttachment(setAttachments);
   const submit = usePromptSubmit({ ...args, attachments, setAttachments });
@@ -131,11 +133,11 @@ export function usePromptBox(args: UsePromptBoxArgs) {
       if (prev.some((a) => a.type === "element" && a.element.mpId === element.mpId)) return prev;
       return [...prev, { type: "element", element }];
     });
-  }, []);
+  }, [setAttachments]);
 
   const removeAttachment = useCallback((index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+  }, [setAttachments]);
 
   return {
     addElementAttachment,
@@ -156,6 +158,13 @@ export function usePromptBox(args: UsePromptBoxArgs) {
 }
 
 export function getAttachmentLabel(attachment: Attachment): string {
-  if (attachment.type === "element") return buildElementSelector(attachment.element);
-  return attachment.name;
+  switch (attachment.type) {
+    case "element": return buildElementSelector(attachment.element);
+    case "image": return attachment.name;
+    case "component": return attachment.label;
+    case "typography": return attachment.label || attachment.fontFamily.split(",")[0].replace(/["']/g, "");
+    case "icon": return attachment.name;
+    case "graphic": return attachment.filename;
+    case "color": return attachment.label || attachment.value;
+  }
 }

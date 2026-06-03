@@ -6,8 +6,9 @@ import { LayersPanel } from "../../components/LayersPanel";
 import { PromptBox } from "../../components/PromptBox";
 import { usePromptBox } from "../../components/PromptBox.hooks";
 import { PropertiesPanel } from "../../components/PropertiesPanel";
-import { Dialog } from "../../components/ui/Dialog";
+import { usePromptAttachments } from "../../hooks/usePromptAttachments";
 import { buildSelectedSelector } from "./Editor.utils";
+import { ExitBlockerDialog } from "./ExitBlockerDialog";
 import type { EditorState } from "./Editor.hooks";
 import { useCallback, useEffect } from "react";
 import { useBlocker } from "react-router-dom";
@@ -83,31 +84,6 @@ function WorkspaceSidePanel(state: EditorState & { agentProcessing?: boolean; aw
   return null;
 }
 
-interface ExitBlockerDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}
-
-function ExitBlockerDialog({ open, onClose, onConfirm }: ExitBlockerDialogProps) {
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      icon="warning"
-      title="Leave while AI is working?"
-      cancelLabel="Stay"
-      confirmLabel="Leave and stop"
-      confirmVariant="danger"
-      onConfirm={onConfirm}
-    >
-      <p className="font-body-md text-body-md text-on-surface-variant">
-        The AI agent is still processing your request. Leaving now will stop the current run and discard any unsaved progress.
-      </p>
-    </Dialog>
-  );
-}
-
 function WorkspacePromptBox({ state, promptBox, readOnly }: { state: EditorState; promptBox: ReturnType<typeof usePromptBox>; readOnly: boolean }) {
   return (
     <PromptBox
@@ -125,7 +101,10 @@ function WorkspacePromptBox({ state, promptBox, readOnly }: { state: EditorState
 
 export function EditorWorkspace({ state }: { state: EditorState }) {
   const readOnlyConversation = !state.conversation.isActiveLatest;
+  const { attachments, setAttachments } = usePromptAttachments(state.projectId);
   const promptBox = usePromptBox({
+    attachments,
+    setAttachments,
     onApplyModification: state.handleApplyModification,
     onApplyPageModification: state.handleApplyPageModification,
     getElementHTML: (mpId: string) => state.canvasRef.current?.getElementHTML(mpId) ?? Promise.resolve(null),

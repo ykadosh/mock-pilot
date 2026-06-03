@@ -1,4 +1,4 @@
-import type { Attachment, ImageAttachment } from "./PromptBox.types";
+import type { Attachment, ColorAttachment, ComponentAttachment, IconAttachment, ImageAttachment, TypographyAttachment } from "./PromptBox.types";
 import type { AgentMessage } from "../hooks/useConversation";
 import { buildElementSelector } from "./PropertiesPanel.utils";
 
@@ -36,6 +36,45 @@ function approxBytesFromDataUrl(dataUrl: string): number {
   return Math.max(0, Math.floor((b64.length * 3) / 4) - padding);
 }
 
+export interface AttachedAssetsPayload {
+  components: Pick<ComponentAttachment, "id" | "label" | "html" | "description" | "props">[];
+  typography: Pick<TypographyAttachment, "id" | "label" | "fontFamily" | "fontSize" | "fontWeight" | "fontStyle" | "lineHeight" | "letterSpacing" | "textTransform">[];
+  icons: Pick<IconAttachment, "name" | "codepoint" | "fontFamily" | "renderMode">[];
+  graphics: { filename: string; extension: string; sizeBytes: number; assetPath: string }[];
+  colors: Pick<ColorAttachment, "id" | "label" | "value">[];
+}
+
+function buildAssetPayloads(attachments: Attachment[]): AttachedAssetsPayload | undefined {
+  const components: AttachedAssetsPayload["components"] = [];
+  const typography: AttachedAssetsPayload["typography"] = [];
+  const icons: AttachedAssetsPayload["icons"] = [];
+  const graphics: AttachedAssetsPayload["graphics"] = [];
+  const colors: AttachedAssetsPayload["colors"] = [];
+
+  for (const a of attachments) {
+    switch (a.type) {
+      case "component":
+        components.push({ id: a.id, label: a.label, html: a.html, description: a.description, props: a.props });
+        break;
+      case "typography":
+        typography.push({ id: a.id, label: a.label, fontFamily: a.fontFamily, fontSize: a.fontSize, fontWeight: a.fontWeight, fontStyle: a.fontStyle, lineHeight: a.lineHeight, letterSpacing: a.letterSpacing, textTransform: a.textTransform });
+        break;
+      case "icon":
+        icons.push({ name: a.name, codepoint: a.codepoint, fontFamily: a.fontFamily, renderMode: a.renderMode });
+        break;
+      case "graphic":
+        graphics.push({ filename: a.filename, extension: a.extension, sizeBytes: a.sizeBytes, assetPath: `assets/${a.filename}` });
+        break;
+      case "color":
+        colors.push({ id: a.id, label: a.label, value: a.value });
+        break;
+    }
+  }
+
+  const hasAny = components.length + typography.length + icons.length + graphics.length + colors.length > 0;
+  return hasAny ? { components, typography, icons, graphics, colors } : undefined;
+}
+
 function buildAttachmentPayloads(attachments: Attachment[]) {
   const images = attachments
     .filter((a): a is ImageAttachment => a.type === "image")
@@ -55,16 +94,15 @@ function buildAttachmentPayloads(attachments: Attachment[]) {
     })
     .filter(Boolean) as { mpId: string; selector: string; outerHTML: string }[];
 
-  return { images, attachedElements };
+  return { images, attachedElements, attachedAssets: buildAssetPayloads(attachments) };
 }
 
 export async function applyAgentModification(args: AgentModifyArgs): Promise<AgentModifyResult> {
   const fullHtml = args.getFullPageHTML?.();
   if (!fullHtml) return { error: "No page content available" };
 
-  const { images, attachedElements } = buildAttachmentPayloads(args.attachments);
+  const { images, attachedElements, attachedAssets } = buildAttachmentPayloads(args.attachments);
 
-  // Live-apply HTML snapshots as the agent mutates, so the editor reflects changes in real-time.
   const unsubscribe = window.api.onAiAgentProgress((progress) => {
     if (progress.type === "html_update" && progress.html) args.onApply?.(progress.html, args.prompt);
   });
@@ -75,6 +113,7 @@ export async function applyAgentModification(args: AgentModifyArgs): Promise<Age
       fullHTML: fullHtml,
       attachedElements: attachedElements.length > 0 ? attachedElements : undefined,
       images: images.length > 0 ? images : undefined,
+      attachedAssets,
       projectAssets: args.projectAssets,
       previousAgentMessages: args.previousAgentMessages,
       continueFromMaxIterations: args.continueFromMaxIterations,

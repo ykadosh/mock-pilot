@@ -32,21 +32,21 @@ export function IconsPage() {
       {isLoading && <p className="text-outline text-ui-small">Loading icons...</p>}
       {!isLoading && !hasContent && <EmptyIconsState />}
       {!isLoading && hasContent && (
-        <IconsContent libraries={libraries} iconFontsData={iconFontsData} search={search} onSearch={setSearch} />
+        <IconsContent libraries={libraries} iconFontsData={iconFontsData} search={search} onSearch={setSearch} projectId={projectId} />
       )}
     </div>
   );
 }
 
-function IconsContent({ libraries, iconFontsData, search, onSearch }: { libraries: IconLibraryMeta[]; iconFontsData: IconFontGlyphData[]; search: string; onSearch: (v: string) => void }) {
+function IconsContent({ libraries, iconFontsData, search, onSearch, projectId }: { libraries: IconLibraryMeta[]; iconFontsData: IconFontGlyphData[]; search: string; onSearch: (v: string) => void; projectId: string | undefined }) {
   return (
     <>
       <IconSearchInput value={search} onChange={onSearch} />
       {libraries.map((lib) => (
-        <IconLibrarySection key={lib.id} library={lib} search={search} />
+        <IconLibrarySection key={lib.id} library={lib} search={search} projectId={projectId} />
       ))}
       {iconFontsData.map((font) => (
-        <ProjectIconFontSection key={font.family} font={font} search={search} />
+        <ProjectIconFontSection key={font.family} font={font} search={search} projectId={projectId} />
       ))}
     </>
   );
@@ -83,7 +83,7 @@ function EmptyIconsState() {
   );
 }
 
-function IconLibrarySection({ library, search }: { library: IconLibraryMeta; search: string }) {
+function IconLibrarySection({ library, search, projectId }: { library: IconLibraryMeta; search: string; projectId: string | undefined }) {
   const filteredIcons = useMemo(() => {
     if (!search.trim()) return library.icons;
     const query = search.toLowerCase().trim();
@@ -102,14 +102,14 @@ function IconLibrarySection({ library, search }: { library: IconLibraryMeta; sea
       </h2>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-3">
         {filteredIcons.map((icon) => (
-          <IconCell key={icon.name} name={icon.name} codepoint={icon.codepoint} fontFamily={library.name} renderMode={library.renderMode} />
+          <IconCell key={icon.name} name={icon.name} codepoint={icon.codepoint} fontFamily={library.name} projectId={projectId} renderMode={library.renderMode} />
         ))}
       </div>
     </section>
   );
 }
 
-function ProjectIconFontSection({ font, search }: { font: IconFontGlyphData; search: string }) {
+function ProjectIconFontSection({ font, search, projectId }: { font: IconFontGlyphData; search: string; projectId: string | undefined }) {
   const filteredGlyphs = useMemo(() => {
     if (!search.trim()) return font.glyphs;
     const query = search.toLowerCase().trim();
@@ -128,7 +128,7 @@ function ProjectIconFontSection({ font, search }: { font: IconFontGlyphData; sea
       </h2>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-3">
         {filteredGlyphs.map((glyph) => (
-          <IconCell key={glyph.codepoint} name={glyph.name || glyph.codepoint} codepoint={glyph.codepoint} fontFamily={font.family} />
+          <IconCell key={glyph.codepoint} name={glyph.name || glyph.codepoint} codepoint={glyph.codepoint} fontFamily={font.family} projectId={projectId} />
         ))}
       </div>
     </section>

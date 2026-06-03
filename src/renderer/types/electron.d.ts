@@ -141,6 +141,13 @@ declare global {
         sessionId?: string;
         attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
         images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[];
+        attachedAssets?: {
+          components: { id: string; label: string; html: string; description?: string; props?: { name: string; type: string; description: string }[] }[];
+          typography: { id: string; label: string; fontFamily: string; fontSize: string; fontWeight: string; fontStyle: string; lineHeight: string; letterSpacing: string; textTransform: string }[];
+          icons: { name: string; codepoint: string; fontFamily: string; renderMode: "codepoint" | "ligature" }[];
+          graphics: { filename: string; extension: string; sizeBytes: number; assetPath: string }[];
+          colors: { id: string; label: string; value: string }[];
+        };
         projectAssets?: object;
         previousAgentMessages?: ConversationAgentMessage[];
         continueFromMaxIterations?: boolean;

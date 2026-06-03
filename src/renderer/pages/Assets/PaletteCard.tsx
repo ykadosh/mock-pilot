@@ -1,3 +1,5 @@
+import { PinAttachmentButton } from "../../components/PinAttachmentButton";
+
 interface ColorAsset {
   id: string;
   label: string;
@@ -7,15 +9,16 @@ interface ColorAsset {
 interface PaletteCardProps {
   color: ColorAsset;
   extras?: ColorAsset[];
+  projectId: string | undefined;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
 }
 
-export function PaletteCard({ color, extras, onDelete, onEdit }: PaletteCardProps) {
+export function PaletteCard({ color, extras, projectId, onDelete, onEdit }: PaletteCardProps) {
   const hasExtras = !!extras && extras.length > 0;
   return (
     <div className="border-outline/20 bg-surface overflow-hidden rounded-lg border">
-      <PaletteMainSwatch color={color} onEdit={onEdit} onDelete={onDelete} />
+      <PaletteMainSwatch color={color} projectId={projectId} onEdit={onEdit} onDelete={onDelete} />
       <PaletteExtrasStrip color={color} extras={hasExtras ? extras! : undefined} onEdit={onEdit} />
       <div className="p-2">
         <p className="text-ui-small text-on-surface truncate font-mono">{color.value}</p>
@@ -25,13 +28,14 @@ export function PaletteCard({ color, extras, onDelete, onEdit }: PaletteCardProp
   );
 }
 
-function PaletteMainSwatch({ color, onEdit, onDelete }: {
+function PaletteMainSwatch({ color, projectId, onEdit, onDelete }: {
   color: ColorAsset;
+  projectId: string | undefined;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="relative">
+    <div className="group relative">
       <button
         type="button"
         onClick={() => onEdit(color.id)}
@@ -39,6 +43,9 @@ function PaletteMainSwatch({ color, onEdit, onDelete }: {
         className="hover:ring-on-surface/40 block h-16 w-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
         style={{ backgroundColor: color.value }}
       />
+      <div className="absolute top-1.5 left-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <PinAttachmentButton projectId={projectId} attachment={{ type: "color", id: color.id, label: color.label, value: color.value }} variant="overlay" className="!static" />
+      </div>
       <button
         type="button"
         onClick={() => onDelete(color.id)}

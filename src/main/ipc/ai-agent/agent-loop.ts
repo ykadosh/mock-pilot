@@ -13,6 +13,14 @@ function log(...args: unknown[]) {
   console.log("[AI Agent]", ...args);
 }
 
+export interface AttachedAssetsPayload {
+  components: { id: string; label: string; html: string; description?: string; props?: { name: string; type: string; description: string }[] }[];
+  typography: { id: string; label: string; fontFamily: string; fontSize: string; fontWeight: string; fontStyle: string; lineHeight: string; letterSpacing: string; textTransform: string }[];
+  icons: { name: string; codepoint: string; fontFamily: string; renderMode: "codepoint" | "ligature" }[];
+  graphics: { filename: string; extension: string; sizeBytes: number; assetPath: string }[];
+  colors: { id: string; label: string; value: string }[];
+}
+
 export interface AgentLoopOptions {
   prompt: string;
   fullHTML: string;
@@ -20,6 +28,7 @@ export interface AgentLoopOptions {
   projectId?: string;
   attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
   images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[];
+  attachedAssets?: AttachedAssetsPayload;
   maxIterations?: number;
   signal?: AbortSignal;
   onProgress?: (progress: AgentProgress) => void;
@@ -330,13 +339,13 @@ function initialMessages(options: AgentLoopOptions, isContinuation: boolean): Ag
         { role: "user", content: "Please continue making the changes. Pick up where you left off (currently in INSPECT phase)." },
       ];
     }
-    const userContent = buildUserContent(options.prompt, options.attachedElements, options.images);
+    const userContent = buildUserContent(options.prompt, { attachedElements: options.attachedElements, images: options.images, attachedAssets: options.attachedAssets });
     return [
       ...options.previousMessages!,
       { role: "user", content: userContent },
     ];
   }
-  const userContent = buildUserContent(options.prompt, options.attachedElements, options.images);
+  const userContent = buildUserContent(options.prompt, { attachedElements: options.attachedElements, images: options.images, attachedAssets: options.attachedAssets });
   return [
     { role: "system", content: AGENT_SYSTEM_PROMPT },
     { role: "user", content: userContent },
@@ -488,11 +497,53 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
 }
 
-function buildUserContent(
-  prompt: string,
-  attachedElements?: { mpId: string; selector: string; outerHTML: string }[],
-  images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[],
-): string {
+function buildAttachedAssetsText(assets: AttachedAssetsPayload): string {
+  const parts: string[] = [];
+  if (assets.components.length > 0) {
+    parts.push("\n\nPinned components from the project library — reuse the EXACT HTML markup when the user asks to insert a component:");
+    for (const c of assets.components) {
+      parts.push(`\n--- Component "${c.label}" (id=${c.id}) ---`);
+      if (c.description) parts.push(`Description: ${c.description}`);
+      if (c.props && c.props.length > 0) parts.push(`Props: ${c.props.map((p) => `${p.name}:${p.type}`).join(", ")}`);
+      parts.push(`HTML:\n${c.html}`);
+    }
+  }
+  if (assets.typography.length > 0) {
+    parts.push("\n\nPinned typography styles from the project — apply these as inline styles or CSS rules when the user asks for these text styles:");
+    for (const t of assets.typography) {
+      const name = t.label || t.fontFamily.split(",")[0].replace(/["']/g, "");
+      parts.push(`- ${name}: font-family:${t.fontFamily}; font-size:${t.fontSize}; font-weight:${t.fontWeight}; font-style:${t.fontStyle}; line-height:${t.lineHeight}; letter-spacing:${t.letterSpacing}; text-transform:${t.textTransform};`);
+    }
+  }
+  if (assets.icons.length > 0) {
+    parts.push("\n\nPinned icons — use these glyphs (font-family + codepoint or ligature) when inserting icons:");
+    for (const i of assets.icons) {
+      parts.push(`- "${i.name}" font-family="${i.fontFamily}" codepoint=U+${i.codepoint.toUpperCase()} renderMode=${i.renderMode}`);
+    }
+  }
+  if (assets.graphics.length > 0) {
+    parts.push("\n\nPinned graphics — reference these files via their assetPath (e.g. <img src=\"<assetPath>\">):");
+    for (const g of assets.graphics) {
+      parts.push(`- ${g.filename} (${g.extension.toUpperCase()}, ${g.sizeBytes}B) → ${g.assetPath}`);
+    }
+  }
+  if (assets.colors.length > 0) {
+    parts.push("\n\nPinned colors from the project palette — use these exact values when the user asks for these colors:");
+    for (const c of assets.colors) {
+      parts.push(`- ${c.value}${c.label ? ` (${c.label})` : ""}`);
+    }
+  }
+  return parts.join("\n");
+}
+
+interface BuildUserContentOptions {
+  attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
+  images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[];
+  attachedAssets?: AttachedAssetsPayload;
+}
+
+function buildUserContent(prompt: string, opts: BuildUserContentOptions = {}): string {
+  const { attachedElements, images, attachedAssets } = opts;
   let text = `User request: ${prompt}`;
 
   if (attachedElements && attachedElements.length > 0) {
@@ -517,6 +568,8 @@ function buildUserContent(
     text += "\n  • To put the image INTO the page, call `saveAttachmentToAssets({id})` — it writes the file under the project's assets/ folder and returns a relative path like \"assets/abc.png\". Reference that path in your edit tools (e.g., addElement with `<img src=\"assets/abc.png\">`, or editCss with `background-image: url(\"assets/abc.png\")`). Do NOT embed base64/data URLs in HTML.";
     text += "\n  • To LOOK AT the image (because the request requires understanding its contents — design-from-image, \"make it look like this\", colour/layout inference, etc.), call `viewImage({id})`. It injects the pixels into the conversation from that iteration onward. Don't call this if the user just wants the image placed on the page.";
   }
+
+  if (attachedAssets) text += buildAttachedAssetsText(attachedAssets);
 
   text += "\n\nBegin by calling `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot mode — completes in one iteration, skips PLAN and VERIFY).";
 

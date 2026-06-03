@@ -23,7 +23,7 @@ export function FontsPage() {
       {typography.length === 0 && !showAddForm && <EmptyTypographyState />}
       <div className="space-y-3">
         {typography.map((item) => (
-          <TypographyCard key={item.id} typography={item} onDelete={handleDelete} onEdit={setEditingId} />
+          <TypographyCard key={item.id} typography={item} projectId={projectId} onDelete={handleDelete} onEdit={setEditingId} />
         ))}
       </div>
       <AddTypographyDrawer

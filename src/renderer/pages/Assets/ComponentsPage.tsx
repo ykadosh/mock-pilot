@@ -1,8 +1,10 @@
-import { useRef, useEffect, useState } from "react";
+import { useState } from "react";
 import type { LegacyRef } from "react";
 import { useParams } from "react-router-dom";
 import { useComponentAssets } from "./UseComponentAssets.hooks";
 import { ComponentCodeBlock, ComponentPreview } from "./ComponentWidgets";
+import { ComponentRenameInput } from "./ComponentRenameInput";
+import { PinAttachmentButton } from "../../components/PinAttachmentButton";
 
 export function ComponentsPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -23,10 +25,7 @@ export function ComponentsPage() {
 }
 
 function ScanOverlay({ projectId, scanWebviewRef }: { projectId: string; scanWebviewRef: React.RefObject<Electron.WebviewTag | null> }) {
-  // The webview must remain on-screen and painted so webview.capturePage() (used by
-  // extractComponents) doesn't fail with UnknownVizError. We mount it in a fixed
-  // container and stack an opaque card on top of it so the user sees a loader card
-  // instead of the live page, but the rest of the app remains visible and interactive.
+  // The webview must stay on-screen and painted for capturePage() to work (UnknownVizError otherwise).
   return (
     <div className="fixed right-6 bottom-6 z-50" style={{ width: 320, height: 200 }}>
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -90,7 +89,12 @@ function ComponentCard({ component, css, projectId, isEditing, onDelete, onEdit,
       )}
       <ComponentPreview html={component.html} css={css} projectId={projectId} />
       {component.props && component.props.length > 0 && <PropsList props={component.props} />}
-      <ComponentCardActions showCode={showCode} onToggleCode={() => setShowCode(!showCode)} onDelete={() => onDelete(component.id)} />
+      <ComponentCardActions
+        showCode={showCode}
+        onToggleCode={() => setShowCode(!showCode)}
+        onDelete={() => onDelete(component.id)}
+        pinButton={<PinAttachmentButton projectId={projectId} attachment={{ type: "component", id: component.id, label: component.label, html: component.html, description: component.description, props: component.props }} />}
+      />
       {showCode && <ComponentCodeBlock html={component.html} />}
     </div>
   );
@@ -101,7 +105,7 @@ function ComponentCardHeader({ component, isEditing, onEdit, onRename }: Pick<Co
     <div className="mb-2 flex items-start justify-between">
       <div className="min-w-0 flex-1">
         {isEditing ? (
-          <RenameInput currentLabel={component.label} onSave={(v) => onRename(component.id, v)} onCancel={() => onEdit(null)} />
+          <ComponentRenameInput currentLabel={component.label} onSave={(v) => onRename(component.id, v)} onCancel={() => onEdit(null)} />
         ) : (
           <h3 className="text-on-surface cursor-pointer truncate text-sm font-medium hover:underline" onClick={() => onEdit(component.id)} title="Click to rename">
             {component.label}
@@ -131,34 +135,12 @@ function PropsList({ props }: { props: ComponentProp[] }) {
   );
 }
 
-function ComponentCardActions({ showCode, onToggleCode, onDelete }: { showCode: boolean; onToggleCode: () => void; onDelete: () => void }) {
+function ComponentCardActions({ showCode, onToggleCode, onDelete, pinButton }: { showCode: boolean; onToggleCode: () => void; onDelete: () => void; pinButton: React.ReactNode }) {
   return (
-    <div className="mt-3 flex items-center gap-2">
-      <button onClick={onToggleCode} className="text-outline hover:text-on-surface text-xs underline">
-        {showCode ? "Hide code" : "Show code"}
-      </button>
-      <button onClick={onDelete} className="text-outline hover:text-error ml-auto text-xs">
-        Remove
-      </button>
+    <div className="mt-3 flex items-center gap-3">
+      <button onClick={onToggleCode} className="text-outline hover:text-on-surface text-xs underline">{showCode ? "Hide code" : "Show code"}</button>
+      {pinButton}
+      <button onClick={onDelete} className="text-outline hover:text-error ml-auto text-xs">Remove</button>
     </div>
-  );
-}
-
-function RenameInput({ currentLabel, onSave, onCancel }: { currentLabel: string; onSave: (v: string) => void; onCancel: () => void }) {
-  const [value, setValue] = useState(currentLabel);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { inputRef.current?.focus(); }, []);
-
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave(value.trim() || currentLabel); }} className="flex gap-1">
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={onCancel}
-        className="border-outline/30 bg-background text-on-surface w-full rounded border px-2 py-0.5 text-sm"
-      />
-    </form>
   );
 }

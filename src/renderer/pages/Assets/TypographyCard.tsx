@@ -1,12 +1,14 @@
 import type { CSSProperties } from "react";
+import { PinAttachmentButton } from "../../components/PinAttachmentButton";
 
 interface TypographyCardProps {
   typography: TypographyAsset;
+  projectId: string | undefined;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
 }
 
-export function TypographyCard({ typography, onDelete, onEdit }: TypographyCardProps) {
+export function TypographyCard({ typography, projectId, onDelete, onEdit }: TypographyCardProps) {
   return (
     <div className="border-outline/20 bg-surface rounded-lg border p-4">
       <div className="flex items-center justify-between">
@@ -19,7 +21,8 @@ export function TypographyCard({ typography, onDelete, onEdit }: TypographyCardP
             {typography.fontStyle !== "normal" && ` · ${typography.fontStyle}`}
           </p>
         </div>
-        <div className="ml-4 flex gap-2">
+        <div className="ml-4 flex items-center gap-3">
+          <PinAttachmentButton projectId={projectId} attachment={{ type: "typography", id: typography.id, label: typography.label, fontFamily: typography.fontFamily, fontSize: typography.fontSize, fontWeight: typography.fontWeight, fontStyle: typography.fontStyle, lineHeight: typography.lineHeight, letterSpacing: typography.letterSpacing, textTransform: typography.textTransform }} />
           <button onClick={() => onEdit(typography.id)} className="text-ui-small text-outline hover:text-on-surface">
             Edit
           </button>

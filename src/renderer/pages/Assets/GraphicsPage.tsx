@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import { PinAttachmentButton } from "../../components/PinAttachmentButton";
 
 type ViewMode = "grid" | "list";
 
@@ -88,6 +89,9 @@ function GraphicsGrid({ graphics, projectId }: { graphics: GraphicAsset[]; proje
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
       {graphics.map((graphic) => (
         <div key={graphic.filename} className="group border-outline/20 bg-surface-container relative overflow-hidden rounded-lg border">
+          <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <PinAttachmentButton projectId={projectId} attachment={{ type: "graphic", filename: graphic.filename, extension: graphic.extension, sizeBytes: graphic.sizeBytes, projectId }} variant="overlay" className="!static" />
+          </div>
           <div className="flex aspect-square items-center justify-center p-2">
             <img
               src={getAssetUrl(projectId, graphic.filename)}
@@ -110,6 +114,26 @@ function GraphicsGrid({ graphics, projectId }: { graphics: GraphicAsset[]; proje
   );
 }
 
+function GraphicsListRow({ graphic, projectId }: { graphic: GraphicAsset; projectId: string }) {
+  return (
+    <tr className="hover:bg-surface-container/50">
+      <td className="px-4 py-2">
+        <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded">
+          <img src={getAssetUrl(projectId, graphic.filename)} alt={graphic.filename} className="max-h-full max-w-full object-contain" loading="lazy" />
+        </div>
+      </td>
+      <td className="text-on-surface px-4 py-2 text-xs font-medium">{graphic.filename}</td>
+      <td className="px-4 py-2">
+        <span className="bg-surface-container text-outline rounded px-1.5 py-0.5 text-[10px] font-medium uppercase">{graphic.extension}</span>
+      </td>
+      <td className="text-outline px-4 py-2 text-right text-xs">{formatFileSize(graphic.sizeBytes)}</td>
+      <td className="px-4 py-2 text-right">
+        <PinAttachmentButton projectId={projectId} attachment={{ type: "graphic", filename: graphic.filename, extension: graphic.extension, sizeBytes: graphic.sizeBytes, projectId }} variant="icon" />
+      </td>
+    </tr>
+  );
+}
+
 function GraphicsList({ graphics, projectId }: { graphics: GraphicAsset[]; projectId: string }) {
   return (
     <div className="border-outline/20 overflow-hidden rounded-lg border">
@@ -120,29 +144,12 @@ function GraphicsList({ graphics, projectId }: { graphics: GraphicAsset[]; proje
             <th className="text-outline px-4 py-2 text-xs font-medium">Filename</th>
             <th className="text-outline px-4 py-2 text-xs font-medium">Type</th>
             <th className="text-outline px-4 py-2 text-right text-xs font-medium">Size</th>
+            <th className="text-outline px-4 py-2 text-right text-xs font-medium">Pin</th>
           </tr>
         </thead>
         <tbody className="divide-outline/10 divide-y">
           {graphics.map((graphic) => (
-            <tr key={graphic.filename} className="hover:bg-surface-container/50">
-              <td className="px-4 py-2">
-                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded">
-                  <img
-                    src={getAssetUrl(projectId, graphic.filename)}
-                    alt={graphic.filename}
-                    className="max-h-full max-w-full object-contain"
-                    loading="lazy"
-                  />
-                </div>
-              </td>
-              <td className="text-on-surface px-4 py-2 text-xs font-medium">{graphic.filename}</td>
-              <td className="px-4 py-2">
-                <span className="bg-surface-container text-outline rounded px-1.5 py-0.5 text-[10px] font-medium uppercase">
-                  {graphic.extension}
-                </span>
-              </td>
-              <td className="text-outline px-4 py-2 text-right text-xs">{formatFileSize(graphic.sizeBytes)}</td>
-            </tr>
+            <GraphicsListRow key={graphic.filename} graphic={graphic} projectId={projectId} />
           ))}
         </tbody>
       </table>

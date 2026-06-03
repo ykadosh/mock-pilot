@@ -11,6 +11,7 @@ interface ColorAsset {
 }
 
 interface PalettePageContentProps {
+  projectId: string | undefined;
   colors: ColorAsset[];
   editingId: string | null;
   showAddForm: boolean;
@@ -31,7 +32,7 @@ export function PalettePageContent(props: PalettePageContentProps) {
     <div className="mx-auto max-w-5xl">
       <PaletteHeader onAdd={() => props.onToggleAddForm(true)} />
       {!props.showAddForm && props.colors.length === 0 && <EmptyPaletteState />}
-      <PaletteGrid colors={props.colors} onDelete={props.onDelete} onEdit={props.onEdit} />
+      <PaletteGrid colors={props.colors} projectId={props.projectId} onDelete={props.onDelete} onEdit={props.onEdit} />
       <AddColorDrawer
         open={props.showAddForm}
         formRef={addFormRef}

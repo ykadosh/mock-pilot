@@ -14,6 +14,14 @@ function log(...args: unknown[]) {
 
 let activeAgentAbortController: AbortController | null = null;
 
+interface AttachedAssetsPayload {
+  components: { id: string; label: string; html: string; description?: string; props?: { name: string; type: string; description: string }[] }[];
+  typography: { id: string; label: string; fontFamily: string; fontSize: string; fontWeight: string; fontStyle: string; lineHeight: string; letterSpacing: string; textTransform: string }[];
+  icons: { name: string; codepoint: string; fontFamily: string; renderMode: "codepoint" | "ligature" }[];
+  graphics: { filename: string; extension: string; sizeBytes: number; assetPath: string }[];
+  colors: { id: string; label: string; value: string }[];
+}
+
 interface AgentModifyRequest {
   prompt: string;
   fullHTML: string;
@@ -21,6 +29,7 @@ interface AgentModifyRequest {
   sessionId?: string;
   attachedElements?: { mpId: string; selector: string; outerHTML: string }[];
   images?: { id: string; name: string; dataUrl: string; mimeType: string; sizeBytes: number }[];
+  attachedAssets?: AttachedAssetsPayload;
   projectAssets?: ProjectAssets;
   /** Previous LLM conversation messages from the active session, sent to enable continuation. */
   previousAgentMessages?: AgentMessage[];
@@ -115,6 +124,7 @@ function buildAgentLoopOptions({ data, previousMessages, signal, getMainWindow, 
     projectAssets: data.projectAssets,
     attachedElements: data.attachedElements,
     images: data.images,
+    attachedAssets: data.attachedAssets,
     projectId: data.projectId,
     maxIterations: getMaxIterations(),
     signal,
