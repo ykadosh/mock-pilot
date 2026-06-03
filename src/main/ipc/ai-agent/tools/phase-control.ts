@@ -21,7 +21,7 @@ export const planChanges: ToolDefinition = {
     type: "function",
     function: {
       name: "planChanges",
-      description: "First action in full (multi-shot) mode. Decompose the user's request into a concise list of concrete changes you intend to make. Keep it short (1-5 items). Each change is a brief sentence — you'll discover selectors and exact values during the INSPECT phase. Calling this tool transitions you from PLAN to INSPECT. For a single trivial edit where the exact target and value are already known, skip planChanges entirely and call the edit tool directly (single-shot mode — skips PLAN and VERIFY).",
+      description: "Decompose the user's request into a concise list of concrete changes you intend to make. Keep it short (1-5 items). Each change is a brief sentence — you may have inspected the page first, but exact selectors and values can still be discovered after planning. Stays in PLAN; the loop auto-flips to MODIFY when you call your first edit tool. For a single trivial edit where the exact target and value are already known, skip planChanges entirely and call the edit tool directly (single-shot mode — skips VERIFY).",
       parameters: {
         type: "object",
         properties: {
@@ -44,10 +44,9 @@ export const planChanges: ToolDefinition = {
     if (parsed.length === 0) return "Plan must contain at least one change.";
 
     context.setPlan?.(parsed);
-    context.requestPhase?.("INSPECT");
 
     const formatted = formatPlan(parsed);
-    return `Plan accepted (${parsed.length} change(s)):\n${formatted}\n\nNow in INSPECT phase. Use read-only tools (searchHtml, searchCss, getElementInfo, takeScreenshot) — batch them in parallel — to gather everything you need for ALL planned changes. When you're ready to edit, just call your edit tool — the loop will move you to MODIFY automatically. No separate transition tool is needed.`;
+    return `Plan accepted (${parsed.length} change(s)):\n${formatted}\n\nStill in PLAN phase. Use read-only tools (searchHtml, searchCss, getElementInfo, takeScreenshot) — batch them in parallel — to gather everything you need for ALL planned changes. When you're ready to edit, just call your edit tool — the loop will move you to MODIFY automatically. No separate transition tool is needed.`;
   },
 };
 
@@ -56,7 +55,7 @@ export const reinspect: ToolDefinition = {
     type: "function",
     function: {
       name: "reinspect",
-      description: "Return to INSPECT phase to gather more information. Use this if you realized mid-MODIFY or mid-VERIFY that you need to look up additional selectors, styles, or structure before continuing.",
+      description: "Return to PLAN phase to gather more information. Use this if you realized mid-MODIFY or mid-VERIFY that you need to look up additional selectors, styles, or structure before continuing.",
       parameters: {
         type: "object",
         properties: {
@@ -68,7 +67,7 @@ export const reinspect: ToolDefinition = {
   },
   async execute(args: Record<string, unknown>, context: ToolContext): Promise<string> {
     const reason = (args.reason as string) || "unspecified";
-    context.requestPhase?.("INSPECT");
-    return `Back in INSPECT phase (reason: ${reason}). Gather what you need with read-only tools, then just call your edit tool to resume editing — the loop will move you to MODIFY automatically.`;
+    context.requestPhase?.("PLAN");
+    return `Back in PLAN phase (reason: ${reason}). Gather what you need with read-only tools, then just call your edit tool to resume editing — the loop will move you to MODIFY automatically.`;
   },
 };

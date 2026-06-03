@@ -25,7 +25,6 @@ const TOOL_LABELS: Record<string, string> = {
 
 const PHASE_LABELS: Record<string, string> = {
   PLAN: "Planning",
-  INSPECT: "Inspecting",
   MODIFY: "Editing",
   VERIFY: "Verifying",
 };

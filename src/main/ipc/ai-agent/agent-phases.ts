@@ -30,27 +30,21 @@ const MODIFY_TOOLS = [
 export const PHASES: Record<AgentPhase, PhaseDefinition> = {
   PLAN: {
     name: "PLAN",
-    description: "Decompose the user request into a concise list of concrete changes by calling planChanges. For a single trivial edit where the exact target and value are already known (single-shot mode), skip planChanges and call the edit tool directly — the loop will auto-transition to MODIFY and skip VERIFY.",
-    allowedTools: ["planChanges", ...MODIFY_TOOLS],
-    canTransitionTo: ["INSPECT", "MODIFY"],
-  },
-  INSPECT: {
-    name: "INSPECT",
-    description: "Gather all information you need before making changes. Batch read-only tool calls in parallel (multiple tool_calls in a single response). When you have enough context, just call your edit tool — the loop will move you to MODIFY automatically.",
-    allowedTools: [...INSPECT_TOOLS, ...MODIFY_TOOLS],
+    description: "Inspect the document and decompose the user request into a concrete list of changes. Read-only tools are allowed — batch them in parallel — and call planChanges once you know what to change. When you're ready to edit, just call your edit tool; the loop will move you to MODIFY automatically. For a single trivial edit where the exact target and value are already known (single-shot mode), skip planChanges and call the edit tool directly — the loop will auto-transition to MODIFY and skip VERIFY.",
+    allowedTools: ["planChanges", ...INSPECT_TOOLS, ...MODIFY_TOOLS],
     canTransitionTo: ["MODIFY"],
   },
   MODIFY: {
     name: "MODIFY",
     description: "Apply the planned changes. Batch related edits in single tool calls when possible (e.g., one editCss call with multiple rules). After your last edit, take a screenshot — that moves you to VERIFY automatically. Call reinspect if you discover you need more information. (In single-shot mode — i.e., when you reached MODIFY directly from PLAN without calling planChanges — call finish directly after the edit; VERIFY is skipped.)",
     allowedTools: [...MODIFY_TOOLS, ...INSPECT_TOOLS, "reinspect", "finish"],
-    canTransitionTo: ["VERIFY", "INSPECT"],
+    canTransitionTo: ["VERIFY", "PLAN"],
   },
   VERIFY: {
     name: "VERIFY",
     description: "Confirm the result is correct. Take a screenshot and/or inspect the changed elements. Then call `finish` with a `verifications` array — one entry per plan item with status 'ok' and concrete evidence describing what you literally see. If anything is wrong, mark those items 'wrong' and finish will reject; then reinspect / undo + reinspect, re-apply, and re-verify.",
     allowedTools: [...INSPECT_TOOLS, "undo", "reinspect", "finish"],
-    canTransitionTo: ["INSPECT", "MODIFY"],
+    canTransitionTo: ["PLAN", "MODIFY"],
   },
 };
 
@@ -75,7 +69,7 @@ export const MUTATION_TOOLS = new Set<string>(
 );
 
 /** Tools that transition between phases (the loop reads requestPhase from context). */
-export const TRANSITION_TOOLS = new Set<string>(["planChanges", "reinspect"]);
+export const TRANSITION_TOOLS = new Set<string>(["reinspect"]);
 
 export function isToolAllowedInPhase(phase: AgentPhase, toolName: string): boolean {
   // `finish` is always allowed as a final exit hatch, but the system prompt steers

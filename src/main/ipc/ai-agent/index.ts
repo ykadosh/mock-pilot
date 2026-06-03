@@ -33,7 +33,7 @@ interface AgentModifyRequest {
   projectAssets?: ProjectAssets;
   /** Previous LLM conversation messages from the active session, sent to enable continuation. */
   previousAgentMessages?: AgentMessage[];
-  /** If true, treat as max-iterations resume (synthetic continue + INSPECT). Else new-prompt continuation. */
+  /** If true, treat as max-iterations resume (synthetic continue). Else new-prompt continuation. */
   continueFromMaxIterations?: boolean;
 }
 

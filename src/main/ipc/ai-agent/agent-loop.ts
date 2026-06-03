@@ -39,7 +39,7 @@ export interface AgentLoopOptions {
   /**
    * How to use previousMessages:
    * - "new-prompt" (default): append the current prompt as a new user turn, start in PLAN phase.
-   * - "resume-max-iterations": append a synthetic "please continue" user turn, start in INSPECT phase.
+   * - "resume-max-iterations": append a synthetic "please continue" user turn, start in PLAN phase.
    * Ignored when previousMessages is empty.
    */
   continueMode?: "new-prompt" | "resume-max-iterations";
@@ -70,7 +70,7 @@ interface LoopState {
   verificationFailures: { index: number; notes: string }[];
   /** Iteration at which the agent last inspected (screenshot/getElementInfo). For VERIFY gating. */
   lastInspectionIteration: number;
-  /** When true (auto-set when the agent calls a MODIFY tool from PLAN), loop skips PLAN, INSPECT, and VERIFY phases — only MODIFY runs. */
+  /** When true (auto-set when the agent calls a MODIFY tool from PLAN without having planned), loop skips VERIFY — only MODIFY runs. */
   singleShot: boolean;
   /** Cumulative time spent waiting on LLM chat completions (ms). */
   llmMs: number;
@@ -205,12 +205,11 @@ const VERIFY_TRIGGER_TOOLS = new Set<string>([...Array.from(READ_ONLY_TOOLS), "t
 
 function maybeAutoTransition(toolName: string, state: LoopState): void {
   if (state.phase === "PLAN" && MUTATION_TOOLS.has(toolName)) {
-    log(`  [AUTO-TRANSITION] PLAN → MODIFY (single-shot, triggered by ${toolName})`);
+    // Single-shot only when the agent jumped straight to an edit without recording a plan.
+    const isSingleShot = state.plan.length === 0;
+    log(`  [AUTO-TRANSITION] PLAN → MODIFY${isSingleShot ? " (single-shot, " : " ("}triggered by ${toolName})`);
     state.phase = "MODIFY";
-    state.singleShot = true;
-  } else if (state.phase === "INSPECT" && MUTATION_TOOLS.has(toolName)) {
-    log(`  [AUTO-TRANSITION] INSPECT → MODIFY (triggered by ${toolName})`);
-    state.phase = "MODIFY";
+    if (isSingleShot) state.singleShot = true;
   } else if (state.phase === "MODIFY" && state.hasMutated && VERIFY_TRIGGER_TOOLS.has(toolName) && !state.singleShot) {
     log(`  [AUTO-TRANSITION] MODIFY → VERIFY (triggered by ${toolName})`);
     state.phase = "VERIFY";
@@ -253,7 +252,7 @@ async function processToolCalls(args: ProcessToolCallsArgs): Promise<ProcessTool
       if (finished) return finished;
     }
 
-    phaseChanged = phaseChanged || executable.some((tc) => ["planChanges", "reinspect"].includes(tc.function.name));
+    phaseChanged = phaseChanged || executable.some((tc) => tc.function.name === "reinspect");
   }
 
   return { cancelled: false, phaseChanged };
@@ -272,8 +271,7 @@ interface IterationContext {
 
 function nudgeHintForPhase(phase: AgentPhase): string {
   switch (phase) {
-    case "PLAN": return "Call `planChanges` with a JSON array of {target, action} describing what you intend to change. For a single trivial edit, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot — completes in one iteration, skips PLAN and VERIFY).";
-    case "INSPECT": return "Use read-only tools in parallel to gather info, then just call your edit tool — the loop will move to MODIFY automatically.";
+    case "PLAN": return "Use read-only tools in parallel to gather any info you need, then call `planChanges` with a JSON array of {target, action} describing what you intend to change. Once planned, just call your edit tool — the loop will move you to MODIFY automatically. For a single trivial edit, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot — completes in one iteration, skips VERIFY).";
     case "MODIFY": return "Apply your planned edits (batch into the fewest tool calls). When done, take a screenshot — that moves you to VERIFY automatically.";
     case "VERIFY": return "Call `finish` directly, passing a `verifications` array (one entry per plan item: {planItemIndex, status:'ok', evidence}) describing what you literally see in the screenshot. Or `reinspect` if the result is wrong.";
   }
@@ -336,7 +334,7 @@ function initialMessages(options: AgentLoopOptions, isContinuation: boolean): Ag
     if (mode === "resume-max-iterations") {
       return [
         ...options.previousMessages!,
-        { role: "user", content: "Please continue making the changes. Pick up where you left off (currently in INSPECT phase)." },
+        { role: "user", content: "Please continue making the changes. Pick up where you left off (currently in PLAN phase)." },
       ];
     }
     const userContent = buildUserContent(options.prompt, { attachedElements: options.attachedElements, images: options.images, attachedAssets: options.attachedAssets });
@@ -394,8 +392,7 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
   logStart(options);
 
   const isContinuation = Boolean(options.previousMessages && options.previousMessages.length > 0);
-  const continueMode = options.continueMode ?? "new-prompt";
-  const initialPhase: AgentPhase = !isContinuation || continueMode === "new-prompt" ? "PLAN" : "INSPECT";
+  const initialPhase: AgentPhase = "PLAN";
   const state = createInitialState(initialPhase);
 
   const messages = initialMessages(options, isContinuation);
@@ -571,7 +568,7 @@ function buildUserContent(prompt: string, opts: BuildUserContentOptions = {}): s
 
   if (attachedAssets) text += buildAttachedAssetsText(attachedAssets);
 
-  text += "\n\nBegin by calling `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot mode — completes in one iteration, skips PLAN and VERIFY).";
+  text += "\n\nBegin in PLAN: inspect what you need with read-only tools (batch in parallel), then call `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot mode — completes in one iteration, skips VERIFY).";
 
   return text;
 }
@@ -582,10 +579,11 @@ function nextActionHint(toolName: string, state: LoopState): string {
   if (HINT_SKIP_TOOLS.has(toolName)) return "";
 
   switch (state.phase) {
-    case "PLAN":
-      return "\n→ Next: call `planChanges` with your decomposed change list, OR (single-shot) skip planning and call the edit tool + `finish` together in one response.";
-    case "INSPECT": {
+    case "PLAN": {
       const planCount = state.plan.length;
+      if (planCount === 0) {
+        return "\n→ Next: inspect what you need (batch read-only tools in parallel), then call `planChanges` with your decomposed change list. OR — single-shot — skip planning and emit the edit tool + `finish` together in one response.";
+      }
       const tip = planCount > 1
         ? " Tip: use batchSearchHtml/batchSearchCss/batchGetElementInfo to look up multiple selectors in ONE call."
         : "";
