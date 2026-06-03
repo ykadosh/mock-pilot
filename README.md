@@ -9,7 +9,7 @@
 
 **Capture any webpage and turn it into an editable mockup — right on your desktop.**
 
-[![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/ykadosh/mock-pilot/releases/latest/download/MockPilot.dmg)
+[![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/ykadosh/mock-pilot/releases/latest/download/MockPilot.zip)
 [![Download for Windows](https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ykadosh/mock-pilot/releases/latest/download/MockPilot.exe)
 
 </div>
@@ -26,8 +26,8 @@ MockPilot lets you capture live web pages, strip away the noise, and edit the re
 
 ### macOS
 
-1. Download `MockPilot.dmg` from the latest [release](https://github.com/ykadosh/mock-pilot/releases) (or use the button above)
-2. Open the `.dmg` and drag **MockPilot.app** to your Applications folder
+1. Download `MockPilot.zip` from the latest [release](https://github.com/ykadosh/mock-pilot/releases) (or use the button above)
+2. Unzip it and move **MockPilot.app** to your Applications folder
 3. Since the app is not yet code-signed, macOS will block it on first launch with a "MockPilot is damaged and can't be opened" dialog:
 
    <img src="resources/macos-damaged-warning.png" alt="macOS damaged app warning" width="280" />

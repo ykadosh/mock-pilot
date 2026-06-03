@@ -41,7 +41,7 @@ async function handleCheckForUpdates() {
     const release = await response.json() as ReleaseInfo;
     const latestVersion = release.tag_name.replace(/^v/, "");
     if (compareVersions(latestVersion, currentVersion) <= 0) return { updateAvailable: false, currentVersion, latestVersion };
-    const extension = process.platform === "darwin" ? ".dmg" : ".exe";
+    const extension = process.platform === "darwin" ? ".zip" : ".exe";
     const asset = release.assets.find((entry) => entry.name.endsWith(extension));
     return { updateAvailable: true, currentVersion, latestVersion, releaseUrl: release.html_url, downloadUrl: asset?.browser_download_url || release.html_url };
   } catch {
