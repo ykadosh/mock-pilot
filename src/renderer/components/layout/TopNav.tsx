@@ -22,7 +22,7 @@ export function TopNav({ children, activeTab, projectId }: TopNavProps) {
           src={logoText}
           alt="MockPilot"
           onClick={() => navigate("/")}
-          className="h-6 w-auto cursor-pointer"
+          className="h-6 w-[34px] cursor-pointer object-cover object-left min-[960px]:w-auto"
         />
       </div>
       {activeTab && <TopNavTabs activeTab={activeTab} projectId={projectId} />}

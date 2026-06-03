@@ -7,12 +7,13 @@ interface TooltipProps {
   label: string;
   placement?: TooltipPlacement;
   children: ReactNode;
+  disabled?: boolean;
 }
 
 const VIEWPORT_MARGIN = 8;
 const OFFSET = 8;
 
-export function Tooltip({ label, placement = "top", children }: TooltipProps) {
+export function Tooltip({ label, placement = "top", children, disabled = false }: TooltipProps) {
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -41,7 +42,7 @@ export function Tooltip({ label, placement = "top", children }: TooltipProps) {
   return (
     <div ref={triggerRef} className="relative" onMouseEnter={() => setVisible(true)} onMouseLeave={() => setVisible(false)}>
       {children}
-      {visible && createPortal(
+      {visible && !disabled && createPortal(
         <div ref={tooltipRef} style={{ position: "fixed", top: 0, left: 0 }} className="pointer-events-none z-50 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] whitespace-nowrap text-white shadow-lg">
           {label}
         </div>,
