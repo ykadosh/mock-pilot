@@ -10,7 +10,7 @@
 **Capture any webpage and turn it into an editable mockup — right on your desktop.**
 
 [![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/ykadosh/mock-pilot/releases/latest/download/MockPilot.zip)
-[![Download for Windows](https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ykadosh/mock-pilot/releases/latest/download/MockPilot.exe)
+[![Download for Windows](https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/ykadosh/mock-pilot/releases/latest/download/MockPilot.exe)
 
 </div>
 
