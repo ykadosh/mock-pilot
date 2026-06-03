@@ -49,7 +49,7 @@ async function generateMacIcons() {
 
   console.log("Generating icon.icns...");
   const src1024 = await resizePng(srcBuffer, 1024);
-  const icns = png2icons.createICNS(src1024, png2icons.BILINEAR, 0);
+  const icns = png2icons.createICNS(src1024, png2icons.BICUBIC, 0);
   if (!icns) throw new Error("Failed to create .icns");
   const icnsPath = path.join(RESOURCES, "icon.icns");
   await writeFile(icnsPath, icns);
@@ -69,7 +69,7 @@ async function generateWindowsIcons() {
 
   console.log("Generating icon.ico...");
   const src1024 = await resizePng(srcBuffer, 1024);
-  const ico = png2icons.createICO(src1024, png2icons.BILINEAR, 0, false);
+  const ico = png2icons.createICO(src1024, png2icons.BICUBIC, 0, true);
   if (!ico) throw new Error("Failed to create .ico");
   const icoPath = path.join(RESOURCES, "icon.ico");
   await writeFile(icoPath, ico);
