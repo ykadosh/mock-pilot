@@ -2,14 +2,24 @@
 export const CAPTURE_HTML_SCRIPT_CLEANUP = `
     _log("[step:cleanup] Stripping non-visual attributes and pruning redundant elements...");
     var _mpDataAttrs = ['data-original-href', 'data-adopted-stylesheet'];
+    // aria-* attributes commonly used as CSS state hooks (e.g. menu/accordion
+    // visibility, tabs, toggles). Stripping these breaks selectors like
+    // [aria-expanded="false"]+ul[aria-hidden="true"] and leaves menus stuck open.
+    var _preservedAriaAttrs = {
+      'aria-expanded': 1, 'aria-hidden': 1, 'aria-selected': 1,
+      'aria-current': 1, 'aria-checked': 1, 'aria-pressed': 1, 'aria-disabled': 1
+    };
     var _strippedCount = 0;
     var _prunedCount = 0;
     function _stripAttrs(el) {
       var toRemove = [];
       for (var i = 0; i < el.attributes.length; i++) {
         var name = el.attributes[i].name;
-        if (name.startsWith('aria-') ||
-            (name.startsWith('data-') && _mpDataAttrs.indexOf(name) === -1) ||
+        if (name.startsWith('aria-')) {
+          if (!_preservedAriaAttrs[name]) toRemove.push(name);
+          continue;
+        }
+        if ((name.startsWith('data-') && _mpDataAttrs.indexOf(name) === -1) ||
             name === 'role' || name === 'tabindex' || name === 'draggable' ||
             name === 'contenteditable' || name === 'title') {
           toRemove.push(name);
