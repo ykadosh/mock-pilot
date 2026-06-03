@@ -25,7 +25,11 @@ MockPilot lets you capture live web pages, strip away the noise, and edit the re
 
 1. Download the `.zip` file from the latest [release](https://github.com/ykadosh/mock-pilot/releases)
 2. Unzip and move **MockPilot.app** to your Applications folder
-3. Since the app is not yet code-signed, macOS will block it on first launch. Run:
+3. Since the app is not yet code-signed, macOS will block it on first launch with a "MockPilot is damaged and can't be opened" dialog:
+
+   <img src="resources/macos-damaged-warning.png" alt="macOS damaged app warning" width="280" />
+
+   Click **Cancel** (do *not* move it to Trash), then run:
    ```bash
    xattr -cr /Applications/MockPilot.app
    ```
