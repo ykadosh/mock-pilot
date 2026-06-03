@@ -83,7 +83,7 @@ jobs:
         run: |
           mkdir -p release-assets
           cp "$(find artifacts -type f -name 'MockPilot.exe' | head -1)" release-assets/MockPilot.exe
-          cp "$(find artifacts/mock-pilot-darwin -type f -name '*.zip' | head -1)" release-assets/MockPilot-macOS.zip
+          cp "$(find artifacts/mock-pilot-darwin -type f -name '*.dmg' | head -1)" release-assets/MockPilot.dmg
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -93,6 +93,6 @@ jobs:
           append_body: true
           files: |
             release-assets/MockPilot.exe
-            release-assets/MockPilot-macOS.zip
+            release-assets/MockPilot.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
