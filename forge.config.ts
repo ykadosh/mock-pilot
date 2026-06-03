@@ -22,7 +22,7 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({
       name: "MockPilot",
-      setupExe: "MockPilot-Setup.exe",
+      setupExe: "MockPilot.exe",
       authors: "Yoav Kadosh",
       setupIcon: "resources/icon.ico",
     }),

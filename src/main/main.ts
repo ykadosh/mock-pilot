@@ -1,6 +1,21 @@
-import { app, BrowserWindow, net, protocol } from "electron";
+import { app, BrowserWindow, Menu, net, protocol } from "electron";
 import path from "path";
 import { pathToFileURL } from "url";
+import squirrelStartup from "electron-squirrel-startup";
+
+// Quit immediately if launched by the Squirrel installer for its lifecycle events
+// (--squirrel-install, --squirrel-updated, --squirrel-uninstall, --squirrel-obsolete).
+// Without this, the app briefly opens a second window during install/update on Windows.
+if (squirrelStartup) {
+  app.quit();
+}
+
+// Prevent a second instance of the app from running. If a second launch occurs,
+// focus the existing window instead of opening a new one.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
 
 import { registerAiHandlers } from "./ipc/ai";
 import { registerAgentHandlers } from "./ipc/ai-agent";
@@ -53,6 +68,12 @@ app.on("ready", () => {
   ensureProjectsDir();
   migrateProjectsToFolders();
 
+  // Remove the default File/Edit/View/Window/Help menu on Windows & Linux.
+  // macOS keeps its standard application menu (required by platform conventions).
+  if (process.platform !== "darwin") {
+    Menu.setApplicationMenu(null);
+  }
+
   if (process.platform === "darwin" && !app.isPackaged && app.dock) {
     app.dock.setIcon(appIconPath);
   }
@@ -85,5 +106,12 @@ app.on("window-all-closed", () => {
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+  }
+});
+
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
   }
 });

@@ -34,7 +34,13 @@ MockPilot lets you capture live web pages, strip away the noise, and edit the re
 ### Windows
 
 1. Download the `.exe` installer from the latest [release](https://github.com/ykadosh/mock-pilot/releases)
-2. Run the installer
+2. Since the installer isn't yet code-signed, Microsoft Edge / SmartScreen will warn that it "isn't commonly downloaded":
+
+   <img src="resources/smartscreen-warning.png" alt="Edge SmartScreen warning" width="380" />
+
+   In the Edge downloads bar, click the `•••` menu next to the warning → **Keep** → **Keep anyway**. (The file will be named `MockPilot.exe` in newer releases; older releases ship `MockPilot-Setup.exe`.)
+3. When you launch the installer, Windows SmartScreen may show a blue "Windows protected your PC" dialog. Click **More info** → **Run anyway**.
+4. Follow the installer prompts
 
 ---
 

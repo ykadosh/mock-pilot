@@ -12,11 +12,17 @@ interface TopNavProps {
   projectId?: string;
 }
 
+const isMac = navigator.userAgent.includes("Mac");
+
 export function TopNav({ children, activeTab, projectId }: TopNavProps) {
   const navigate = useNavigate();
 
   return (
-    <header className="relative z-50 flex h-12 w-full shrink-0 items-center border-b border-slate-700 bg-slate-900 pr-4 pl-20 text-sm tracking-tight [-webkit-app-region:drag]">
+    <header
+      className={`relative z-50 flex h-12 w-full shrink-0 items-center border-b border-slate-700 bg-slate-900 pr-4 text-sm tracking-tight [-webkit-app-region:drag] ${
+        isMac ? "pl-20" : "pl-4"
+      }`}
+    >
       <div className="gap-md flex items-center [-webkit-app-region:no-drag]">
         <img
           src={logoText}
