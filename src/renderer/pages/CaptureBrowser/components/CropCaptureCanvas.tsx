@@ -3,25 +3,31 @@ import type { CropPreview } from "../types";
 import { DimensionPill } from "./CropCaptureDialogPanels";
 
 const HANDLE_HIT_SIZE = 12;
+const HANDLE_MARGIN = HANDLE_HIT_SIZE / 2;
 const SCROLL_MARGIN = 32;
 
 interface CropCanvasProps {
   cropTop: number;
   cropHeight: number;
   preview: CropPreview;
+  naturalPageHeight: number;
   setRegion: (top: number, height: number) => void;
 }
 
-export function CropCanvas({ cropTop, cropHeight, preview, setRegion }: CropCanvasProps) {
+export function CropCanvas({ cropTop, cropHeight, preview, naturalPageHeight, setRegion }: CropCanvasProps) {
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const virtualPageHeight = useMemo(() => Math.max(preview.naturalHeight, cropTop + cropHeight), [cropTop, cropHeight, preview.naturalHeight]);
+  // virtualPageHeight uses the ORIGINAL natural page height as the floor, not the
+  // (possibly grown) effective preview height. This way, after the user extends
+  // the crop and then shrinks it back, the page rect snaps back to the natural size
+  // instead of leaving a big dimmed area below the crop.
+  const virtualPageHeight = useMemo(() => Math.max(naturalPageHeight, cropTop + cropHeight), [cropTop, cropHeight, naturalPageHeight]);
   const [stageRect, setStageRect] = useState<{ width: number; height: number } | null>(null);
   useStageMeasurement(stageRef, setStageRect);
   // Width-only scale: image always fills stage width at its true aspect ratio. When the
   // page rect grows taller than the stage (extended crop), the stage scrolls vertically.
   const scale = stageRect ? stageRect.width / preview.viewportWidth : 0;
-  const handleDrag = useHandleDrag({ cropTop, cropHeight, scale, stageRef, setRegion });
-  useAutoScrollOnCropChange(stageRef, (cropTop + cropHeight) * scale);
+  const handleDrag = useHandleDrag({ cropTop, cropHeight, scale, setRegion });
+  useAutoScrollOnCropChange(stageRef, (cropTop + cropHeight) * scale + HANDLE_MARGIN);
   return (
     <div className="bg-surface-container-lowest p-lg relative flex flex-1 flex-col items-center justify-center overflow-hidden">
       <div className="technical-grid absolute inset-0 opacity-10" />
@@ -51,17 +57,21 @@ function PageRect({ cropTop, cropHeight, handleDrag, preview, scale, virtualPage
   const cropTopPx = cropTop * scale;
   const cropHeightPx = cropHeight * scale;
   const cropBottomPx = cropTopPx + cropHeightPx;
+  // Outer wrapper has no clipping so handles can poke past the page rect edges.
+  // Vertical margin gives the handles room above/below within the scroll container.
   return (
-    <div className="bg-surface border-outline-variant relative mx-auto overflow-hidden border shadow-xl" style={{ width: pageWidth, height: pageHeight }}>
-      <div className="technical-grid absolute inset-x-0 bottom-0 opacity-30" style={{ top: imageHeightPx }} />
-      <img alt="Page preview" src={preview.dataUrl} className="absolute inset-x-0 top-0 w-full select-none" draggable={false} style={{ height: imageHeightPx }} />
-      <div className="pointer-events-none absolute inset-x-0 top-0 bg-black/70" style={{ height: cropTopPx }} />
-      <div className="pointer-events-none absolute inset-x-0 bg-black/70" style={{ top: cropBottomPx, bottom: 0 }} />
-      <div className="border-primary pointer-events-none absolute inset-x-0 border-2 border-dashed" style={{ top: cropTopPx, height: cropHeightPx }}>
-        <div className="border-primary/20 absolute top-1/3 w-full border-t" />
-        <div className="border-primary/20 absolute top-2/3 w-full border-t" />
-        <div className="border-primary/20 absolute left-1/3 h-full border-l" />
-        <div className="border-primary/20 absolute left-2/3 h-full border-l" />
+    <div className="relative mx-auto" style={{ width: pageWidth, height: pageHeight, marginTop: HANDLE_MARGIN, marginBottom: HANDLE_MARGIN }}>
+      <div className="bg-surface border-outline-variant absolute inset-0 overflow-hidden border shadow-xl">
+        <div className="technical-grid absolute inset-x-0 bottom-0 opacity-30" style={{ top: imageHeightPx }} />
+        <img alt="Page preview" src={preview.dataUrl} className="absolute inset-x-0 top-0 w-full select-none" draggable={false} style={{ height: imageHeightPx }} />
+        <div className="pointer-events-none absolute inset-x-0 top-0 bg-black/70" style={{ height: cropTopPx }} />
+        <div className="pointer-events-none absolute inset-x-0 bg-black/70" style={{ top: cropBottomPx, bottom: 0 }} />
+        <div className="border-primary pointer-events-none absolute inset-x-0 border-2 border-dashed" style={{ top: cropTopPx, height: cropHeightPx }}>
+          <div className="border-primary/20 absolute top-1/3 w-full border-t" />
+          <div className="border-primary/20 absolute top-2/3 w-full border-t" />
+          <div className="border-primary/20 absolute left-1/3 h-full border-l" />
+          <div className="border-primary/20 absolute left-2/3 h-full border-l" />
+        </div>
       </div>
       <CropHandle cropPx={cropTopPx} kind="top" onMouseDown={(e) => handleDrag("top", e)} />
       <CropHandle cropPx={cropBottomPx} kind="bottom" onMouseDown={(e) => handleDrag("bottom", e)} />
@@ -110,7 +120,6 @@ interface DragOptions {
   cropTop: number;
   cropHeight: number;
   scale: number;
-  stageRef: React.RefObject<HTMLDivElement | null>;
   setRegion: (top: number, height: number) => void;
 }
 

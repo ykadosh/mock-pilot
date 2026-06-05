@@ -34,7 +34,7 @@ export function CropCaptureDialog({ preview, url, onConfirm, onCancel, onExtendP
       <div className="bg-surface-container-low border-outline relative flex h-[640px] w-full max-w-4xl flex-col overflow-hidden rounded-xl border shadow-2xl">
         <CropDialogHeader onCancel={onCancel} />
         <div className="flex flex-1 overflow-hidden">
-          <CropCanvas cropTop={cropTop} cropHeight={cropHeight} preview={effectivePreview} setRegion={setRegion} />
+          <CropCanvas cropTop={cropTop} cropHeight={cropHeight} preview={effectivePreview} naturalPageHeight={preview.naturalHeight} setRegion={setRegion} />
           <CropSidebar cropTop={cropTop} cropHeight={cropHeight} preview={effectivePreview} setRegion={setRegion} url={url} />
         </div>
         <CropDialogFooter cropTop={cropTop} cropHeight={cropHeight} onCancel={onCancel} onConfirm={onConfirm} />
