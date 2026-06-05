@@ -46,8 +46,13 @@ export const CAPTURE_HTML_SCRIPT_PRELUDE = `
     for (var _si = 0; _si < document.styleSheets.length; _si++) _snapshotSheet(document.styleSheets[_si], 0, false);
     if (document.adoptedStyleSheets) for (var _ai = 0; _ai < document.adoptedStyleSheets.length; _ai++) _snapshotSheet(document.adoptedStyleSheets[_ai], 0, true);
     if (_crossOriginSheets.length > 0) {
-      _log("[step:cssom-cors] Fetching " + _crossOriginSheets.length + " cross-origin stylesheet(s) (cssRules blocked)...");
-      await Promise.all(_crossOriginSheets.map(async function(item) {
+      var _seenHref = {}, _uniqueCors = [];
+      for (var _ci = 0; _ci < _crossOriginSheets.length; _ci++) {
+        var _it = _crossOriginSheets[_ci];
+        if (!_seenHref[_it.href]) { _seenHref[_it.href] = true; _uniqueCors.push(_it); }
+      }
+      _log("[step:cssom-cors] Fetching " + _uniqueCors.length + " cross-origin stylesheet(s) (cssRules blocked)...");
+      await Promise.all(_uniqueCors.map(async function(item) {
         try {
           var res = await fetch(item.href);
           if (!res.ok) return _log("  Fetch failed " + res.status + ": " + item.href);
