@@ -57,16 +57,16 @@ function CropNumberInput({ label, value, onChange }: { label: string; value: num
   return (
     <div className="space-y-sm">
       <label className="font-ui-small text-ui-small text-on-surface">{label}</label>
-      <div className="bg-surface-container-lowest border-outline-variant focus-within:border-primary focus-within:ring-primary pr-md flex items-center overflow-hidden rounded-lg border focus-within:ring-1">
+      <div className="bg-surface-container-lowest border-outline-variant focus-within:border-primary focus-within:ring-primary relative flex items-center overflow-hidden rounded-lg border focus-within:ring-1">
         <input
           type="number"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={(event) => commit(event.target.value)}
           onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }}
-          className="font-code-block text-primary px-md flex-1 border-none bg-transparent py-3 text-lg outline-none focus:ring-0"
+          className="font-code-block text-primary px-md w-full min-w-0 border-none bg-transparent py-3 pr-10 text-lg outline-none focus:ring-0"
         />
-        <span className="font-ui-small text-ui-small text-on-surface-variant/60">PX</span>
+        <span className="font-ui-small text-ui-small text-on-surface-variant/60 right-md pointer-events-none absolute">PX</span>
       </div>
     </div>
   );

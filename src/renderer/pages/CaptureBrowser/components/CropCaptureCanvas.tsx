@@ -66,7 +66,7 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
     <div className="relative mx-auto" style={{ width: pageWidth, height: pageHeightPx, marginTop: HANDLE_MARGIN, marginBottom: HANDLE_MARGIN }}>
       <div className="bg-surface border-outline-variant absolute inset-0 overflow-hidden border shadow-xl">
         <div className="technical-grid absolute inset-x-0 bottom-0 opacity-30" style={{ top: imageHeightPx }} />
-        <img alt="Page preview" src={preview.dataUrl} className="absolute inset-x-0 top-0 w-full select-none" draggable={false} style={{ height: imageHeightPx }} />
+        <img alt="Page preview" src={preview.dataUrl} className="absolute inset-x-0 top-0 w-full object-contain object-top select-none" draggable={false} style={{ height: imageHeightPx }} />
         <div className="pointer-events-none absolute inset-x-0 top-0 bg-black/70" style={{ height: cropTopPx }} />
         <div className="pointer-events-none absolute inset-x-0 bg-black/70" style={{ top: cropBottomPx, bottom: 0 }} />
         <div className="border-primary pointer-events-none absolute inset-x-0 border-2 border-dashed" style={{ top: cropTopPx, height: cropHeightPx }}>
