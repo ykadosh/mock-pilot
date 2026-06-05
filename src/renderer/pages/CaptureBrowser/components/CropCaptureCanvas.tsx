@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CropPreview } from "../types";
 import { DimensionPill } from "./CropCaptureDialogPanels";
 
-const HANDLE_HIT_SIZE = 10;
+const HANDLE_HIT_SIZE = 12;
+const SCROLL_MARGIN = 32;
 
 interface CropCanvasProps {
   cropTop: number;
@@ -16,20 +17,15 @@ export function CropCanvas({ cropTop, cropHeight, preview, setRegion }: CropCanv
   const virtualPageHeight = useMemo(() => Math.max(preview.naturalHeight, cropTop + cropHeight), [cropTop, cropHeight, preview.naturalHeight]);
   const [stageRect, setStageRect] = useState<{ width: number; height: number } | null>(null);
   useStageMeasurement(stageRef, setStageRect);
-  const computedScale = computeScale(stageRect, preview.viewportWidth, virtualPageHeight);
-  // Lock the scale during an active drag so the handle stays under the cursor.
-  // On release we drop the lock and the page rect snaps to its proportional fit.
-  const [lockedScale, setLockedScale] = useState<number | null>(null);
-  const scale = lockedScale ?? computedScale;
-  const handleDrag = useHandleDrag({
-    cropTop, cropHeight, scale, setRegion,
-    onStart: useCallback(() => setLockedScale(computedScale), [computedScale]),
-    onEnd: useCallback(() => setLockedScale(null), []),
-  });
+  // Width-only scale: image always fills stage width at its true aspect ratio. When the
+  // page rect grows taller than the stage (extended crop), the stage scrolls vertically.
+  const scale = stageRect ? stageRect.width / preview.viewportWidth : 0;
+  const handleDrag = useHandleDrag({ cropTop, cropHeight, scale, stageRef, setRegion });
+  useAutoScrollOnCropChange(stageRef, (cropTop + cropHeight) * scale);
   return (
     <div className="bg-surface-container-lowest p-lg relative flex flex-1 flex-col items-center justify-center overflow-hidden">
       <div className="technical-grid absolute inset-0 opacity-10" />
-      <div ref={stageRef} className="relative flex min-h-0 w-full max-w-2xl flex-1 items-start justify-center overflow-hidden">
+      <div ref={stageRef} className="relative min-h-0 w-full max-w-2xl flex-1 overflow-x-hidden overflow-y-auto">
         {stageRect && scale > 0 && (
           <PageRect cropTop={cropTop} cropHeight={cropHeight} handleDrag={handleDrag} preview={preview} scale={scale} virtualPageHeight={virtualPageHeight} />
         )}
@@ -56,7 +52,7 @@ function PageRect({ cropTop, cropHeight, handleDrag, preview, scale, virtualPage
   const cropHeightPx = cropHeight * scale;
   const cropBottomPx = cropTopPx + cropHeightPx;
   return (
-    <div className="bg-surface border-outline-variant relative overflow-hidden border shadow-xl" style={{ width: pageWidth, height: pageHeight }}>
+    <div className="bg-surface border-outline-variant relative mx-auto overflow-hidden border shadow-xl" style={{ width: pageWidth, height: pageHeight }}>
       <div className="technical-grid absolute inset-x-0 bottom-0 opacity-30" style={{ top: imageHeightPx }} />
       <img alt="Page preview" src={preview.dataUrl} className="absolute inset-x-0 top-0 w-full select-none" draggable={false} style={{ height: imageHeightPx }} />
       <div className="pointer-events-none absolute inset-x-0 top-0 bg-black/70" style={{ height: cropTopPx }} />
@@ -75,17 +71,10 @@ function PageRect({ cropTop, cropHeight, handleDrag, preview, scale, virtualPage
 
 function CropHandle({ cropPx, kind, onMouseDown }: { cropPx: number; kind: "top" | "bottom"; onMouseDown: (e: React.MouseEvent) => void }) {
   return (
-    <div onMouseDown={onMouseDown} className="bg-primary/20 hover:bg-primary absolute inset-x-0 z-30 flex items-center justify-center transition-colors" style={{ top: cropPx - HANDLE_HIT_SIZE / 2, height: HANDLE_HIT_SIZE, cursor: "ns-resize" }} data-kind={kind}>
-      <div className="bg-primary border-surface h-1.5 w-12 rounded-full border" />
+    <div onMouseDown={onMouseDown} className="group absolute inset-x-0 z-30 flex items-center justify-center" style={{ top: cropPx - HANDLE_HIT_SIZE / 2, height: HANDLE_HIT_SIZE, cursor: "ns-resize" }} data-kind={kind}>
+      <div className="bg-primary border-surface h-1.5 w-12 rounded-full border transition-transform group-hover:scale-110" />
     </div>
   );
-}
-
-function computeScale(stageRect: { width: number; height: number } | null, viewportWidth: number, virtualPageHeight: number) {
-  if (!stageRect) return 0;
-  const byWidth = stageRect.width / viewportWidth;
-  const byHeight = stageRect.height / virtualPageHeight;
-  return Math.min(byWidth, byHeight);
 }
 
 function useStageMeasurement(ref: React.RefObject<HTMLDivElement | null>, set: (rect: { width: number; height: number } | null) => void) {
@@ -102,19 +91,31 @@ function useStageMeasurement(ref: React.RefObject<HTMLDivElement | null>, set: (
   }, [ref, set]);
 }
 
+// While the user drags, keep the active handle visible by scrolling the stage if the
+// crop bottom edge moves outside the visible area.
+function useAutoScrollOnCropChange(stageRef: React.RefObject<HTMLDivElement | null>, cropBottomScreenPx: number) {
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const visibleBottom = el.scrollTop + el.clientHeight;
+    if (cropBottomScreenPx > visibleBottom - SCROLL_MARGIN) {
+      el.scrollTop = Math.min(el.scrollHeight, cropBottomScreenPx - el.clientHeight + SCROLL_MARGIN);
+    } else if (cropBottomScreenPx < el.scrollTop + SCROLL_MARGIN) {
+      el.scrollTop = Math.max(0, cropBottomScreenPx - SCROLL_MARGIN);
+    }
+  }, [stageRef, cropBottomScreenPx]);
+}
+
 interface DragOptions {
   cropTop: number;
   cropHeight: number;
   scale: number;
+  stageRef: React.RefObject<HTMLDivElement | null>;
   setRegion: (top: number, height: number) => void;
-  onStart: () => void;
-  onEnd: () => void;
 }
 
-function useHandleDrag({ cropTop, cropHeight, scale, setRegion, onStart, onEnd }: DragOptions) {
+function useHandleDrag({ cropTop, cropHeight, scale, setRegion }: DragOptions) {
   const dragState = useRef<{ kind: "top" | "bottom"; startY: number; startTop: number; startHeight: number } | null>(null);
-  const callbacksRef = useRef({ onStart, onEnd });
-  callbacksRef.current = { onStart, onEnd };
   useEffect(() => {
     const onMove = (event: MouseEvent) => {
       const state = dragState.current;
@@ -131,7 +132,6 @@ function useHandleDrag({ cropTop, cropHeight, scale, setRegion, onStart, onEnd }
       dragState.current = null;
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
-      callbacksRef.current.onEnd();
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -145,6 +145,5 @@ function useHandleDrag({ cropTop, cropHeight, scale, setRegion, onStart, onEnd }
     dragState.current = { kind, startY: event.clientY, startTop: cropTop, startHeight: cropHeight };
     document.body.style.cursor = "ns-resize";
     document.body.style.userSelect = "none";
-    callbacksRef.current.onStart();
   }, [cropTop, cropHeight]);
 }
