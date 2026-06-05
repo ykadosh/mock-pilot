@@ -7,6 +7,7 @@ export const CAPTURE_STEPS: CaptureStepDefinition[] = [
   { key: "cssom", label: "Processing styles" },
   { key: "fonts", label: "Converting fonts" },
   { key: "layout", label: "Adjusting layout" },
+  { key: "crop", label: "Cropping the capture" },
   { key: "cleanup", label: "Tidying up the HTML" },
   { key: "assets", label: "Extracting assets" },
   { key: "screenshot", label: "Creating preview" },

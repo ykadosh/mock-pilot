@@ -1,10 +1,10 @@
  
 export const CAPTURE_HTML_SCRIPT_CLEANUP = `
+    _log("[step:scripts] Removing scripts and prefetch links...");
+    document.querySelectorAll("script,noscript").forEach((s) => s.remove());
+    document.querySelectorAll('link[rel="preload"],link[rel="prefetch"],link[rel="preconnect"],link[rel="dns-prefetch"],link[rel="modulepreload"],link[rel="icon"],link[rel="shortcut icon"],link[rel="apple-touch-icon"]').forEach((l) => l.remove());
     _log("[step:cleanup] Stripping non-visual attributes and pruning redundant elements...");
-    var _mpDataAttrs = ['data-original-href', 'data-adopted-stylesheet'];
-    // aria-* attributes commonly used as CSS state hooks (e.g. menu/accordion
-    // visibility, tabs, toggles). Stripping these breaks selectors like
-    // [aria-expanded="false"]+ul[aria-hidden="true"] and leaves menus stuck open.
+    var _mpDataAttrs = ['data-original-href', 'data-adopted-stylesheet', 'data-mp-crop-trail'];
     var _preservedAriaAttrs = {
       'aria-expanded': 1, 'aria-hidden': 1, 'aria-selected': 1,
       'aria-current': 1, 'aria-checked': 1, 'aria-pressed': 1, 'aria-disabled': 1

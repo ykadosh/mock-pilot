@@ -3,6 +3,7 @@ import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, MouseEvent as React
 import type { CaptureStep } from "../../components/CaptureProgressModal";
 import type { CaptureBrowserToolbarProps } from "./components/CaptureBrowserToolbar";
 import type { HeightMode } from "./types";
+import { useCropPrompt } from "./useCropPrompt";
 import { normalizeCaptureUrl } from "./utils";
 
 export function useCaptureBrowserState() {
@@ -23,6 +24,7 @@ export function useCaptureBrowserState() {
   const [heightMode, setHeightMode] = useState<HeightMode>("convert-vh");
   const [captureSteps, setCaptureSteps] = useState<CaptureStep[]>([]);
   const [capturePercent, setCapturePercent] = useState(0);
+  const cropPrompt = useCropPrompt();
   useWebviewPreloadPath(setWebviewPreloadPath);
   useNavigationSync({ webviewRef, hasNavigated, setAddressBarValue, setCanGoBack, setCanGoForward, setCurrentUrl, setIsLoading, setIsSecure });
   useFocusRetention(webviewRef, hasNavigated);
@@ -36,7 +38,7 @@ export function useCaptureBrowserState() {
     event.preventDefault();
   }, []);
   const toolbarProps: Omit<CaptureBrowserToolbarProps, "onCapture"> = { addressBarValue, canGoBack, canGoForward, captureSettingsOpen, hasNavigated, heightMode, isCapturing, isLoading, isSecure, onAddressBarChange: setAddressBarValue, onAddressBarKeyDown: handleAddressBarKeyDown, onBack: () => webviewRef.current?.goBack(), onForward: () => webviewRef.current?.goForward(), onMouseDown: preventFocusSteal, onRefresh: handleRefresh, onSetCaptureSettingsOpen: setCaptureSettingsOpen, onToggleSettings: () => setCaptureSettingsOpen(previous => !previous), onUpdateHeightMode: setHeightMode, settingsButtonRef };
-  return { abortCaptureRef, captureState: { capturePercent, captureSettingsOpen, captureSteps, heightMode, isCapturing }, navigationState: { canGoBack, canGoForward, currentUrl, hasNavigated, isLoading, isSecure, pendingUrl, webviewPreloadPath }, preventFocusSteal, setCapturePercent, setCaptureSteps, setIsCapturing, toolbarProps, webviewRef };
+  return { abortCaptureRef, captureState: { capturePercent, captureSettingsOpen, captureSteps, heightMode, isCapturing }, cropPrompt, navigationState: { canGoBack, canGoForward, currentUrl, hasNavigated, isLoading, isSecure, pendingUrl, webviewPreloadPath }, preventFocusSteal, setCapturePercent, setCaptureSteps, setIsCapturing, toolbarProps, webviewRef };
 }
 
 function useWebviewPreloadPath(setWebviewPreloadPath: Dispatch<SetStateAction<string>>) {

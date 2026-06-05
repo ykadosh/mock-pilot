@@ -1,0 +1,132 @@
+import { useEffect, useState } from "react";
+import type { CropPreview, CropRegion } from "../types";
+
+export function CropDialogHeader({ onCancel }: { onCancel: () => void }) {
+  return (
+    <div className="h-xl px-md border-outline-variant bg-surface-container flex items-center justify-between border-b">
+      <div className="gap-sm flex items-center">
+        <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>crop</span>
+        <h2 className="font-headline-md text-headline-md text-on-surface">Crop Capture Area</h2>
+      </div>
+      <button onClick={onCancel} className="p-xs hover:bg-surface-bright text-on-surface-variant rounded transition-colors">
+        <span className="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  );
+}
+
+export function DimensionPill({ cropHeight, viewportWidth }: { cropHeight: number; viewportWidth: number }) {
+  return (
+    <div className="bottom-md bg-surface-container-high border-outline px-md py-xs gap-sm absolute left-1/2 flex -translate-x-1/2 items-center rounded-full border">
+      <span className="font-label-caps text-label-caps text-on-surface-variant">CROP SIZE</span>
+      <span className="font-code-block text-primary">{viewportWidth} × {Math.round(cropHeight)}px</span>
+    </div>
+  );
+}
+
+interface CropSidebarProps {
+  cropTop: number;
+  cropHeight: number;
+  preview: CropPreview;
+  setRegion: (top: number, height: number) => void;
+  url: string;
+}
+
+export function CropSidebar({ cropTop, cropHeight, preview, setRegion, url }: CropSidebarProps) {
+  return (
+    <div className="bg-surface-container border-outline-variant p-md gap-lg flex w-[280px] flex-col border-l">
+      <div className="space-y-md">
+        <div className="border-outline-variant pb-xs flex items-center justify-between border-b">
+          <h3 className="font-label-caps text-label-caps text-on-surface-variant">PRECISION CONTROL</h3>
+          <span className="material-symbols-outlined text-on-surface-variant text-[16px]">tune</span>
+        </div>
+        <CropNumberInput label="Top Offset (px)" value={Math.round(cropTop)} onChange={(value) => setRegion(value, cropHeight)} />
+        <CropNumberInput label="Capture Height (px)" value={Math.round(cropHeight)} onChange={(value) => setRegion(cropTop, value)} />
+      </div>
+      <div className="flex flex-1 flex-col justify-between">
+        <CropMetadata naturalHeight={preview.naturalHeight} url={url} viewportWidth={preview.viewportWidth} />
+        <CropHint />
+      </div>
+    </div>
+  );
+}
+
+function CropNumberInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => { setDraft(String(value)); }, [value]);
+  const commit = (raw: string) => {
+    const parsed = parseInt(raw, 10);
+    if (Number.isFinite(parsed)) onChange(parsed);
+    else setDraft(String(value));
+  };
+  return (
+    <div className="space-y-sm">
+      <label className="font-ui-small text-ui-small text-on-surface">{label}</label>
+      <div className="bg-surface-container-lowest border-outline-variant focus-within:border-primary focus-within:ring-primary flex items-center overflow-hidden rounded-lg border focus-within:ring-1">
+        <input
+          type="number"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={(event) => commit(event.target.value)}
+          onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }}
+          className="font-code-block text-primary px-md flex-1 border-none bg-transparent py-3 text-lg outline-none focus:ring-0"
+        />
+        <div className="bg-surface-container-high px-md border-outline-variant border-l py-3">
+          <span className="font-ui-small text-ui-small text-on-surface-variant font-bold">PX</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CropMetadata({ naturalHeight, url, viewportWidth }: { naturalHeight: number; url: string; viewportWidth: number }) {
+  return (
+    <div className="space-y-md">
+      <div className="pt-md border-outline-variant space-y-sm border-t">
+        <CropMetaRow label="Source URL" value={shortenUrl(url)} />
+        <CropMetaRow label="Page size" value={`${viewportWidth} × ${naturalHeight}px`} />
+        <CropMetaRow label="Format" value="PNG (Lossless)" />
+      </div>
+    </div>
+  );
+}
+
+function CropMetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="text-ui-small flex items-center justify-between">
+      <span className="text-on-surface-variant">{label}</span>
+      <span className="text-on-surface max-w-[160px] truncate">{value}</span>
+    </div>
+  );
+}
+
+function CropHint() {
+  return (
+    <div className="p-md bg-primary/10 border-primary/20 gap-sm flex items-start rounded-lg border">
+      <span className="material-symbols-outlined text-primary text-[16px]">info</span>
+      <p className="text-ui-small text-primary leading-tight">Drag the handles or enter exact pixel values. Extending the height past the page bottom resizes the page before capture.</p>
+    </div>
+  );
+}
+
+export function CropDialogFooter({ cropTop, cropHeight, onCancel, onConfirm }: { cropTop: number; cropHeight: number; onCancel: () => void; onConfirm: (region: CropRegion) => void }) {
+  return (
+    <div className="h-xl px-md gap-md border-outline-variant bg-surface-container flex items-center justify-end border-t">
+      <button onClick={onCancel} className="px-md text-ui-small font-ui-small border-outline text-on-surface hover:bg-surface-bright h-[36px] rounded border transition-colors">Cancel</button>
+      <button onClick={() => onConfirm({ top: Math.round(cropTop), height: Math.round(cropHeight) })} className="px-md text-ui-small font-ui-small bg-primary text-on-primary hover:bg-primary/90 gap-xs flex h-[36px] items-center rounded font-bold transition-colors">
+        Confirm Crop
+        <span className="material-symbols-outlined text-[16px]">check_circle</span>
+      </button>
+    </div>
+  );
+}
+
+function shortenUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname === "/" ? "" : parsed.pathname;
+    return `${parsed.hostname}${path}`.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}

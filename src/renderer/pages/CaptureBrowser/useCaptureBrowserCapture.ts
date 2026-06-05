@@ -2,18 +2,28 @@ import { useCallback } from "react";
 import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from "react";
 import type { CaptureStep } from "../../components/CaptureProgressModal";
 import { setCapturedHtml } from "../../lib/store";
+import { applyCropExtension, capturePreviewForCrop, cropCapturedThumbnail } from "./cropCaptureHelpers";
 import { captureAndInlineIframes } from "./iframeCapture";
 import { createCaptureHtmlScript } from "./scripts/captureHtmlScript";
 import { EXTRACT_ASSETS_SCRIPT } from "./scripts/extractAssetsScript";
 import { EXTRACT_ICONS_SCRIPT } from "./scripts/extractIconsScript";
-import type { ExtractedAssets, ExtractedIcons, HeightMode } from "./types";
-import { advanceCaptureStep, buildProjectAssets, ensureCaptureNotAborted, initializeCaptureProgress, resolveCaptureTitle } from "./utils";
+import type { CropPreview, CropRegion, ExtractedAssets, ExtractedIcons, HeightMode } from "./types";
+import {
+  advanceCaptureStep,
+  buildProjectAssets,
+  ensureCaptureNotAborted,
+  initializeCaptureProgress,
+  resolveCaptureTitle,
+  restoreWebviewHeight,
+  type WebviewSizeSnapshot,
+} from "./utils";
 
 interface CaptureArgs {
   abortCaptureRef: MutableRefObject<boolean>;
   currentUrl: string;
   heightMode: HeightMode;
   navigate: (path: string) => void;
+  promptForCrop: (preview: CropPreview) => Promise<CropRegion | null>;
   setCapturePercent: Dispatch<SetStateAction<number>>;
   setCaptureSteps: Dispatch<SetStateAction<CaptureStep[]>>;
   setIsCapturing: Dispatch<SetStateAction<boolean>>;
@@ -26,6 +36,9 @@ interface CaptureSequenceResult {
   thumbnailDataUrl: string;
 }
 
+type Progress = Parameters<typeof initializeCaptureProgress>[0];
+type Logger = (...args: unknown[]) => Promise<void>;
+
 export function useCaptureBrowserCapture(args: CaptureArgs) {
   return useCallback(async () => runCapture(args), [args]);
 }
@@ -33,28 +46,32 @@ export function useCaptureBrowserCapture(args: CaptureArgs) {
 async function runCapture(args: CaptureArgs) {
   const webview = args.webviewRef.current;
   if (!webview || !args.currentUrl) return;
-  const progress = { abortCaptureRef: args.abortCaptureRef, setCapturePercent: args.setCapturePercent, setCaptureSteps: args.setCaptureSteps };
-  const log = (...logArgs: unknown[]) => window.api.captureLog(...logArgs);
-  const detachConsole = attachCaptureConsole(webview, log, progress);
+  const progress: Progress = { abortCaptureRef: args.abortCaptureRef, setCapturePercent: args.setCapturePercent, setCaptureSteps: args.setCaptureSteps };
+  const log: Logger = (...logArgs) => window.api.captureLog(...logArgs);
+  const detachConsole = attachCaptureConsole({ webview, log, progress });
   webview.focus();
-  initializeCaptureProgress(progress);
-  args.setIsCapturing(true);
+  let extensionSnapshot: WebviewSizeSnapshot | null = null;
   try {
-    const result = await performCaptureSequence({ args, webview, log, progress });
+    const preview = await capturePreviewForCrop(webview, log);
+    const cropRegion = await args.promptForCrop(preview);
+    if (!cropRegion) { await log("Capture cancelled at crop step"); return; }
+    initializeCaptureProgress(progress);
+    args.setIsCapturing(true);
+    extensionSnapshot = await applyCropExtension({ webview, preview, cropRegion, log });
+    const result = await performCaptureSequence({ args, webview, log, progress, cropRegion, preview });
     await persistCaptureResult({ args, result, log, progress });
   } catch (error) {
     await handleCaptureError(error, log);
   } finally {
+    if (extensionSnapshot) restoreWebviewHeight(webview, extensionSnapshot);
     detachConsole();
     args.setIsCapturing(false);
   }
 }
 
-function attachCaptureConsole(
-  webview: Electron.WebviewTag,
-  log: (...args: unknown[]) => Promise<void>,
-  progress: Parameters<typeof initializeCaptureProgress>[0],
-) {
+interface ConsoleOptions { webview: Electron.WebviewTag; log: Logger; progress: Progress }
+
+function attachCaptureConsole({ webview, log, progress }: ConsoleOptions) {
   const onConsoleMessage = (event: Electron.ConsoleMessageEvent) => {
     if (!event.message.startsWith("[Capture]")) return;
     const message = event.message.slice(10);
@@ -69,34 +86,37 @@ function attachCaptureConsole(
 interface CaptureSequenceOptions {
   args: CaptureArgs;
   webview: Electron.WebviewTag;
-  log: (...args: unknown[]) => Promise<void>;
-  progress: Parameters<typeof initializeCaptureProgress>[0];
+  log: Logger;
+  progress: Progress;
+  cropRegion: CropRegion;
+  preview: CropPreview;
 }
 
-async function performCaptureSequence({ args, webview, log, progress }: CaptureSequenceOptions) {
+async function performCaptureSequence({ args, webview, log, progress, cropRegion, preview }: CaptureSequenceOptions) {
   await log("Starting capture for", args.currentUrl);
   await captureAndInlineIframes(webview, log, stepKey => advanceCaptureStep(stepKey, progress));
-  const rawHtml = await captureHtml(args.heightMode, webview, log);
+  const rawHtml = await captureHtml({ heightMode: args.heightMode, webview, log, cropRegion, naturalHeight: preview.naturalHeight });
   ensureCaptureNotAborted(args.abortCaptureRef);
-  const extractedAssets = await extractAssets(webview, log, progress);
+  const extractedAssets = await extractAssets({ webview, log, progress });
   ensureCaptureNotAborted(args.abortCaptureRef);
-  const thumbnailDataUrl = await captureThumbnail(webview, progress, log);
+  advanceCaptureStep("screenshot", progress);
+  const thumbnailDataUrl = await cropCapturedThumbnail({ webview, log, cropRegion, viewportWidth: preview.viewportWidth });
   ensureCaptureNotAborted(args.abortCaptureRef);
   return { extractedAssets, rawHtml, thumbnailDataUrl };
 }
 
-async function captureHtml(heightMode: HeightMode, webview: Electron.WebviewTag, log: (...args: unknown[]) => Promise<void>) {
+interface CaptureHtmlOptions { heightMode: HeightMode; webview: Electron.WebviewTag; log: Logger; cropRegion: CropRegion; naturalHeight: number }
+
+async function captureHtml({ heightMode, webview, log, cropRegion, naturalHeight }: CaptureHtmlOptions) {
   await log("Injecting capture script into webview...");
-  const rawHtml = await webview.executeJavaScript(createCaptureHtmlScript(heightMode)) as string;
+  const rawHtml = await webview.executeJavaScript(createCaptureHtmlScript(heightMode, cropRegion, naturalHeight)) as string;
   await log("Webview script finished, got", rawHtml.length, "chars of HTML");
   return rawHtml;
 }
 
-async function extractAssets(
-  webview: Electron.WebviewTag,
-  log: (...args: unknown[]) => Promise<void>,
-  progress: Parameters<typeof initializeCaptureProgress>[0],
-) {
+interface ExtractOptions { webview: Electron.WebviewTag; log: Logger; progress: Progress }
+
+async function extractAssets({ webview, log, progress }: ExtractOptions) {
   advanceCaptureStep("assets", progress);
   await log("Extracting assets (typography & colors)...");
   const extractedAssets = await webview.executeJavaScript(EXTRACT_ASSETS_SCRIPT) as ExtractedAssets;
@@ -108,23 +128,11 @@ async function extractAssets(
   return extractedAssets;
 }
 
-async function captureThumbnail(
-  webview: Electron.WebviewTag,
-  progress: Parameters<typeof initializeCaptureProgress>[0],
-  log: (...args: unknown[]) => Promise<void>,
-) {
-  advanceCaptureStep("screenshot", progress);
-  await log("Taking screenshot...");
-  await webview.executeJavaScript("window.scrollTo(0, 0)");
-  await new Promise(resolve => setTimeout(resolve, 100));
-  return webview.capturePage().then(image => image.toDataURL());
-}
-
 interface PersistCaptureOptions {
   args: CaptureArgs;
   result: CaptureSequenceResult;
-  log: (...args: unknown[]) => Promise<void>;
-  progress: Parameters<typeof initializeCaptureProgress>[0];
+  log: Logger;
+  progress: Progress;
 }
 
 async function persistCaptureResult({ args, result, log, progress }: PersistCaptureOptions) {
@@ -137,20 +145,22 @@ async function persistCaptureResult({ args, result, log, progress }: PersistCapt
   await log("Saving project...");
   const project = await window.api.saveProject({ html: formatResult.html, thumbnail: result.thumbnailDataUrl, title: resolveCaptureTitle(args.webviewRef, args.currentUrl), url: args.currentUrl });
   await log("Project saved:", project.id);
-  await saveExtractedAssets(project.id, result.extractedAssets, { fontFaceCss: project.fontFaceCss, log });
+  await saveExtractedAssets({ projectId: project.id, extractedAssets: result.extractedAssets, fontFaceCss: project.fontFaceCss, log });
   progress.setCaptureSteps(previous => previous.map(step => ({ ...step, status: "done" as const })));
   progress.setCapturePercent(100);
   setCapturedHtml(formatResult.html, `mp-asset://assets/${project.id}/`);
   args.navigate(`/editor/${project.id}`);
 }
 
-async function saveExtractedAssets(projectId: string, extractedAssets: ExtractedAssets, options: { fontFaceCss?: string | null; log: (...args: unknown[]) => Promise<void> }) {
+interface SaveAssetsOptions { projectId: string; extractedAssets: ExtractedAssets; fontFaceCss?: string | null; log: Logger }
+
+async function saveExtractedAssets({ projectId, extractedAssets, fontFaceCss, log }: SaveAssetsOptions) {
   const assetsToSave = buildProjectAssets(extractedAssets);
-  await window.api.saveProjectAssets(projectId, { ...assetsToSave, fontFaceCss: options.fontFaceCss || undefined });
-  await options.log("Assets saved:", assetsToSave.typography.length, "typography,", assetsToSave.colors.length, "colors");
+  await window.api.saveProjectAssets(projectId, { ...assetsToSave, fontFaceCss: fontFaceCss || undefined });
+  await log("Assets saved:", assetsToSave.typography.length, "typography,", assetsToSave.colors.length, "colors");
 }
 
-async function handleCaptureError(error: unknown, log: (...args: unknown[]) => Promise<void>) {
+async function handleCaptureError(error: unknown, log: Logger) {
   const message = error instanceof Error ? error.message : String(error);
   if (message === "Capture cancelled") return void (await log("Capture cancelled by user"));
   await log("Capture FAILED:", message);
