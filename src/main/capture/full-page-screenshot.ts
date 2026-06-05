@@ -22,7 +22,18 @@ function normalizeArgs(args: CaptureArgs): NormalizedArgs {
 }
 
 async function captureWithOverride(target: Electron.WebContents, { width, height, scale }: NormalizedArgs): Promise<string> {
-  await target.debugger.sendCommand("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: scale, mobile: false });
+  await target.debugger.sendCommand("Emulation.setDeviceMetricsOverride", {
+    width,
+    height,
+    deviceScaleFactor: scale,
+    mobile: false,
+    screenWidth: width,
+    screenHeight: height,
+    positionX: 0,
+    positionY: 0,
+  });
+  // Give layout a tick to react to the new viewport before capturing.
+  await new Promise<void>((resolve) => setTimeout(resolve, 50));
   try {
     const result = await target.debugger.sendCommand("Page.captureScreenshot", {
       format: "png",
