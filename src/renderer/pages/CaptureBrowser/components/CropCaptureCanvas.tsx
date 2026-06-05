@@ -6,7 +6,8 @@ const HANDLE_HIT_SIZE = 12;
 const HANDLE_MARGIN = HANDLE_HIT_SIZE / 2;
 const PAGE_HANDLE_GAP = 10;
 const PAGE_HANDLE_HEIGHT = 14;
-const SCROLL_MARGIN = 32;
+// Fixed screen-px overhead around the page rect (top/bottom margins + page-height handle).
+const VERTICAL_OVERHEAD = HANDLE_MARGIN * 2 + PAGE_HANDLE_GAP + PAGE_HANDLE_HEIGHT;
 
 type HandleKind = "top" | "bottom" | "page";
 
@@ -23,23 +24,21 @@ export function CropCanvas({ cropTop, cropHeight, pageHeight, preview, setRegion
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [stageRect, setStageRect] = useState<{ width: number; height: number } | null>(null);
   useStageMeasurement(stageRef, setStageRect);
-  // Width-only scale: image always fills stage width at its true aspect ratio. When the
-  // page rect grows taller than the stage (extended page), the stage scrolls vertically.
-  const scale = stageRect ? stageRect.width / preview.viewportWidth : 0;
+  // "Contain" sizing: scale is the smaller of width-fit and height-fit so the page rect
+  // (plus the page-height handle below it) always fits inside the stage without scrolling.
+  // When the page grows taller than the stage allows at full width, the width shrinks
+  // to preserve aspect ratio.
+  const scale = stageRect ? Math.min(stageRect.width / preview.viewportWidth, Math.max(0, stageRect.height - VERTICAL_OVERHEAD) / pageHeight) : 0;
   const handleDrag = useHandleDrag({ cropTop, cropHeight, pageHeight, scale, setRegion, setPageHeight });
-  // Auto-scroll target: bottom of the page height handle so the whole interactive
-  // area stays in view while dragging.
-  const autoScrollTarget = pageHeight * scale + HANDLE_MARGIN * 2 + PAGE_HANDLE_GAP + PAGE_HANDLE_HEIGHT;
-  useAutoScrollOnCropChange(stageRef, autoScrollTarget);
   return (
     <div className="bg-surface-container-lowest p-lg relative flex flex-1 flex-col items-center justify-center overflow-hidden">
       <div className="technical-grid absolute inset-0 opacity-10" />
-      <div ref={stageRef} className="relative min-h-0 w-full max-w-2xl flex-1 overflow-x-hidden overflow-y-auto">
+      <div ref={stageRef} className="relative min-h-0 w-full max-w-2xl flex-1 overflow-hidden">
         {stageRect && scale > 0 && (
-          <>
+          <div className="flex h-full flex-col items-center justify-start">
             <PageRect cropTop={cropTop} cropHeight={cropHeight} handleDrag={handleDrag} pageHeight={pageHeight} preview={preview} scale={scale} />
             <PageHeightHandle pageWidth={preview.viewportWidth * scale} onMouseDown={(e) => handleDrag("page", e)} />
-          </>
+          </div>
         )}
       </div>
       <DimensionPill cropHeight={cropHeight} viewportWidth={preview.viewportWidth} />
@@ -113,17 +112,6 @@ function useStageMeasurement(ref: React.RefObject<HTMLDivElement | null>, set: (
     set({ width: el.clientWidth, height: el.clientHeight });
     return () => observer.disconnect();
   }, [ref, set]);
-}
-
-// While the user drags, scroll the stage so the lower interactive edge stays in view.
-function useAutoScrollOnCropChange(stageRef: React.RefObject<HTMLDivElement | null>, targetScreenPx: number) {
-  useEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    if (targetScreenPx > el.scrollTop + el.clientHeight - SCROLL_MARGIN) {
-      el.scrollTop = Math.min(el.scrollHeight, targetScreenPx - el.clientHeight + SCROLL_MARGIN);
-    }
-  }, [stageRef, targetScreenPx]);
 }
 
 interface DragOptions {
