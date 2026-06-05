@@ -6,6 +6,7 @@ export type HeightMode = "convert-vh" | "remove" | "keep-as-is";
 export interface CropRegion {
   top: number;
   height: number;
+  pageHeight: number;
 }
 
 export interface CropPreview {

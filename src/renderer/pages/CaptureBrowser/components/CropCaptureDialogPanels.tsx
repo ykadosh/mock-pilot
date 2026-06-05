@@ -27,12 +27,14 @@ export function DimensionPill({ cropHeight, viewportWidth }: { cropHeight: numbe
 interface CropSidebarProps {
   cropTop: number;
   cropHeight: number;
+  pageHeight: number;
   preview: CropPreview;
   setRegion: (top: number, height: number) => void;
+  setPageHeight: (height: number) => void;
   url: string;
 }
 
-export function CropSidebar({ cropTop, cropHeight, preview, setRegion, url }: CropSidebarProps) {
+export function CropSidebar({ cropTop, cropHeight, pageHeight, preview, setRegion, setPageHeight, url }: CropSidebarProps) {
   return (
     <div className="bg-surface-container border-outline-variant p-md gap-lg flex w-[280px] flex-col border-l">
       <div className="space-y-md">
@@ -42,6 +44,7 @@ export function CropSidebar({ cropTop, cropHeight, preview, setRegion, url }: Cr
         </div>
         <CropNumberInput label="Top Offset (px)" value={Math.round(cropTop)} onChange={(value) => setRegion(value, cropHeight)} />
         <CropNumberInput label="Capture Height (px)" value={Math.round(cropHeight)} onChange={(value) => setRegion(cropTop, value)} />
+        <CropNumberInput label="Page Height (px)" value={Math.round(pageHeight)} onChange={setPageHeight} />
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <CropMetadata naturalHeight={preview.naturalHeight} url={url} viewportWidth={preview.viewportWidth} />
@@ -109,11 +112,11 @@ function CropHint() {
   );
 }
 
-export function CropDialogFooter({ cropTop, cropHeight, onCancel, onConfirm }: { cropTop: number; cropHeight: number; onCancel: () => void; onConfirm: (region: CropRegion) => void }) {
+export function CropDialogFooter({ cropTop, cropHeight, pageHeight, onCancel, onConfirm }: { cropTop: number; cropHeight: number; pageHeight: number; onCancel: () => void; onConfirm: (region: CropRegion) => void }) {
   return (
     <div className="h-xl px-md gap-md border-outline-variant bg-surface-container flex items-center justify-end border-t">
       <button onClick={onCancel} className="px-md text-ui-small font-ui-small border-outline text-on-surface hover:bg-surface-bright h-[36px] rounded border transition-colors">Cancel</button>
-      <button onClick={() => onConfirm({ top: Math.round(cropTop), height: Math.round(cropHeight) })} className="px-md text-ui-small font-ui-small bg-primary text-on-primary hover:bg-primary/90 gap-xs flex h-[36px] items-center rounded font-bold transition-colors">
+      <button onClick={() => onConfirm({ top: Math.round(cropTop), height: Math.round(cropHeight), pageHeight: Math.round(pageHeight) })} className="px-md text-ui-small font-ui-small bg-primary text-on-primary hover:bg-primary/90 gap-xs flex h-[36px] items-center rounded font-bold transition-colors">
         Confirm Crop
         <span className="material-symbols-outlined text-[16px]">check_circle</span>
       </button>

@@ -48,10 +48,10 @@ interface ExtensionArgs {
 }
 
 export async function applyCropExtension({ webview, preview, cropRegion, log }: ExtensionArgs): Promise<WebviewSizeSnapshot | null> {
-  const cropBottom = cropRegion.top + cropRegion.height;
-  if (cropBottom <= preview.naturalHeight) return null;
-  await log("Extending webview height to " + cropBottom + "px for crop region past page bottom");
-  const snapshot = forceWebviewHeight(webview, cropBottom);
+  const targetHeight = Math.max(cropRegion.pageHeight, cropRegion.top + cropRegion.height);
+  if (targetHeight <= preview.naturalHeight) return null;
+  await log("Extending webview height to " + targetHeight + "px for crop region past page bottom");
+  const snapshot = forceWebviewHeight(webview, targetHeight);
   await waitForLayoutSettle(webview);
   // Nudge JS-driven layouts that listen to resize events but don't respond to the
   // initial style change alone. Run twice with a settle between to flush debounced
