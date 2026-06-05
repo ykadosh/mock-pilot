@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CropPreview, CropRegion } from "../types";
+import type { CropRegion } from "../types";
 
 export function CropDialogHeader({ onCancel }: { onCancel: () => void }) {
   return (
@@ -19,13 +19,11 @@ interface CropSidebarProps {
   cropTop: number;
   cropHeight: number;
   pageHeight: number;
-  preview: CropPreview;
   setRegion: (top: number, height: number) => void;
   setPageHeight: (height: number) => void;
-  url: string;
 }
 
-export function CropSidebar({ cropTop, cropHeight, pageHeight, preview, setRegion, setPageHeight, url }: CropSidebarProps) {
+export function CropSidebar({ cropTop, cropHeight, pageHeight, setRegion, setPageHeight }: CropSidebarProps) {
   const cropBottom = cropTop + cropHeight;
   return (
     <div className="bg-surface-container border-outline-variant p-md gap-lg flex w-[280px] flex-col border-l">
@@ -38,8 +36,7 @@ export function CropSidebar({ cropTop, cropHeight, pageHeight, preview, setRegio
         <CropNumberInput label="Bottom Crop" value={Math.round(cropBottom)} onChange={(value) => setRegion(cropTop, value - cropTop)} />
         <CropNumberInput label="Page Height" value={Math.round(pageHeight)} onChange={setPageHeight} />
       </div>
-      <div className="flex flex-1 flex-col justify-between">
-        <CropMetadata naturalHeight={preview.naturalHeight} url={url} viewportWidth={preview.viewportWidth} />
+      <div className="flex flex-1 flex-col justify-end">
         <CropHint />
       </div>
     </div>
@@ -72,32 +69,11 @@ function CropNumberInput({ label, value, onChange }: { label: string; value: num
   );
 }
 
-function CropMetadata({ naturalHeight, url, viewportWidth }: { naturalHeight: number; url: string; viewportWidth: number }) {
-  return (
-    <div className="space-y-md">
-      <div className="pt-md border-outline-variant space-y-sm border-t">
-        <CropMetaRow label="Source URL" value={shortenUrl(url)} />
-        <CropMetaRow label="Page size" value={`${viewportWidth} × ${naturalHeight}px`} />
-        <CropMetaRow label="Format" value="PNG (Lossless)" />
-      </div>
-    </div>
-  );
-}
-
-function CropMetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="text-ui-small flex items-center justify-between">
-      <span className="text-on-surface-variant">{label}</span>
-      <span className="text-on-surface max-w-[160px] truncate">{value}</span>
-    </div>
-  );
-}
-
 function CropHint() {
   return (
     <div className="p-md bg-primary/10 border-primary/20 gap-sm flex items-start rounded-lg border">
       <span className="material-symbols-outlined text-primary text-[16px]">info</span>
-      <p className="text-ui-small text-primary leading-tight">Drag the handles or enter exact pixel values. Extending the height past the page bottom resizes the page before capture.</p>
+      <p className="text-ui-small text-primary leading-tight">Drag the top and bottom handles to crop, or the lower handle to change the page height. You can also enter exact pixel values on the right.</p>
     </div>
   );
 }
@@ -112,14 +88,4 @@ export function CropDialogFooter({ cropTop, cropHeight, pageHeight, onCancel, on
       </button>
     </div>
   );
-}
-
-function shortenUrl(url: string) {
-  try {
-    const parsed = new URL(url);
-    const path = parsed.pathname === "/" ? "" : parsed.pathname;
-    return `${parsed.hostname}${path}`.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
 }

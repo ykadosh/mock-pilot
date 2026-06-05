@@ -9,13 +9,12 @@ const EXTEND_DEBOUNCE_MS = 250;
 
 interface CropCaptureDialogProps {
   preview: CropPreview;
-  url: string;
   onConfirm: (region: CropRegion) => void;
   onCancel: () => void;
   onExtendPreview?: (targetHeight: number) => Promise<CropPreview>;
 }
 
-export function CropCaptureDialog({ preview, url, onConfirm, onCancel, onExtendPreview }: CropCaptureDialogProps) {
+export function CropCaptureDialog({ preview, onConfirm, onCancel, onExtendPreview }: CropCaptureDialogProps) {
   const naturalPageHeight = preview.naturalHeight;
   const maxPageHeight = naturalPageHeight * MAX_EXTENSION_FACTOR;
   const [effectivePreview, setEffectivePreview] = useState(preview);
@@ -48,7 +47,7 @@ export function CropCaptureDialog({ preview, url, onConfirm, onCancel, onExtendP
         <CropDialogHeader onCancel={onCancel} />
         <div className="flex flex-1 overflow-hidden">
           <CropCanvas cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} preview={effectivePreview} setRegion={setRegion} setPageHeight={setPageHeight} />
-          <CropSidebar cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} preview={effectivePreview} setRegion={setRegion} setPageHeight={setPageHeight} url={url} />
+          <CropSidebar cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} setRegion={setRegion} setPageHeight={setPageHeight} />
         </div>
         <CropDialogFooter cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} onCancel={onCancel} onConfirm={onConfirm} />
       </div>

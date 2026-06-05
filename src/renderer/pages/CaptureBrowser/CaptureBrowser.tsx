@@ -24,7 +24,7 @@ export function CaptureBrowser() {
       <CaptureBrowserToolbar {...state.toolbarProps} onCapture={handleCapture} />
       <CaptureBrowserViewport hasNavigated={state.navigationState.hasNavigated} isCapturing={state.captureState.isCapturing} isLoading={state.navigationState.isLoading} pendingUrl={state.navigationState.pendingUrl} preventFocusSteal={state.preventFocusSteal} webviewPreloadPath={state.navigationState.webviewPreloadPath} webviewRef={state.webviewRef} />
       {state.cropPrompt.cropPromptOpen && state.cropPrompt.cropPreview && (
-        <CropCaptureDialog preview={state.cropPrompt.cropPreview} url={state.navigationState.currentUrl} onCancel={() => state.cropPrompt.resolveCropPrompt(null)} onConfirm={region => state.cropPrompt.resolveCropPrompt(region)} onExtendPreview={handleExtendPreview} />
+        <CropCaptureDialog preview={state.cropPrompt.cropPreview} onCancel={() => state.cropPrompt.resolveCropPrompt(null)} onConfirm={region => state.cropPrompt.resolveCropPrompt(region)} onExtendPreview={handleExtendPreview} />
       )}
       {state.captureState.isCapturing && <CaptureProgressModal steps={state.captureState.captureSteps} percentage={state.captureState.capturePercent} url={state.navigationState.currentUrl} onCancel={() => { state.abortCaptureRef.current = true; }} />}
     </div>
