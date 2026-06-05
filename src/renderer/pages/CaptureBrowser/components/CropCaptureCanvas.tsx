@@ -5,7 +5,7 @@ const HANDLE_HIT_SIZE = 12;
 const HANDLE_MARGIN = HANDLE_HIT_SIZE / 2;
 const PAGE_HANDLE_GAP = 10;
 const PAGE_HANDLE_HEIGHT = 14;
-const BOTTOM_HANDLE_INSET = 5;
+const BOTTOM_HANDLE_INSET = 3;
 // Fixed screen-px overhead around the page rect (top/bottom margins + page-height handle).
 const VERTICAL_OVERHEAD = HANDLE_MARGIN * 2 + PAGE_HANDLE_GAP + PAGE_HANDLE_HEIGHT;
 
@@ -89,9 +89,9 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
 }
 
 function CropHandle({ cropPx, kind, onMouseDown }: { cropPx: number; kind: "top" | "bottom"; onMouseDown: (e: React.MouseEvent) => void }) {
-  // The 2px dashed border's optical center sits 1px inside the cropPx line, so
-  // nudge top handles down 1px and bottom handles up 1px to land on the border.
-  const opticalNudge = kind === "top" ? 1 : -1;
+  // Nudge both handles down 1px relative to the dashed border line for better
+  // optical centering on the 2px stroke.
+  const opticalNudge = kind === "top" ? 2 : 0;
   return (
     <div onMouseDown={onMouseDown} className="group absolute inset-x-0 z-30 flex items-center justify-center" style={{ top: cropPx - HANDLE_HIT_SIZE / 2 + opticalNudge, height: HANDLE_HIT_SIZE, cursor: "ns-resize" }} data-kind={kind}>
       <div className="bg-primary border-surface h-1.5 w-12 rounded-full border transition-transform group-hover:scale-110" />
