@@ -3,7 +3,6 @@ import path from "path";
 
 import { handleCaptureIframes } from "../capture/iframes";
 import { handleCaptureWebsite } from "../capture/website";
-import { handleCaptureFullPage } from "../capture/full-page-screenshot";
 import { handleFormatHtml } from "../capture/format-html";
 
 export function registerCaptureHandlers() {
@@ -14,6 +13,5 @@ export function registerCaptureHandlers() {
     console.log("[Capture]", ...args);
   });
   ipcMain.handle("capture-webview-iframes", handleCaptureIframes);
-  ipcMain.handle("capture-webview-full-page", handleCaptureFullPage);
   ipcMain.handle("format-html", handleFormatHtml);
 }

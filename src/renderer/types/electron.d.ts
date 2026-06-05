@@ -78,7 +78,6 @@ declare global {
     api: {
       captureLog: (...args: unknown[]) => Promise<void>;
       captureWebviewIframes: (webContentsId: number) => Promise<{ success: boolean; iframes?: { url: string; html: string; childIframeSrcs: string[] }[]; error?: string }>;
-      captureWebviewFullPage: (args: { webContentsId: number; width: number; height: number; deviceScaleFactor?: number }) => Promise<{ success: boolean; dataUrl?: string; error?: string }>;
       captureWebsite: (url: string) => Promise<{
         success: boolean;
         html?: string;

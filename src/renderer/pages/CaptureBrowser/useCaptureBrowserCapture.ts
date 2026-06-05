@@ -100,7 +100,7 @@ async function performCaptureSequence({ args, webview, log, progress, cropRegion
   const extractedAssets = await extractAssets({ webview, log, progress });
   ensureCaptureNotAborted(args.abortCaptureRef);
   advanceCaptureStep("screenshot", progress);
-  const thumbnailDataUrl = await cropCapturedThumbnail({ webview, log, cropRegion, viewportWidth: preview.viewportWidth });
+  const thumbnailDataUrl = await cropCapturedThumbnail({ webview, log, cropRegion });
   ensureCaptureNotAborted(args.abortCaptureRef);
   return { extractedAssets, rawHtml, thumbnailDataUrl };
 }
