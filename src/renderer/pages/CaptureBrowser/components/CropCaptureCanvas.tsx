@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CropPreview } from "../types";
-import { DimensionPill } from "./CropCaptureDialogPanels";
 
 const HANDLE_HIT_SIZE = 12;
 const HANDLE_MARGIN = HANDLE_HIT_SIZE / 2;
@@ -41,7 +40,6 @@ export function CropCanvas({ cropTop, cropHeight, pageHeight, preview, setRegion
           </div>
         )}
       </div>
-      <DimensionPill cropHeight={cropHeight} viewportWidth={preview.viewportWidth} />
     </div>
   );
 }

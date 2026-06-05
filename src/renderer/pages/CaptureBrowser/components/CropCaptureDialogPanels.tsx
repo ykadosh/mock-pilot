@@ -15,15 +15,6 @@ export function CropDialogHeader({ onCancel }: { onCancel: () => void }) {
   );
 }
 
-export function DimensionPill({ cropHeight, viewportWidth }: { cropHeight: number; viewportWidth: number }) {
-  return (
-    <div className="bottom-md bg-surface-container-high border-outline px-md py-xs gap-sm absolute left-1/2 flex -translate-x-1/2 items-center rounded-full border">
-      <span className="font-label-caps text-label-caps text-on-surface-variant">CROP SIZE</span>
-      <span className="font-code-block text-primary">{viewportWidth} × {Math.round(cropHeight)}px</span>
-    </div>
-  );
-}
-
 interface CropSidebarProps {
   cropTop: number;
   cropHeight: number;
@@ -35,6 +26,7 @@ interface CropSidebarProps {
 }
 
 export function CropSidebar({ cropTop, cropHeight, pageHeight, preview, setRegion, setPageHeight, url }: CropSidebarProps) {
+  const cropBottom = cropTop + cropHeight;
   return (
     <div className="bg-surface-container border-outline-variant p-md gap-lg flex w-[280px] flex-col border-l">
       <div className="space-y-md">
@@ -42,9 +34,9 @@ export function CropSidebar({ cropTop, cropHeight, pageHeight, preview, setRegio
           <h3 className="font-label-caps text-label-caps text-on-surface-variant">PRECISION CONTROL</h3>
           <span className="material-symbols-outlined text-on-surface-variant text-[16px]">tune</span>
         </div>
-        <CropNumberInput label="Top Offset (px)" value={Math.round(cropTop)} onChange={(value) => setRegion(value, cropHeight)} />
-        <CropNumberInput label="Capture Height (px)" value={Math.round(cropHeight)} onChange={(value) => setRegion(cropTop, value)} />
-        <CropNumberInput label="Page Height (px)" value={Math.round(pageHeight)} onChange={setPageHeight} />
+        <CropNumberInput label="Top Crop" value={Math.round(cropTop)} onChange={(value) => setRegion(value, cropBottom - value)} />
+        <CropNumberInput label="Bottom Crop" value={Math.round(cropBottom)} onChange={(value) => setRegion(cropTop, value - cropTop)} />
+        <CropNumberInput label="Page Height" value={Math.round(pageHeight)} onChange={setPageHeight} />
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <CropMetadata naturalHeight={preview.naturalHeight} url={url} viewportWidth={preview.viewportWidth} />
@@ -65,7 +57,7 @@ function CropNumberInput({ label, value, onChange }: { label: string; value: num
   return (
     <div className="space-y-sm">
       <label className="font-ui-small text-ui-small text-on-surface">{label}</label>
-      <div className="bg-surface-container-lowest border-outline-variant focus-within:border-primary focus-within:ring-primary flex items-center overflow-hidden rounded-lg border focus-within:ring-1">
+      <div className="bg-surface-container-lowest border-outline-variant focus-within:border-primary focus-within:ring-primary pr-md flex items-center overflow-hidden rounded-lg border focus-within:ring-1">
         <input
           type="number"
           value={draft}
@@ -74,9 +66,7 @@ function CropNumberInput({ label, value, onChange }: { label: string; value: num
           onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }}
           className="font-code-block text-primary px-md flex-1 border-none bg-transparent py-3 text-lg outline-none focus:ring-0"
         />
-        <div className="bg-surface-container-high px-md border-outline-variant border-l py-3">
-          <span className="font-ui-small text-ui-small text-on-surface-variant font-bold">PX</span>
-        </div>
+        <span className="font-ui-small text-ui-small text-on-surface-variant/60">PX</span>
       </div>
     </div>
   );
