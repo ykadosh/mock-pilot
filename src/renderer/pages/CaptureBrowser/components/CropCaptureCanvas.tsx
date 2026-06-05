@@ -61,6 +61,13 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
   const cropTopPx = cropTop * scale;
   const cropHeightPx = cropHeight * scale;
   const cropBottomPx = cropTopPx + cropHeightPx;
+  // Visual cap so the dashed border and bottom handle stay a few screen pixels
+  // above the page rect bottom — purely cosmetic. The underlying crop value
+  // (cropTop + cropHeight) can still reach pageHeight; the bottom strip between
+  // the visual border and pageHeightPx is captured even though it's not drawn
+  // inside the dashed frame.
+  const visualBottomPx = Math.min(cropBottomPx, pageHeightPx - BOTTOM_HANDLE_INSET);
+  const visualHeightPx = Math.max(0, visualBottomPx - cropTopPx);
   return (
     <div className="relative mx-auto" style={{ width: pageWidth, height: pageHeightPx, marginTop: HANDLE_MARGIN, marginBottom: HANDLE_MARGIN }}>
       <div className="bg-surface border-outline-variant absolute inset-0 overflow-hidden border shadow-xl">
@@ -68,7 +75,7 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
         <img alt="Page preview" src={preview.dataUrl} className="absolute inset-x-0 top-0 w-full object-contain object-top select-none" draggable={false} style={{ height: imageHeightPx }} />
         <div className="pointer-events-none absolute inset-x-0 top-0 bg-black/70" style={{ height: cropTopPx }} />
         <div className="pointer-events-none absolute inset-x-0 bg-black/70" style={{ top: cropBottomPx, bottom: 0 }} />
-        <div className="border-primary pointer-events-none absolute inset-x-0 border-2 border-dashed" style={{ top: cropTopPx, height: cropHeightPx }}>
+        <div className="border-primary pointer-events-none absolute inset-x-0 border-2 border-dashed" style={{ top: cropTopPx, height: visualHeightPx }}>
           <div className="border-primary/20 absolute top-1/3 w-full border-t" />
           <div className="border-primary/20 absolute top-2/3 w-full border-t" />
           <div className="border-primary/20 absolute left-1/3 h-full border-l" />
@@ -76,7 +83,7 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
         </div>
       </div>
       <CropHandle cropPx={cropTopPx} kind="top" onMouseDown={(e) => handleDrag("top", e)} />
-      <CropHandle cropPx={cropBottomPx} kind="bottom" onMouseDown={(e) => handleDrag("bottom", e)} />
+      <CropHandle cropPx={visualBottomPx} kind="bottom" onMouseDown={(e) => handleDrag("bottom", e)} />
     </div>
   );
 }
@@ -130,15 +137,8 @@ function useHandleDrag({ cropTop, cropHeight, pageHeight, scale, setRegion, setP
       const state = dragState.current;
       if (!state || scale <= 0) return;
       const deltaPx = (event.clientY - state.startY) / scale;
-      // Reserve a few screen pixels at the bottom so the bottom handle (and the
-      // dashed border) always stays visible inside the page rect.
-      const maxCropBottom = pageHeight - BOTTOM_HANDLE_INSET / scale;
       if (state.kind === "top") setRegion(state.startTop + deltaPx, state.startHeight - deltaPx);
-      else if (state.kind === "bottom") {
-        const desiredHeight = state.startHeight + deltaPx;
-        const cappedHeight = Math.min(desiredHeight, maxCropBottom - state.startTop);
-        setRegion(state.startTop, cappedHeight);
-      }
+      else if (state.kind === "bottom") setRegion(state.startTop, state.startHeight + deltaPx);
       else setPageHeight(state.startPageHeight + deltaPx);
     };
     const onUp = () => {
@@ -153,7 +153,7 @@ function useHandleDrag({ cropTop, cropHeight, pageHeight, scale, setRegion, setP
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [scale, pageHeight, setRegion, setPageHeight]);
+  }, [scale, setRegion, setPageHeight]);
   return useCallback((kind: HandleKind, event: React.MouseEvent) => {
     event.preventDefault();
     dragState.current = { kind, startY: event.clientY, startTop: cropTop, startHeight: cropHeight, startPageHeight: pageHeight };
