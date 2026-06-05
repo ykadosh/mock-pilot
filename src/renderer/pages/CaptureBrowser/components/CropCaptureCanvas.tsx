@@ -5,6 +5,7 @@ const HANDLE_HIT_SIZE = 12;
 const HANDLE_MARGIN = HANDLE_HIT_SIZE / 2;
 const PAGE_HANDLE_GAP = 10;
 const PAGE_HANDLE_HEIGHT = 14;
+const BOTTOM_HANDLE_INSET = 5;
 // Fixed screen-px overhead around the page rect (top/bottom margins + page-height handle).
 const VERTICAL_OVERHEAD = HANDLE_MARGIN * 2 + PAGE_HANDLE_GAP + PAGE_HANDLE_HEIGHT;
 
@@ -60,8 +61,10 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
   const cropTopPx = cropTop * scale;
   const cropHeightPx = cropHeight * scale;
   const cropBottomPx = cropTopPx + cropHeightPx;
-  // Outer wrapper has no clipping so handles can poke past the page rect edges.
-  // Vertical margin gives the handles room above/below within the scroll container.
+  // Cap the bottom handle's visual position so its lower edge stays inside the
+  // page rect by at least BOTTOM_HANDLE_INSET pixels (purely cosmetic — the crop
+  // value can still reach pageHeight).
+  const bottomHandleCenter = Math.min(cropBottomPx, pageHeightPx - BOTTOM_HANDLE_INSET - HANDLE_HIT_SIZE / 2);
   return (
     <div className="relative mx-auto" style={{ width: pageWidth, height: pageHeightPx, marginTop: HANDLE_MARGIN, marginBottom: HANDLE_MARGIN }}>
       <div className="bg-surface border-outline-variant absolute inset-0 overflow-hidden border shadow-xl">
@@ -77,14 +80,17 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
         </div>
       </div>
       <CropHandle cropPx={cropTopPx} kind="top" onMouseDown={(e) => handleDrag("top", e)} />
-      <CropHandle cropPx={cropBottomPx} kind="bottom" onMouseDown={(e) => handleDrag("bottom", e)} />
+      <CropHandle cropPx={bottomHandleCenter} kind="bottom" onMouseDown={(e) => handleDrag("bottom", e)} />
     </div>
   );
 }
 
 function CropHandle({ cropPx, kind, onMouseDown }: { cropPx: number; kind: "top" | "bottom"; onMouseDown: (e: React.MouseEvent) => void }) {
+  // The 2px dashed border's optical center sits 1px inside the cropPx line, so
+  // nudge top handles down 1px and bottom handles up 1px to land on the border.
+  const opticalNudge = kind === "top" ? 1 : -1;
   return (
-    <div onMouseDown={onMouseDown} className="group absolute inset-x-0 z-30 flex items-center justify-center" style={{ top: cropPx - HANDLE_HIT_SIZE / 2, height: HANDLE_HIT_SIZE, cursor: "ns-resize" }} data-kind={kind}>
+    <div onMouseDown={onMouseDown} className="group absolute inset-x-0 z-30 flex items-center justify-center" style={{ top: cropPx - HANDLE_HIT_SIZE / 2 + opticalNudge, height: HANDLE_HIT_SIZE, cursor: "ns-resize" }} data-kind={kind}>
       <div className="bg-primary border-surface h-1.5 w-12 rounded-full border transition-transform group-hover:scale-110" />
     </div>
   );
