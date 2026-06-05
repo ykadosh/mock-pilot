@@ -67,25 +67,48 @@ export interface WebviewSizeSnapshot {
   height: string;
   minHeight: string;
   maxHeight: string;
+  position: string;
+  top: string;
+  left: string;
+  right: string;
+  width: string;
+  zIndex: string;
 }
 
 // Forces the webview's rendered height to `heightPx` so that capturePage() returns
 // the full page (or a taller-than-natural extension when the user crops past the
 // page bottom). The webview is normally `flex-1` inside its container; switching
 // to `position: absolute` lifts it out of flex layout so the imposed height takes
-// effect without breaking surrounding sizing.
+// effect and the guest WebContents actually renders at that height.
 export function forceWebviewHeight(webview: Electron.WebviewTag, heightPx: number): WebviewSizeSnapshot {
-  const snapshot: WebviewSizeSnapshot = { height: webview.style.height, minHeight: webview.style.minHeight, maxHeight: webview.style.maxHeight };
-  webview.style.height = `${heightPx}px`;
-  webview.style.minHeight = `${heightPx}px`;
-  webview.style.maxHeight = `${heightPx}px`;
+  const s = webview.style;
+  const snapshot: WebviewSizeSnapshot = {
+    height: s.height, minHeight: s.minHeight, maxHeight: s.maxHeight,
+    position: s.position, top: s.top, left: s.left, right: s.right, width: s.width, zIndex: s.zIndex,
+  };
+  s.position = "absolute";
+  s.top = "0";
+  s.left = "0";
+  s.right = "0";
+  s.width = "100%";
+  s.zIndex = "0";
+  s.height = `${heightPx}px`;
+  s.minHeight = `${heightPx}px`;
+  s.maxHeight = `${heightPx}px`;
   return snapshot;
 }
 
 export function restoreWebviewHeight(webview: Electron.WebviewTag, snapshot: WebviewSizeSnapshot) {
-  webview.style.height = snapshot.height;
-  webview.style.minHeight = snapshot.minHeight;
-  webview.style.maxHeight = snapshot.maxHeight;
+  const s = webview.style;
+  s.height = snapshot.height;
+  s.minHeight = snapshot.minHeight;
+  s.maxHeight = snapshot.maxHeight;
+  s.position = snapshot.position;
+  s.top = snapshot.top;
+  s.left = snapshot.left;
+  s.right = snapshot.right;
+  s.width = snapshot.width;
+  s.zIndex = snapshot.zIndex;
 }
 
 export async function waitForLayoutSettle(webview: Electron.WebviewTag, delayMs = 200) {
