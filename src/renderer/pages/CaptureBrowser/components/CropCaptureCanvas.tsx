@@ -61,10 +61,6 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
   const cropTopPx = cropTop * scale;
   const cropHeightPx = cropHeight * scale;
   const cropBottomPx = cropTopPx + cropHeightPx;
-  // Cap the bottom handle's visual position so its lower edge stays inside the
-  // page rect by at least BOTTOM_HANDLE_INSET pixels (purely cosmetic — the crop
-  // value can still reach pageHeight).
-  const bottomHandleCenter = Math.min(cropBottomPx, pageHeightPx - BOTTOM_HANDLE_INSET - HANDLE_HIT_SIZE / 2);
   return (
     <div className="relative mx-auto" style={{ width: pageWidth, height: pageHeightPx, marginTop: HANDLE_MARGIN, marginBottom: HANDLE_MARGIN }}>
       <div className="bg-surface border-outline-variant absolute inset-0 overflow-hidden border shadow-xl">
@@ -80,7 +76,7 @@ function PageRect({ cropTop, cropHeight, handleDrag, pageHeight, preview, scale 
         </div>
       </div>
       <CropHandle cropPx={cropTopPx} kind="top" onMouseDown={(e) => handleDrag("top", e)} />
-      <CropHandle cropPx={bottomHandleCenter} kind="bottom" onMouseDown={(e) => handleDrag("bottom", e)} />
+      <CropHandle cropPx={cropBottomPx} kind="bottom" onMouseDown={(e) => handleDrag("bottom", e)} />
     </div>
   );
 }
@@ -134,8 +130,15 @@ function useHandleDrag({ cropTop, cropHeight, pageHeight, scale, setRegion, setP
       const state = dragState.current;
       if (!state || scale <= 0) return;
       const deltaPx = (event.clientY - state.startY) / scale;
+      // Reserve a few screen pixels at the bottom so the bottom handle (and the
+      // dashed border) always stays visible inside the page rect.
+      const maxCropBottom = pageHeight - BOTTOM_HANDLE_INSET / scale;
       if (state.kind === "top") setRegion(state.startTop + deltaPx, state.startHeight - deltaPx);
-      else if (state.kind === "bottom") setRegion(state.startTop, state.startHeight + deltaPx);
+      else if (state.kind === "bottom") {
+        const desiredHeight = state.startHeight + deltaPx;
+        const cappedHeight = Math.min(desiredHeight, maxCropBottom - state.startTop);
+        setRegion(state.startTop, cappedHeight);
+      }
       else setPageHeight(state.startPageHeight + deltaPx);
     };
     const onUp = () => {
@@ -150,7 +153,7 @@ function useHandleDrag({ cropTop, cropHeight, pageHeight, scale, setRegion, setP
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [scale, setRegion, setPageHeight]);
+  }, [scale, pageHeight, setRegion, setPageHeight]);
   return useCallback((kind: HandleKind, event: React.MouseEvent) => {
     event.preventDefault();
     dragState.current = { kind, startY: event.clientY, startTop: cropTop, startHeight: cropHeight, startPageHeight: pageHeight };
