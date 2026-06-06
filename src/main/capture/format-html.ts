@@ -12,7 +12,7 @@ export function handleFormatHtml(_event: Electron.IpcMainInvokeEvent, rawHtml: s
       end_with_newline: true,
       indent_inner_html: true,
       css_indent_size: 2,
-      content_unformatted: ["pre", "code", "textarea"],
+      content_unformatted: ["pre", "code", "textarea", "style"],
     });
     return { success: true, html: `<!DOCTYPE html>\n${formattedHtml}` };
   } catch (error: unknown) {

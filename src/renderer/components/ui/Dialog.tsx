@@ -5,6 +5,7 @@ interface DialogProps {
   open: boolean;
   onClose: () => void;
   icon?: string;
+  iconFilled?: boolean;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
@@ -12,6 +13,8 @@ interface DialogProps {
   confirmLabel?: string;
   confirmVariant?: "primary" | "danger";
   onConfirm?: () => void;
+  panelClassName?: string;
+  contentClassName?: string;
 }
 
 function DialogDefaultFooter({
@@ -56,8 +59,10 @@ function useEscapeKey(open: boolean, onClose: () => void) {
 }
 
 export function Dialog({
-  open, onClose, icon, title, children, footer,
+  open, onClose, icon, iconFilled, title, children, footer,
   cancelLabel = "Cancel", confirmLabel, confirmVariant = "primary", onConfirm,
+  panelClassName = "w-full max-w-[520px]",
+  contentClassName = "p-lg max-h-[60vh] overflow-y-auto",
 }: DialogProps) {
   useEscapeKey(open, onClose);
   if (!open) return null;
@@ -65,17 +70,17 @@ export function Dialog({
   return (
     <div className="p-md fixed inset-0 z-[100] flex items-center justify-center">
       <div onClick={onClose} className="bg-background/60 absolute inset-0 backdrop-blur-[6px]" />
-      <div className="border-outline-variant bg-surface-container/85 relative flex w-full max-w-[520px] flex-col overflow-hidden rounded-xl border shadow-2xl backdrop-blur-[12px]">
+      <div className={`border-outline-variant bg-surface-container/85 relative flex flex-col overflow-hidden rounded-xl border shadow-2xl backdrop-blur-[12px] ${panelClassName}`}>
         <div className="border-outline-variant px-md py-sm flex items-center justify-between border-b">
           <div className="gap-sm flex items-center">
-            {icon && <span className="material-symbols-outlined text-primary">{icon}</span>}
+            {icon && <span className="material-symbols-outlined text-primary" style={iconFilled ? { fontVariationSettings: "'FILL' 1" } : undefined}>{icon}</span>}
             <h2 className="font-headline-md text-headline-md text-on-surface">{title}</h2>
           </div>
           <button onClick={onClose} className="text-on-surface-variant hover:bg-surface-variant hover:text-on-surface flex cursor-pointer items-center justify-center rounded-lg p-1 transition-colors">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <div className="p-lg max-h-[60vh] overflow-y-auto">{children}</div>
+        <div className={contentClassName}>{children}</div>
         <div className="gap-md border-outline-variant bg-surface-container-high px-md py-sm flex items-center justify-end border-t">
           {footer ?? <DialogDefaultFooter cancelLabel={cancelLabel} confirmLabel={confirmLabel} confirmVariant={confirmVariant} onClose={onClose} onConfirm={onConfirm} />}
         </div>

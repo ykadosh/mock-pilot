@@ -1,7 +1,17 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { CaptureStep } from "../../components/CaptureProgressModal";
 
-export type HeightMode = "convert-vh" | "remove" | "keep-as-is";
+export interface CropRegion {
+  top: number;
+  height: number;
+  pageHeight: number;
+}
+
+export interface CropPreview {
+  dataUrl: string;
+  naturalHeight: number;
+  viewportWidth: number;
+}
 
 export interface CaptureStepDefinition {
   key: string;
