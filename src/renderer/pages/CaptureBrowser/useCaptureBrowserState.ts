@@ -2,13 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, RefObject, SetStateAction } from "react";
 import type { CaptureStep } from "../../components/CaptureProgressModal";
 import type { CaptureBrowserToolbarProps } from "./components/CaptureBrowserToolbar";
-import type { HeightMode } from "./types";
 import { useCropPrompt } from "./useCropPrompt";
 import { normalizeCaptureUrl } from "./utils";
 
 export function useCaptureBrowserState() {
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
-  const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
   const abortCaptureRef = useRef(false);
   const [addressBarValue, setAddressBarValue] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
@@ -20,15 +18,12 @@ export function useCaptureBrowserState() {
   const [isSecure, setIsSecure] = useState(false);
   const [hasNavigated, setHasNavigated] = useState(false);
   const [webviewPreloadPath, setWebviewPreloadPath] = useState("");
-  const [captureSettingsOpen, setCaptureSettingsOpen] = useState(false);
-  const [heightMode, setHeightMode] = useState<HeightMode>("convert-vh");
   const [captureSteps, setCaptureSteps] = useState<CaptureStep[]>([]);
   const [capturePercent, setCapturePercent] = useState(0);
   const cropPrompt = useCropPrompt();
   useWebviewPreloadPath(setWebviewPreloadPath);
   useNavigationSync({ webviewRef, hasNavigated, setAddressBarValue, setCanGoBack, setCanGoForward, setCurrentUrl, setIsLoading, setIsSecure });
   useFocusRetention(webviewRef, hasNavigated);
-  useEscapeToCloseSettings(captureSettingsOpen, setCaptureSettingsOpen);
   const navigateTo = useCallback((input: string) => navigateWebview({ input, hasNavigated, webview: webviewRef.current, setAddressBarValue, setCurrentUrl, setHasNavigated, setIsSecure, setPendingUrl }), [hasNavigated]);
   const handleAddressBarKeyDown = useCallback((event: ReactKeyboardEvent<HTMLInputElement>) => event.key === "Enter" && navigateTo(addressBarValue), [addressBarValue, navigateTo]);
   const handleRefresh = useCallback(() => (isLoading ? webviewRef.current?.stop() : webviewRef.current?.reload()), [isLoading]);
@@ -37,8 +32,8 @@ export function useCaptureBrowserState() {
     if (target.tagName === "INPUT") return;
     event.preventDefault();
   }, []);
-  const toolbarProps: Omit<CaptureBrowserToolbarProps, "onCapture"> = { addressBarValue, canGoBack, canGoForward, captureSettingsOpen, hasNavigated, heightMode, isCapturing, isLoading, isSecure, onAddressBarChange: setAddressBarValue, onAddressBarKeyDown: handleAddressBarKeyDown, onBack: () => webviewRef.current?.goBack(), onForward: () => webviewRef.current?.goForward(), onMouseDown: preventFocusSteal, onRefresh: handleRefresh, onSetCaptureSettingsOpen: setCaptureSettingsOpen, onToggleSettings: () => setCaptureSettingsOpen(previous => !previous), onUpdateHeightMode: setHeightMode, settingsButtonRef };
-  return { abortCaptureRef, captureState: { capturePercent, captureSettingsOpen, captureSteps, heightMode, isCapturing }, cropPrompt, navigationState: { canGoBack, canGoForward, currentUrl, hasNavigated, isLoading, isSecure, pendingUrl, webviewPreloadPath }, preventFocusSteal, setCapturePercent, setCaptureSteps, setIsCapturing, toolbarProps, webviewRef };
+  const toolbarProps: Omit<CaptureBrowserToolbarProps, "onCapture"> = { addressBarValue, canGoBack, canGoForward, hasNavigated, isCapturing, isLoading, isSecure, onAddressBarChange: setAddressBarValue, onAddressBarKeyDown: handleAddressBarKeyDown, onBack: () => webviewRef.current?.goBack(), onForward: () => webviewRef.current?.goForward(), onMouseDown: preventFocusSteal, onRefresh: handleRefresh };
+  return { abortCaptureRef, captureState: { capturePercent, captureSteps, isCapturing }, cropPrompt, navigationState: { canGoBack, canGoForward, currentUrl, hasNavigated, isLoading, isSecure, pendingUrl, webviewPreloadPath }, preventFocusSteal, setCapturePercent, setCaptureSteps, setIsCapturing, toolbarProps, webviewRef };
 }
 
 function useWebviewPreloadPath(setWebviewPreloadPath: Dispatch<SetStateAction<string>>) {
@@ -92,15 +87,6 @@ function useFocusRetention(webviewRef: RefObject<Electron.WebviewTag | null>, ha
     window.addEventListener("focusin", onFocusIn);
     return () => window.removeEventListener("focusin", onFocusIn);
   }, [hasNavigated, webviewRef]);
-}
-
-function useEscapeToCloseSettings(captureSettingsOpen: boolean, setCaptureSettingsOpen: Dispatch<SetStateAction<boolean>>) {
-  useEffect(() => {
-    if (!captureSettingsOpen) return;
-    const handleKey = (event: KeyboardEvent) => event.key === "Escape" && setCaptureSettingsOpen(false);
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [captureSettingsOpen, setCaptureSettingsOpen]);
 }
 
 interface NavigateOptions {

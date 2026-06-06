@@ -7,7 +7,7 @@ import { captureAndInlineIframes } from "./iframeCapture";
 import { createCaptureHtmlScript } from "./scripts/captureHtmlScript";
 import { EXTRACT_ASSETS_SCRIPT } from "./scripts/extractAssetsScript";
 import { EXTRACT_ICONS_SCRIPT } from "./scripts/extractIconsScript";
-import type { CropPreview, CropRegion, ExtractedAssets, ExtractedIcons, HeightMode } from "./types";
+import type { CropPreview, CropRegion, ExtractedAssets, ExtractedIcons } from "./types";
 import {
   advanceCaptureStep,
   buildProjectAssets,
@@ -21,7 +21,6 @@ import {
 interface CaptureArgs {
   abortCaptureRef: MutableRefObject<boolean>;
   currentUrl: string;
-  heightMode: HeightMode;
   navigate: (path: string) => void;
   promptForCrop: (preview: CropPreview) => Promise<CropRegion | null>;
   setCapturePercent: Dispatch<SetStateAction<number>>;
@@ -95,7 +94,7 @@ interface CaptureSequenceOptions {
 async function performCaptureSequence({ args, webview, log, progress, cropRegion, preview }: CaptureSequenceOptions) {
   await log("Starting capture for", args.currentUrl);
   await captureAndInlineIframes(webview, log, stepKey => advanceCaptureStep(stepKey, progress));
-  const rawHtml = await captureHtml({ heightMode: args.heightMode, webview, log, cropRegion, naturalHeight: preview.naturalHeight });
+  const rawHtml = await captureHtml({ webview, log, cropRegion, naturalHeight: preview.naturalHeight });
   ensureCaptureNotAborted(args.abortCaptureRef);
   const extractedAssets = await extractAssets({ webview, log, progress });
   ensureCaptureNotAborted(args.abortCaptureRef);
@@ -105,11 +104,11 @@ async function performCaptureSequence({ args, webview, log, progress, cropRegion
   return { extractedAssets, rawHtml, thumbnailDataUrl };
 }
 
-interface CaptureHtmlOptions { heightMode: HeightMode; webview: Electron.WebviewTag; log: Logger; cropRegion: CropRegion; naturalHeight: number }
+interface CaptureHtmlOptions { webview: Electron.WebviewTag; log: Logger; cropRegion: CropRegion; naturalHeight: number }
 
-async function captureHtml({ heightMode, webview, log, cropRegion, naturalHeight }: CaptureHtmlOptions) {
+async function captureHtml({ webview, log, cropRegion, naturalHeight }: CaptureHtmlOptions) {
   await log("Injecting capture script into webview...");
-  const rawHtml = await webview.executeJavaScript(createCaptureHtmlScript(heightMode, cropRegion, naturalHeight)) as string;
+  const rawHtml = await webview.executeJavaScript(createCaptureHtmlScript(cropRegion, naturalHeight)) as string;
   await log("Webview script finished, got", rawHtml.length, "chars of HTML");
   return rawHtml;
 }

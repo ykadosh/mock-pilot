@@ -1,7 +1,6 @@
  
 export const CAPTURE_HTML_SCRIPT_PRELUDE = `
   (async () => {
-    var _heightMode = __HEIGHT_MODE__;
     var _origFetch = window.fetch.bind(window);
     var fetch = function(url, opts) {
       var timeout = 10000;

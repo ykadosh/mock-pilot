@@ -13,7 +13,7 @@ import { restoreWebviewHeight, type WebviewSizeSnapshot } from "./utils";
 export function CaptureBrowser() {
   const navigate = useNavigate();
   const state = useCaptureBrowserState();
-  const handleCapture = useCaptureBrowserCapture({ abortCaptureRef: state.abortCaptureRef, currentUrl: state.navigationState.currentUrl, heightMode: state.captureState.heightMode, navigate, promptForCrop: state.cropPrompt.promptForCrop, setCapturePercent: state.setCapturePercent, setCaptureSteps: state.setCaptureSteps, setIsCapturing: state.setIsCapturing, webviewRef: state.webviewRef });
+  const handleCapture = useCaptureBrowserCapture({ abortCaptureRef: state.abortCaptureRef, currentUrl: state.navigationState.currentUrl, navigate, promptForCrop: state.cropPrompt.promptForCrop, setCapturePercent: state.setCapturePercent, setCaptureSteps: state.setCaptureSteps, setIsCapturing: state.setIsCapturing, webviewRef: state.webviewRef });
   const extendSnapshotRef = useRef<WebviewSizeSnapshot | null>(null);
   const handleExtendPreview = useCallback(async (targetHeight: number) => {
     const webview = state.webviewRef.current;
