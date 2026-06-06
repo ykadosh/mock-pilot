@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { CaptureProgressModal } from "../../components/CaptureProgressModal";
 import { CaptureBrowserHeader } from "./components/CaptureBrowserHeader";
@@ -8,16 +8,30 @@ import { CropCaptureDialog } from "./components/CropCaptureDialog";
 import { extendPreviewCapture } from "./cropCaptureHelpers";
 import { useCaptureBrowserCapture } from "./useCaptureBrowserCapture";
 import { useCaptureBrowserState } from "./useCaptureBrowserState";
+import { restoreWebviewHeight, type WebviewSizeSnapshot } from "./utils";
 
 export function CaptureBrowser() {
   const navigate = useNavigate();
   const state = useCaptureBrowserState();
   const handleCapture = useCaptureBrowserCapture({ abortCaptureRef: state.abortCaptureRef, currentUrl: state.navigationState.currentUrl, heightMode: state.captureState.heightMode, navigate, promptForCrop: state.cropPrompt.promptForCrop, setCapturePercent: state.setCapturePercent, setCaptureSteps: state.setCaptureSteps, setIsCapturing: state.setIsCapturing, webviewRef: state.webviewRef });
+  const extendSnapshotRef = useRef<WebviewSizeSnapshot | null>(null);
   const handleExtendPreview = useCallback(async (targetHeight: number) => {
     const webview = state.webviewRef.current;
     if (!webview) throw new Error("webview is not ready");
-    return extendPreviewCapture(webview, targetHeight);
+    const { preview, snapshot } = await extendPreviewCapture(webview, targetHeight, extendSnapshotRef.current);
+    extendSnapshotRef.current = snapshot;
+    return preview;
   }, [state.webviewRef]);
+  const cropOpen = state.cropPrompt.cropPromptOpen;
+  const wasCropOpenRef = useRef(false);
+  useEffect(() => {
+    if (wasCropOpenRef.current && !cropOpen) {
+      const webview = state.webviewRef.current;
+      if (webview && extendSnapshotRef.current) restoreWebviewHeight(webview, extendSnapshotRef.current);
+      extendSnapshotRef.current = null;
+    }
+    wasCropOpenRef.current = cropOpen;
+  }, [cropOpen, state.webviewRef]);
   return (
     <div className="bg-background text-on-surface font-body-main flex h-screen flex-col overflow-hidden antialiased">
       <CaptureBrowserHeader onMouseDown={state.preventFocusSteal} />
