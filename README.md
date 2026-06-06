@@ -34,7 +34,7 @@ MockPilot lets you capture live web pages, strip away the noise, and edit the re
 
    Click **Cancel** (do *not* move it to Trash), then run:
    ```bash
-   xattr -cr ~/Downloads/MockPilot.app
+   xattr -cr /Applications/MockPilot.app
    ```
 4. Open the app normally
 
