@@ -85,9 +85,9 @@ async function previewStitchCapture(webview: Electron.WebviewTag, targetHeight: 
   if (!snapshot) snapshot = forceWebviewHeight(webview, targetHeight);
   else if (targetHeight !== currentHeight) forceWebviewHeight(webview, targetHeight);
   if (needsResize) {
-    await waitForLayoutSettle(webview, 100);
+    await waitForLayoutSettle(webview, 200);
     await webview.executeJavaScript("window.dispatchEvent(new Event('resize'))");
-    await waitForLayoutSettle(webview, 80);
+    for (let i = 0; i < 12; i++) { const h = await webview.executeJavaScript("Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0)") as number; if (h >= targetHeight) break; await new Promise<void>(r => setTimeout(r, 80)); }
   }
   const viewportWidth = Math.round(hostRect.width);
   const chunks = await fastChunkCapture(webview, chunkCssHeight, targetHeight);
