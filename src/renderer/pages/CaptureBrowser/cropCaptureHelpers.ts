@@ -2,6 +2,7 @@ import { scrollStitchCapture } from "./scrollStitchCapture";
 import type { CropPreview, CropRegion } from "./types";
 import {
   forceWebviewHeight,
+  restoreWebviewHeight,
   waitForLayoutSettle,
   type WebviewSizeSnapshot,
 } from "./utils";
@@ -77,18 +78,14 @@ function stitchToDataUrl(chunks: Chunk[], viewportWidth: number, targetHeight: n
 }
 
 async function previewStitchCapture(webview: Electron.WebviewTag, targetHeight: number, prevSnapshot: WebviewSizeSnapshot | null) {
+  if (prevSnapshot) restoreWebviewHeight(webview, prevSnapshot);
   const hostRect = webview.getBoundingClientRect();
   const chunkCssHeight = Math.max(1, Math.round(hostRect.height));
-  const currentHeight = parseFloat(webview.style.height) || hostRect.height;
-  let snapshot = prevSnapshot;
-  const needsResize = !snapshot || targetHeight !== currentHeight;
-  if (!snapshot) snapshot = forceWebviewHeight(webview, targetHeight);
-  else if (targetHeight !== currentHeight) forceWebviewHeight(webview, targetHeight);
-  if (needsResize) {
-    await waitForLayoutSettle(webview);
-    await webview.executeJavaScript("window.dispatchEvent(new Event('resize'))"); await waitForLayoutSettle(webview, 350);
-    await webview.executeJavaScript("window.dispatchEvent(new Event('resize'))"); await waitForLayoutSettle(webview, 350);
-  }
+  const snapshot = prevSnapshot ?? forceWebviewHeight(webview, targetHeight);
+  if (prevSnapshot) forceWebviewHeight(webview, targetHeight);
+  await waitForLayoutSettle(webview);
+  await webview.executeJavaScript("window.dispatchEvent(new Event('resize'))"); await waitForLayoutSettle(webview, 350);
+  await webview.executeJavaScript("window.dispatchEvent(new Event('resize'))"); await waitForLayoutSettle(webview, 350);
   const viewportWidth = Math.round(hostRect.width);
   const chunks = await fastChunkCapture(webview, chunkCssHeight, targetHeight);
   return { dataUrl: stitchToDataUrl(chunks, viewportWidth, targetHeight), snapshot, viewportWidth };
