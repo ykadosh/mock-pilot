@@ -1,6 +1,17 @@
 export const RESIZE_SCRIPT = `
 (function() {
   function reportHeight() {
+    var cropMeta = document.querySelector('meta[name="mp-crop"]');
+    if (cropMeta) {
+      var match = /height=(\\d+)/.exec(cropMeta.getAttribute('content') || '');
+      if (match) {
+        var cropH = parseInt(match[1], 10);
+        if (isFinite(cropH) && cropH > 0) {
+          window.parent.postMessage({ type: 'iframe-height', height: cropH }, '*');
+          return;
+        }
+      }
+    }
     var htmlEl = document.documentElement;
     var bodyEl = document.body;
     var savedH = [htmlEl.style.height, bodyEl.style.height];

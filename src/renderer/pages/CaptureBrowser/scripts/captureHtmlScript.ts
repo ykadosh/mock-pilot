@@ -10,10 +10,12 @@ import { CAPTURE_HTML_SCRIPT_STYLES } from "./captureHtmlScriptStyles";
 
 export function createCaptureHtmlScript(heightMode: HeightMode, cropRegion?: CropRegion, naturalHeight?: number) {
   void naturalHeight;
-  const cropScript = cropRegion
+  const isNoOpCrop = cropRegion && cropRegion.top === 0 && cropRegion.height === cropRegion.pageHeight;
+  const cropScript = cropRegion && !isNoOpCrop
     ? CAPTURE_HTML_SCRIPT_CROP
         .replace("__CROP_TOP__", String(cropRegion.top))
         .replace("__CROP_HEIGHT__", String(cropRegion.height))
+        .replace("__CROP_PAGE_HEIGHT__", String(cropRegion.pageHeight))
     : "";
   return [
     CAPTURE_HTML_SCRIPT_PRELUDE.replace("__HEIGHT_MODE__", JSON.stringify(heightMode)),

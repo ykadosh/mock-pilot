@@ -101,8 +101,9 @@ function CropHandle({ cropPx, kind, onMouseDown }: { cropPx: number; kind: "top"
 
 function PageHeightHandle({ pageWidth, onMouseDown }: { pageWidth: number; onMouseDown: (e: React.MouseEvent) => void }) {
   return (
-    <div onMouseDown={onMouseDown} title="Drag to change page height" className="group mx-auto flex items-center justify-center" style={{ width: pageWidth, height: PAGE_HANDLE_HEIGHT, marginTop: PAGE_HANDLE_GAP, cursor: "ns-resize" }} data-kind="page">
-      <div className="bg-secondary border-surface h-1.5 w-20 rounded-full border transition-transform group-hover:scale-110" />
+    <div onMouseDown={onMouseDown} title="Drag to change page height" className="group relative mx-auto flex items-center justify-center" style={{ width: pageWidth, height: PAGE_HANDLE_HEIGHT, marginTop: PAGE_HANDLE_GAP, cursor: "ns-resize" }} data-kind="page">
+      <div className="border-outline-variant pointer-events-none absolute left-1/2 -translate-x-1/2 border-l border-dashed" style={{ top: -16, height: 20 }} />
+      <div className="bg-secondary border-surface relative h-1.5 w-20 rounded-full border transition-transform group-hover:scale-110" />
     </div>
   );
 }

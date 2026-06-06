@@ -3,79 +3,62 @@ export const CAPTURE_HTML_SCRIPT_CROP = `
     _log("[step:crop] Cropping DOM to requested region...");
     var _cropTop = __CROP_TOP__;
     var _cropHeight = __CROP_HEIGHT__;
-    var _cropBottom = _cropTop + _cropHeight;
-    _log("Crop region: top=" + _cropTop + "px height=" + _cropHeight + "px (bottom=" + _cropBottom + "px)");
-    // Extended-crop note: we deliberately do NOT freeze inline heights or pin a chain
-    // of wrappers here. The webview is at the extended size, the page has already
-    // responded to the resize event, and the cleanup step records that size in the
-    // mp-viewport-height meta. The editor iframe sizes itself to that value, so
-    // viewport-relative CSS (100vh, position:absolute top/bottom, %) reproduces the
-    // exact live layout in the editor without us re-pinning anything.
-    function _getAbsoluteTop(el) {
-      var rect; try { rect = el.getBoundingClientRect(); } catch (e) { return null; }
-      return { top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY, height: rect.height };
-    }
-    var _bodyChildren = Array.prototype.slice.call(document.body.children);
-    var _removedAboveTotal = 0;
-    var _removedBelowTotal = 0;
-    var _keptCount = 0;
-    var _skippedFixedCount = 0;
-    for (var _ci = 0; _ci < _bodyChildren.length; _ci++) {
-      var _child = _bodyChildren[_ci];
-      var _cs; try { _cs = getComputedStyle(_child); } catch (e) { _cs = null; }
-      // Viewport-anchored elements (fixed/sticky headers, nav bars, modal layers)
-      // intentionally render outside normal flow. Removing them based on document
-      // coordinates would drop kept overlays, so leave them in place.
-      if (_cs && (_cs.position === 'fixed' || _cs.position === 'sticky')) { _skippedFixedCount++; continue; }
-      var _bounds = _getAbsoluteTop(_child);
-      if (!_bounds) { _keptCount++; continue; }
-      if (_bounds.bottom <= _cropTop) {
-        _removedAboveTotal += _bounds.height;
-        _child.remove();
-        continue;
-      }
-      if (_bounds.top >= _cropBottom) {
-        _removedBelowTotal += _bounds.height;
-        _child.remove();
-        continue;
-      }
-      _keptCount++;
-    }
-    // Preserve original Y of kept elements by reinserting placeholders that match the
-    // total height of removed siblings on each side. This keeps in-flow layout stable
-    // for any later script that measures positions.
-    if (_removedAboveTotal > 0) {
-      var _topPlaceholder = document.createElement('div');
-      _topPlaceholder.setAttribute('data-mp-crop-placeholder', 'top');
-      _topPlaceholder.style.height = _removedAboveTotal + 'px';
-      _topPlaceholder.style.width = '100%';
-      document.body.insertBefore(_topPlaceholder, document.body.firstChild);
-    }
-    if (_removedBelowTotal > 0) {
-      var _bottomPlaceholder = document.createElement('div');
-      _bottomPlaceholder.setAttribute('data-mp-crop-placeholder', 'bottom');
-      _bottomPlaceholder.style.height = _removedBelowTotal + 'px';
-      _bottomPlaceholder.style.width = '100%';
-      document.body.appendChild(_bottomPlaceholder);
-    }
+    var _cropPageHeight = __CROP_PAGE_HEIGHT__;
+    _log("Crop region: top=" + _cropTop + "px height=" + _cropHeight + "px pageHeight=" + _cropPageHeight + "px");
     var _cropMeta = document.createElement('meta');
     _cropMeta.name = 'mp-crop';
     _cropMeta.content = 'top=' + _cropTop + ';height=' + _cropHeight;
     document.head.appendChild(_cropMeta);
-    // Sites with JS-driven or viewport-relative heights collapse back to their original
-    // size when the captured HTML is rendered outside the force-resized webview. Pin
-    // the document min-height to the crop bottom so the editor reproduces the same
-    // canvas height the user previewed, even if internal containers shrink.
-    document.documentElement.style.minHeight = _cropBottom + 'px';
-    document.body.style.minHeight = _cropBottom + 'px';
-    var _postCropHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-    if (_postCropHeight < _cropBottom) {
-      var _extensionSpacer = document.createElement('div');
-      _extensionSpacer.setAttribute('data-mp-crop-placeholder', 'extension');
-      _extensionSpacer.style.height = (_cropBottom - _postCropHeight) + 'px';
-      _extensionSpacer.style.width = '100%';
-      document.body.appendChild(_extensionSpacer);
+    // Surface crop height as the canonical viewport height for the editor iframe.
+    // Cleanup later appends another mp-viewport-height meta; the resize script
+    // uses querySelector and reads ours first so the iframe sizes to the crop.
+    var _cropVpMeta = document.createElement('meta');
+    _cropVpMeta.name = 'mp-viewport-height';
+    _cropVpMeta.content = String(_cropHeight);
+    document.head.appendChild(_cropVpMeta);
+    // Move all in-flow body children into a wrapper and translate the wrapper
+    // up by cropTop. We keep every original element (no removal) so the layout
+    // is identical to the live page — the crop is purely visual via transform
+    // and html/body overflow:hidden. Fixed/sticky children stay at body level
+    // so they aren't trapped inside the transform's containing block (which
+    // would detach them from the viewport anchoring they rely on).
+    var _flowChildren = [];
+    var _skippedFixedCount = 0;
+    for (var _wi = 0; _wi < document.body.children.length; _wi++) {
+      var _wc = document.body.children[_wi];
+      var _wcs; try { _wcs = getComputedStyle(_wc); } catch (e) { _wcs = null; }
+      if (_wcs && (_wcs.position === 'fixed' || _wcs.position === 'sticky')) {
+        _skippedFixedCount++;
+        continue;
+      }
+      _flowChildren.push(_wc);
     }
-    _log("Cropped DOM: kept " + _keptCount + " body children, removed " + (_bodyChildren.length - _keptCount - _skippedFixedCount) +
-      " (above=" + _removedAboveTotal + "px, below=" + _removedBelowTotal + "px), skipped " + _skippedFixedCount + " fixed/sticky, pinned doc to " + _cropBottom + "px");
+    var _wrapper = document.createElement('div');
+    _wrapper.setAttribute('data-mp-crop-wrapper', 'true');
+    // No position/margin/padding on the wrapper — we want it transparent to
+    // layout so the in-flow children render at the exact same coordinates they
+    // had before wrapping. The transform shifts the rendered pixels up.
+    // min-height is set to the original page height so the wrapper preserves
+    // the layout context the live page had (percentage/viewport heights,
+    // bottom-anchored absolute positioning, etc. resolve against pageHeight
+    // rather than the clipped cropHeight).
+    _wrapper.style.cssText = 'display:block;height:' + _cropPageHeight +
+      'px;min-height:' + _cropPageHeight +
+      'px;transform:translateY(-' + _cropTop +
+      'px);transform-origin:top left;';
+    document.body.insertBefore(_wrapper, document.body.firstChild);
+    for (var _mi = 0; _mi < _flowChildren.length; _mi++) {
+      _wrapper.appendChild(_flowChildren[_mi]);
+    }
+    // Clip the document to the crop region. setProperty(...,'important') so
+    // page rules like "html, body { height: 100% }" can't override the clip.
+    var _clipTargets = [document.documentElement, document.body];
+    for (var _ti = 0; _ti < _clipTargets.length; _ti++) {
+      var _el = _clipTargets[_ti];
+      _el.style.setProperty('height', _cropHeight + 'px', 'important');
+      _el.style.setProperty('min-height', _cropHeight + 'px', 'important');
+      _el.style.setProperty('max-height', _cropHeight + 'px', 'important');
+      _el.style.setProperty('overflow', 'hidden', 'important');
+    }
+    _log("Cropped DOM: wrapped " + _flowChildren.length + " in-flow child(ren), skipped " + _skippedFixedCount + " fixed/sticky, clipped to " + _cropHeight + "px (offset=" + _cropTop + "px)");
 `;

@@ -4,7 +4,7 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
     document.querySelectorAll("script,noscript").forEach((s) => s.remove());
     document.querySelectorAll('link[rel="preload"],link[rel="prefetch"],link[rel="preconnect"],link[rel="dns-prefetch"],link[rel="modulepreload"],link[rel="icon"],link[rel="shortcut icon"],link[rel="apple-touch-icon"]').forEach((l) => l.remove());
     _log("[step:cleanup] Stripping non-visual attributes and pruning redundant elements...");
-    var _mpDataAttrs = ['data-original-href', 'data-adopted-stylesheet', 'data-mp-crop-trail'];
+    var _mpDataAttrs = ['data-original-href', 'data-adopted-stylesheet', 'data-mp-crop-trail', 'data-mp-crop-placeholder', 'data-mp-crop-wrapper'];
     var _preservedAriaAttrs = {
       'aria-expanded': 1, 'aria-hidden': 1, 'aria-selected': 1,
       'aria-current': 1, 'aria-checked': 1, 'aria-pressed': 1, 'aria-disabled': 1
@@ -59,6 +59,8 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
     }
     function _shouldPrune(el) {
       var tag = el.tagName;
+      // Crop placeholders hold body's flow to cropBottom for the crop offset.
+      if (el.hasAttribute && el.hasAttribute('data-mp-crop-placeholder')) return false;
       // Don't descend into SVG subtrees: SVG layout/getComputedStyle is unreliable
       // and SVG content is part of the visual. The SVG root itself is handled
       // below via the replaced-element branch so a 0x0 svg can still be pruned.
@@ -87,8 +89,7 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
       // Elements with visible (element) descendants are always preserved.
       if (hasChildElement) return false;
       // Last-resort dimension check: a childless element occupying zero
-      // width or height contributes nothing visually, regardless of its
-      // text content or visual styling. Runs after all cheap checks.
+      // width or height contributes nothing visually.
       var rect;
       try { rect = el.getBoundingClientRect(); } catch (e) { rect = null; }
       if (rect && (rect.width === 0 || rect.height === 0)) return true;
@@ -143,8 +144,7 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
     if (flattenCount) _log("Flattened " + flattenCount + " nested interactive element(s)");
     var vpMeta = document.createElement('meta');
     vpMeta.name = 'mp-viewport-height';
-    vpMeta.content = String(window.innerHeight);
-    document.head.appendChild(vpMeta);
+    vpMeta.content = String(window.innerHeight); document.head.appendChild(vpMeta);
     _log("Capture script complete, returning HTML (" + document.documentElement.outerHTML.length + " chars)");
     return document.documentElement.outerHTML;
   })()

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Dialog } from "../../../components/ui/Dialog";
 import type { CropPreview, CropRegion } from "../types";
 import { CropCanvas } from "./CropCaptureCanvas";
-import { CropDialogFooter, CropDialogHeader, CropSidebar } from "./CropCaptureDialogPanels";
+import { CropDialogFooter, CropSidebar } from "./CropCaptureDialogPanels";
 
 const MIN_CROP_HEIGHT = 100;
 const MAX_EXTENSION_FACTOR = 5;
@@ -38,20 +39,13 @@ export function CropCaptureDialog({ preview, onConfirm, onCancel, onExtendPrevie
       setCropHeight(clamped.height);
     }
   }, [naturalPageHeight, maxPageHeight]);
-  useEscapeToCancel(onCancel);
   useExtendedPreviewSync({ pageHeight, currentHeight: effectivePreview.naturalHeight, onExtendPreview, setEffectivePreview });
+  const footer = <CropDialogFooter cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} onCancel={onCancel} onConfirm={onConfirm} />;
   return (
-    <div className="p-md fixed inset-0 z-[100] flex items-center justify-center">
-      <div onClick={onCancel} className="bg-background/60 absolute inset-0 backdrop-blur-[6px]" />
-      <div className="bg-surface-container-low border-outline relative flex h-[640px] w-full max-w-4xl flex-col overflow-hidden rounded-xl border shadow-2xl">
-        <CropDialogHeader onCancel={onCancel} />
-        <div className="flex flex-1 overflow-hidden">
-          <CropCanvas cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} preview={effectivePreview} setRegion={setRegion} setPageHeight={setPageHeight} />
-          <CropSidebar cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} setRegion={setRegion} setPageHeight={setPageHeight} />
-        </div>
-        <CropDialogFooter cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} onCancel={onCancel} onConfirm={onConfirm} />
-      </div>
-    </div>
+    <Dialog open onClose={onCancel} icon="crop" iconFilled title="Crop Capture Area" panelClassName="h-[640px] w-full max-w-4xl" contentClassName="flex flex-1 overflow-hidden" footer={footer}>
+      <CropCanvas cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} preview={effectivePreview} setRegion={setRegion} setPageHeight={setPageHeight} />
+      <CropSidebar cropTop={cropTop} cropHeight={cropHeight} pageHeight={pageHeight} setRegion={setRegion} setPageHeight={setPageHeight} />
+    </Dialog>
   );
 }
 
@@ -65,12 +59,16 @@ interface ExtendSyncArgs {
 function useExtendedPreviewSync({ pageHeight, currentHeight, onExtendPreview, setEffectivePreview }: ExtendSyncArgs) {
   const inFlightRef = useRef(false);
   useEffect(() => {
-    if (!onExtendPreview || pageHeight <= currentHeight || inFlightRef.current) return;
+    if (!onExtendPreview || pageHeight === currentHeight || inFlightRef.current) return;
     const target = Math.ceil(pageHeight);
     const timer = setTimeout(() => {
       inFlightRef.current = true;
       onExtendPreview(target)
-        .then(next => setEffectivePreview(prev => next.naturalHeight > prev.naturalHeight ? next : prev))
+        .then(next => setEffectivePreview(prev => {
+          if (next.dataUrl === prev.dataUrl) return prev;
+          if (prev.dataUrl.startsWith("blob:")) URL.revokeObjectURL(prev.dataUrl);
+          return next;
+        }))
         .finally(() => { inFlightRef.current = false; });
     }, EXTEND_DEBOUNCE_MS);
     return () => clearTimeout(timer);
@@ -81,12 +79,4 @@ function clampCropRegion(top: number, height: number, maxBottom: number) {
   const safeTop = Math.max(0, Math.min(top, maxBottom - MIN_CROP_HEIGHT));
   const safeHeight = Math.max(MIN_CROP_HEIGHT, Math.min(height, maxBottom - safeTop));
   return { top: safeTop, height: safeHeight };
-}
-
-function useEscapeToCancel(onCancel: () => void) {
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => { if (event.key === "Escape") onCancel(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onCancel]);
 }

@@ -1,20 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CropRegion } from "../types";
 
-export function CropDialogHeader({ onCancel }: { onCancel: () => void }) {
-  return (
-    <div className="h-xl px-md border-outline-variant bg-surface-container flex items-center justify-between border-b">
-      <div className="gap-sm flex items-center">
-        <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>crop</span>
-        <h2 className="font-headline-md text-headline-md text-on-surface">Crop Capture Area</h2>
-      </div>
-      <button onClick={onCancel} className="p-xs hover:bg-surface-bright text-on-surface-variant rounded transition-colors">
-        <span className="material-symbols-outlined">close</span>
-      </button>
-    </div>
-  );
-}
-
 interface CropSidebarProps {
   cropTop: number;
   cropHeight: number;
@@ -80,12 +66,12 @@ function CropHint() {
 
 export function CropDialogFooter({ cropTop, cropHeight, pageHeight, onCancel, onConfirm }: { cropTop: number; cropHeight: number; pageHeight: number; onCancel: () => void; onConfirm: (region: CropRegion) => void }) {
   return (
-    <div className="h-xl px-md gap-md border-outline-variant bg-surface-container flex items-center justify-end border-t">
+    <>
       <button onClick={onCancel} className="px-md text-ui-small font-ui-small border-outline text-on-surface hover:bg-surface-bright h-[36px] rounded border transition-colors">Cancel</button>
       <button onClick={() => onConfirm({ top: Math.round(cropTop), height: Math.round(cropHeight), pageHeight: Math.round(pageHeight) })} className="px-md text-ui-small font-ui-small bg-primary text-on-primary hover:bg-primary/90 gap-xs flex h-[36px] items-center rounded font-bold transition-colors">
         Confirm Crop
         <span className="material-symbols-outlined text-[16px]">check_circle</span>
       </button>
-    </div>
+    </>
   );
 }

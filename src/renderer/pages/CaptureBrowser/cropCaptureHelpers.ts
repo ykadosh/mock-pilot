@@ -8,9 +8,29 @@ import {
 
 type Logger = (...args: unknown[]) => Promise<void>;
 
+const PREVIEW_MAX_DIM = 1200;
+
 async function nativeImageToBitmap(dataUrl: string): Promise<ImageBitmap> {
   const blob = await (await fetch(dataUrl)).blob();
   return createImageBitmap(blob);
+}
+
+async function downscaleToBlobUrl(dataUrl: string, maxDim: number): Promise<string> {
+  const bitmap = await nativeImageToBitmap(dataUrl);
+  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Failed to obtain 2D context for preview downscale");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  const outBlob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!outBlob) throw new Error("Failed to encode preview JPEG");
+  return URL.createObjectURL(outBlob);
 }
 
 export async function capturePreviewForCrop(webview: Electron.WebviewTag, log: Logger): Promise<CropPreview> {
@@ -22,7 +42,8 @@ export async function capturePreviewForCrop(webview: Electron.WebviewTag, log: L
   await webview.executeJavaScript("window.scrollTo(0, 0)");
   await waitForLayoutSettle(webview);
   const stitch = await scrollStitchCapture(webview, naturalHeight, log);
-  return { dataUrl: stitch.dataUrl, naturalHeight, viewportWidth };
+  const dataUrl = await downscaleToBlobUrl(stitch.dataUrl, PREVIEW_MAX_DIM);
+  return { dataUrl, naturalHeight, viewportWidth };
 }
 
 export async function extendPreviewCapture(webview: Electron.WebviewTag, targetHeight: number): Promise<CropPreview> {
@@ -31,7 +52,8 @@ export async function extendPreviewCapture(webview: Electron.WebviewTag, targetH
   await webview.executeJavaScript("window.scrollTo(0, 0)");
   await waitForLayoutSettle(webview);
   const stitch = await scrollStitchCapture(webview, targetHeight, noopLog);
-  return { dataUrl: stitch.dataUrl, naturalHeight: targetHeight, viewportWidth };
+  const dataUrl = await downscaleToBlobUrl(stitch.dataUrl, PREVIEW_MAX_DIM);
+  return { dataUrl, naturalHeight: targetHeight, viewportWidth };
 }
 
 interface ExtensionArgs {
