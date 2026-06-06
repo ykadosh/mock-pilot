@@ -30,7 +30,7 @@ export function CropCaptureDialog({ preview, onConfirm, onCancel, onExtendPrevie
     setCropHeight(next.height);
   }, [pageHeight]);
   const setPageHeight = useCallback((height: number) => {
-    const safe = Math.max(naturalPageHeight, Math.min(height, maxPageHeight));
+    const safe = Math.round(Math.max(naturalPageHeight, Math.min(height, maxPageHeight)));
     setPageHeightState(safe);
     const { top, height: h } = cropRef.current;
     if (top + h > safe) {
