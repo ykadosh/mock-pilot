@@ -12,7 +12,7 @@ interface UsePromptSubmitArgs {
   getElementHTML?: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
   getFullPageHTML?: () => string | null;
   projectAssets?: object;
-  onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void;
+  onConversationMessage?: (role: "user" | "assistant", content: string, opts?: { type?: "message" | "thinking" | "tool" | "done"; attachments?: Attachment[] }) => void;
   openChat?: () => void;
   getPreviousAgentMessages?: () => AgentMessage[];
   onAgentMessagesUpdate?: (messages: AgentMessage[]) => void;
@@ -58,23 +58,23 @@ async function applyPrompt(args: UsePromptSubmitArgs, trimmedPrompt: string, sta
     return;
   }
   if (result.maxIterationsReached) {
-    args.onConversationMessage?.("assistant", "⚠️ Reached the maximum number of iterations. The changes made so far have been applied. Would you like to continue?", "message");
+    args.onConversationMessage?.("assistant", "⚠️ Reached the maximum number of iterations. The changes made so far have been applied. Would you like to continue?", { type: "message" });
     state.setAwaitingContinue(true);
     state.setPrompt(trimmedPrompt);
     args.setAttachments([]);
     return;
   }
   const summary = result.summary || "Changes applied successfully";
-  args.onConversationMessage?.("assistant", summary, "done");
+  args.onConversationMessage?.("assistant", summary, { type: "done" });
   state.setPrompt("");
   args.setAttachments([]);
 }
 
-async function runPromptFlow(args: UsePromptSubmitArgs, trimmedPrompt: string, state: SubmitState & { displayMessage?: string }) {
+async function runPromptFlow(args: UsePromptSubmitArgs, trimmedPrompt: string, state: SubmitState & { displayMessage?: string; userAttachments?: Attachment[] }) {
   state.setAwaitingContinue(false);
   state.setLoading(true);
   state.clearProgress();
-  args.onConversationMessage?.("user", state.displayMessage || trimmedPrompt, "message");
+  args.onConversationMessage?.("user", state.displayMessage || trimmedPrompt, { type: "message", attachments: state.userAttachments });
   try {
     await applyPrompt(args, trimmedPrompt, state);
   } catch (e: unknown) {
@@ -104,7 +104,7 @@ export function usePromptSubmit(args: UsePromptSubmitArgs) {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) return;
     setError("");
-    await runPromptFlow(args, trimmedPrompt, state);
+    await runPromptFlow(args, trimmedPrompt, { ...state, userAttachments: args.attachments });
   };
 
   const handleContinue = async () => {

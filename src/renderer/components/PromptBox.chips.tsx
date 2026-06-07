@@ -10,10 +10,10 @@ const FONT_FAMILY_MAP: Record<string, string> = {
   "Remix Icons": "'remixicon'",
 };
 
-function ChipShell({ children, onRemove, className, onClick, title }: { children: React.ReactNode; onRemove: () => void; className: string; onClick?: () => void; title?: string }) {
+function ChipShell({ children, onRemove, className, onClick, title }: { children: React.ReactNode; onRemove?: () => void; className: string; onClick?: () => void; title?: string }) {
   const handleRemove = (event: React.MouseEvent) => {
     event.stopPropagation();
-    onRemove();
+    onRemove?.();
   };
   return (
     <div
@@ -22,14 +22,16 @@ function ChipShell({ children, onRemove, className, onClick, title }: { children
       title={title}
     >
       {children}
-      <button className="ml-1 inline-flex items-center hover:text-red-400" onClick={handleRemove}>
-        <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span>
-      </button>
+      {onRemove && (
+        <button className="ml-1 inline-flex items-center hover:text-red-400" onClick={handleRemove}>
+          <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span>
+        </button>
+      )}
     </div>
   );
 }
 
-function ImageChip({ attachment, onRemove }: { attachment: Attachment & { type: "image" }; onRemove: () => void }) {
+function ImageChip({ attachment, onRemove }: { attachment: Attachment & { type: "image" }; onRemove?: () => void }) {
   return (
     <ChipShell className="border-slate-700/50 bg-slate-800/80 py-1 pr-2 pl-1 text-slate-300" onRemove={onRemove}>
       <img alt="Thumb" className="h-6 w-6 rounded object-cover" src={attachment.dataUrl} />
@@ -38,7 +40,7 @@ function ImageChip({ attachment, onRemove }: { attachment: Attachment & { type: 
   );
 }
 
-function ElementChip({ attachment, onRemove, onSelect }: { attachment: ElementAttachment; onRemove: () => void; onSelect?: (attachment: ElementAttachment) => void }) {
+function ElementChip({ attachment, onRemove, onSelect }: { attachment: ElementAttachment; onRemove?: () => void; onSelect?: (attachment: ElementAttachment) => void }) {
   const clickable = !!onSelect;
   return (
     <ChipShell
@@ -53,7 +55,7 @@ function ElementChip({ attachment, onRemove, onSelect }: { attachment: ElementAt
   );
 }
 
-function ComponentChip({ attachment, onRemove }: { attachment: ComponentAttachment; onRemove: () => void }) {
+function ComponentChip({ attachment, onRemove }: { attachment: ComponentAttachment; onRemove?: () => void }) {
   return (
     <ChipShell className="border-amber-500/30 bg-amber-900/30 text-amber-200" onRemove={onRemove} title={attachment.description}>
       <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>widgets</span>
@@ -62,7 +64,7 @@ function ComponentChip({ attachment, onRemove }: { attachment: ComponentAttachme
   );
 }
 
-function TypographyChip({ attachment, onRemove }: { attachment: TypographyAttachment; onRemove: () => void }) {
+function TypographyChip({ attachment, onRemove }: { attachment: TypographyAttachment; onRemove?: () => void }) {
   return (
     <ChipShell className="border-sky-500/30 bg-sky-900/30 text-sky-200" onRemove={onRemove}>
       <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>text_fields</span>
@@ -71,7 +73,7 @@ function TypographyChip({ attachment, onRemove }: { attachment: TypographyAttach
   );
 }
 
-function IconChip({ attachment, onRemove }: { attachment: IconAttachment; onRemove: () => void }) {
+function IconChip({ attachment, onRemove }: { attachment: IconAttachment; onRemove?: () => void }) {
   const cssFontFamily = FONT_FAMILY_MAP[attachment.fontFamily] || `"${attachment.fontFamily}"`;
   const glyphContent = attachment.renderMode === "ligature"
     ? attachment.name
@@ -84,7 +86,7 @@ function IconChip({ attachment, onRemove }: { attachment: IconAttachment; onRemo
   );
 }
 
-function GraphicChip({ attachment, onRemove }: { attachment: GraphicAttachment; onRemove: () => void }) {
+function GraphicChip({ attachment, onRemove }: { attachment: GraphicAttachment; onRemove?: () => void }) {
   const src = `mp-asset://assets/${attachment.projectId}/assets/${attachment.filename}`;
   return (
     <ChipShell className="border-slate-700/50 bg-slate-800/80 py-1 pr-2 pl-1 text-slate-300" onRemove={onRemove} title={attachment.filename}>
@@ -94,7 +96,7 @@ function GraphicChip({ attachment, onRemove }: { attachment: GraphicAttachment; 
   );
 }
 
-function ColorChip({ attachment, onRemove }: { attachment: ColorAttachment; onRemove: () => void }) {
+function ColorChip({ attachment, onRemove }: { attachment: ColorAttachment; onRemove?: () => void }) {
   return (
     <ChipShell className="border-pink-500/30 bg-pink-900/20 py-1 pr-2 pl-1 text-pink-200" onRemove={onRemove} title={attachment.value}>
       <span className="border-outline/30 inline-block h-5 w-5 rounded border" style={{ backgroundColor: attachment.value }} />
@@ -113,7 +115,7 @@ function SuggestedElementChip({ element, onPin }: { element: SelectedElement; on
   );
 }
 
-function renderChip(attachment: Attachment, onRemove: () => void, onSelectElement?: (attachment: ElementAttachment) => void) {
+function renderChip(attachment: Attachment, onRemove?: () => void, onSelectElement?: (attachment: ElementAttachment) => void) {
   switch (attachment.type) {
     case "image": return <ImageChip attachment={attachment} onRemove={onRemove} />;
     case "element": return <ElementChip attachment={attachment} onRemove={onRemove} onSelect={onSelectElement} />;
@@ -125,15 +127,15 @@ function renderChip(attachment: Attachment, onRemove: () => void, onSelectElemen
   }
 }
 
-export function AttachmentChips({ attachments, onRemove, onSelectElement, suggestedElement, onPinSuggestion }: { attachments: Attachment[]; onRemove: (index: number) => void; onSelectElement?: (attachment: ElementAttachment) => void; suggestedElement?: SelectedElement | null; onPinSuggestion?: () => void }) {
+export function AttachmentChips({ attachments, onRemove, onSelectElement, suggestedElement, onPinSuggestion, className }: { attachments: Attachment[]; onRemove?: (index: number) => void; onSelectElement?: (attachment: ElementAttachment) => void; suggestedElement?: SelectedElement | null; onPinSuggestion?: () => void; className?: string }) {
   if (attachments.length === 0 && !suggestedElement) return null;
   return (
-    <div className="mb-2 flex flex-wrap gap-2 px-1">
+    <div className={className ?? "mb-2 flex flex-wrap gap-2 px-1"}>
       {suggestedElement && onPinSuggestion && (
         <SuggestedElementChip element={suggestedElement} onPin={onPinSuggestion} />
       )}
       {attachments.map((attachment, index) => (
-        <span key={index}>{renderChip(attachment, () => onRemove(index), onSelectElement)}</span>
+        <span key={index}>{renderChip(attachment, onRemove ? () => onRemove(index) : undefined, onSelectElement)}</span>
       ))}
     </div>
   );

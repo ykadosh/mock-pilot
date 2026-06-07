@@ -2,6 +2,8 @@ import { useCallback, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ConversationMessage } from "../hooks/useConversation";
+import type { Attachment } from "./PromptBox.types";
+import { AttachmentChips } from "./PromptBox.chips";
 
 export function TypingIndicator({ toolName }: { toolName?: string }) {
   return (
@@ -63,9 +65,9 @@ function DoneBubble({ content }: { content: string }) {
   );
 }
 
-function UserBubble({ content }: { content: string }) {
+function UserBubble({ content, attachments }: { content: string; attachments?: Attachment[] }) {
   return (
-    <div className="flex justify-end">
+    <div className="flex flex-col items-end gap-1">
       <div className="max-w-[85%] rounded-lg border border-violet-500/30 bg-[#172033] px-3 py-2">
         <div className="prose prose-invert prose-sm prose-p:my-0 prose-p:whitespace-pre-wrap prose-pre:my-1 prose-pre:bg-slate-800 prose-pre:text-[11px] prose-code:text-violet-300 prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-li:pl-0 max-w-none text-[13px] break-words text-slate-200">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
@@ -74,6 +76,9 @@ function UserBubble({ content }: { content: string }) {
           <CopyButton text={content} />
         </div>
       </div>
+      {attachments && attachments.length > 0 && (
+        <AttachmentChips attachments={attachments} className="flex max-w-[85%] flex-wrap justify-end gap-2" />
+      )}
     </div>
   );
 }
@@ -93,6 +98,6 @@ function AssistantBubble({ content }: { content: string }) {
 export function MessageBubble({ msg }: { msg: ConversationMessage }) {
   if (msg.type === "tool") return <ToolPill content={msg.content} />;
   if (msg.type === "done") return <DoneBubble content={msg.content} />;
-  if (msg.role === "user") return <UserBubble content={msg.content} />;
+  if (msg.role === "user") return <UserBubble content={msg.content} attachments={msg.attachments} />;
   return <AssistantBubble content={msg.content} />;
 }

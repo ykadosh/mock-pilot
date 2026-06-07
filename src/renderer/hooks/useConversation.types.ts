@@ -1,8 +1,11 @@
+import type { Attachment } from "../components/PromptBox.types";
+
 export interface ConversationMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
   type?: "message" | "thinking" | "tool" | "done";
+  attachments?: Attachment[];
 }
 
 export interface AgentMessage {
