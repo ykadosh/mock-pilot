@@ -44,7 +44,7 @@ export function CanvasPreviewSurface(props: CanvasPreviewSurfaceProps) {
     <div ref={scrollContainerRef} className={containerClass}>
       <CanvasDottedBackground>
         <div data-canvas-wrapper className="relative" style={{ width: `${viewportWidth * scale}px` }}>
-          <CanvasPreviewToolbar rect={selectedRect} scale={scale} selectedMpId={selectedMpId} selectedSelector={selectedSelector} onDelete={onToolbarDelete} onDeselect={() => onElementDeselected?.()} onPickerAction={(action) => sendPickerAction(iframeRef.current, selectedMpId, action)} />
+          <CanvasPreviewToolbar rect={selectedRect} scale={scale} selectedMpId={selectedMpId} selectedSelector={selectedSelector} onDelete={onToolbarDelete} onDeselect={() => onElementDeselected?.()} onPickerAction={(action) => sendPickerAction(iframeRef.current, selectedMpId, action)} scrollContainerRef={scrollContainerRef} />
           <CanvasPreviewViewport html={html} iframeHeight={iframeHeight} iframeRef={iframeRef} isPanning={isPanning} onLoad={onLoad} panActive={panActive} pickerActive={pickerActive} rectSelectorActive={rectSelectorActive} scale={scale} selectionRect={selectionRect} srcDoc={srcDoc} viewportWidth={viewportWidth} />
         </div>
       </CanvasDottedBackground>
