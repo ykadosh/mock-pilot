@@ -13,7 +13,7 @@ interface UsePromptBoxArgs {
   getElementHTML?: (mpId: string) => Promise<{ outerHTML: string; computedStyle: Record<string, string> } | null>;
   getFullPageHTML?: () => string | null;
   projectAssets?: object;
-  onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void;
+  onConversationMessage?: (role: "user" | "assistant", content: string, opts?: { type?: "message" | "thinking" | "tool" | "done"; attachments?: Attachment[] }) => void;
   openChat?: () => void;
   getPreviousAgentMessages?: () => AgentMessage[];
   onAgentMessagesUpdate?: (messages: AgentMessage[]) => void;

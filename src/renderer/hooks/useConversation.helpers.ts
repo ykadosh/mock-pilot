@@ -1,4 +1,5 @@
 import type { ActiveSessionState, AgentMessage, ConversationMessage, SessionMeta } from "./useConversation.types";
+import type { Attachment } from "../components/PromptBox.types";
 import { DEFAULT_CONVERSATION_TITLE, deriveSessionTitle } from "./useConversation.types";
 
 export interface PersistArgs {
@@ -31,11 +32,12 @@ export interface AppendMessageArgs {
   role: "user" | "assistant";
   content: string;
   type?: ConversationMessage["type"];
+  attachments?: Attachment[];
 }
 
 export function appendMessage(args: AppendMessageArgs): { next: ActiveSessionState; titleChanged: boolean } {
-  const { prev, role, content, type } = args;
-  const msg: ConversationMessage = { role, content, timestamp: Date.now(), type };
+  const { prev, role, content, type, attachments } = args;
+  const msg: ConversationMessage = { role, content, timestamp: Date.now(), type, ...(attachments && attachments.length > 0 ? { attachments } : {}) };
   const displayMessages = [...prev.displayMessages, msg];
   const isDefaultTitle = prev.meta.title === DEFAULT_CONVERSATION_TITLE;
   const shouldRetitle = isDefaultTitle && role === "user" && type === "message";

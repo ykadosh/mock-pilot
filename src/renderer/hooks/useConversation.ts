@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ActiveSessionState, AgentMessage, ConversationMessage, SessionMeta } from "./useConversation.types";
+import type { Attachment } from "../components/PromptBox.types";
 import { appendMessage, bootstrapSessions, computeIsLatest, persistSession } from "./useConversation.helpers";
 
 export type { AgentMessage, ConversationMessage, SessionMeta } from "./useConversation.types";
@@ -10,7 +11,7 @@ export interface ConversationApi {
   activeSessionMeta: SessionMeta | null;
   displayMessages: ConversationMessage[];
   isActiveLatest: boolean;
-  addMessage: (role: "user" | "assistant", content: string, type?: ConversationMessage["type"]) => void;
+  addMessage: (role: "user" | "assistant", content: string, opts?: { type?: ConversationMessage["type"]; attachments?: Attachment[] }) => void;
   setAgentMessages: (messages: AgentMessage[]) => void;
   getAgentMessages: () => AgentMessage[];
   newConversation: () => Promise<SessionMeta | null>;
@@ -27,10 +28,10 @@ interface ActionHookArgs {
 }
 
 function useConversationActions({ projectId, setSessions, setActive, activeRef, adoptSession }: ActionHookArgs) {
-  const addMessage = useCallback((role: "user" | "assistant", content: string, type?: ConversationMessage["type"]) => {
+  const addMessage = useCallback((role: "user" | "assistant", content: string, opts?: { type?: ConversationMessage["type"]; attachments?: Attachment[] }) => {
     setActive((prev) => {
       if (!prev) return prev;
-      const { next, titleChanged } = appendMessage({ prev, role, content, type });
+      const { next, titleChanged } = appendMessage({ prev, role, content, type: opts?.type, attachments: opts?.attachments });
       persistSession({ projectId, setSessions }, next.meta.id, { displayMessages: next.displayMessages, title: titleChanged ? next.meta.title : undefined });
       return next;
     });

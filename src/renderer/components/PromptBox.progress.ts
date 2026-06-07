@@ -35,7 +35,7 @@ interface ProgressState {
   setAgentProgress: React.Dispatch<React.SetStateAction<ProgressSnapshot>>;
   setAgentProcessing: (v: boolean) => void;
   lastIterationRef: React.RefObject<number>;
-  onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void;
+  onConversationMessage?: (role: "user" | "assistant", content: string, opts?: { type?: "message" | "thinking" | "tool" | "done" }) => void;
 }
 
 type ProgressEvent = { type: string; toolName?: string; iteration?: number; maxIterations?: number; content?: string; phase?: string; planTotal?: number; verifiedCount?: number };
@@ -44,7 +44,7 @@ function handleToolStart(progress: ProgressEvent, state: ProgressState) {
   if (progress.toolName === "finish") return;
   state.setAgentProgress((prev) => ({ ...prev, toolName: progress.toolName }));
   state.setAgentProcessing(true);
-  state.onConversationMessage?.("assistant", getToolLabel(progress.toolName), "tool");
+  state.onConversationMessage?.("assistant", getToolLabel(progress.toolName), { type: "tool" });
 }
 
 function handleIteration(progress: ProgressEvent, state: ProgressState) {
@@ -69,7 +69,7 @@ function handleDone(state: ProgressState) {
 function handleProgressEvent(progress: ProgressEvent, state: ProgressState) {
   switch (progress.type) {
     case "thinking":
-      if (progress.content) state.onConversationMessage?.("assistant", progress.content, "thinking");
+      if (progress.content) state.onConversationMessage?.("assistant", progress.content, { type: "thinking" });
       return;
     case "tool_start": return handleToolStart(progress, state);
     case "tool_end": return state.setAgentProcessing(true);
@@ -84,7 +84,7 @@ function handleProgressEvent(progress: ProgressEvent, state: ProgressState) {
   }
 }
 
-export function useAgentProgressListener(onConversationMessage?: (role: "user" | "assistant", content: string, type?: "message" | "thinking" | "tool" | "done") => void) {
+export function useAgentProgressListener(onConversationMessage?: (role: "user" | "assistant", content: string, opts?: { type?: "message" | "thinking" | "tool" | "done" }) => void) {
   const [agentProgress, setAgentProgress] = useState<ProgressSnapshot>(null);
   const [agentProcessing, setAgentProcessing] = useState(false);
   const lastIterationRef = useRef(0);
