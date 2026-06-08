@@ -88,15 +88,15 @@ export const CAPTURE_HTML_SCRIPT_CLEANUP = `
       }
       // Elements with visible (element) descendants are always preserved.
       if (hasChildElement) return false;
-      // Last-resort dimension check: a childless element occupying zero
-      // width or height contributes nothing visually.
-      var rect;
-      try { rect = el.getBoundingClientRect(); } catch (e) { rect = null; }
-      if (rect && (rect.width === 0 || rect.height === 0)) return true;
       // Has meaningful text content -> preserve
       if (_hasNonWhitespaceText(el)) return false;
-      // Empty element with no visual styling -> prune
-      if (!_hasVisualStyle(cs)) return true;
+      // A childless element with non-zero width OR height occupies layout
+      // space (e.g. a flex-grow spacer with zero cross-axis size under
+      // items-center) and removing it would shift siblings, so preserve it.
+      var rect;
+      try { rect = el.getBoundingClientRect(); } catch (e) { rect = null; }
+      var isZeroSized = !rect || (rect.width === 0 && rect.height === 0);
+      if (isZeroSized && !_hasVisualStyle(cs)) return true;
       return false;
     }
     var _allEls = Array.prototype.slice.call(document.querySelectorAll('body *'));
