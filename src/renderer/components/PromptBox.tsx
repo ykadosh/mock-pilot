@@ -9,6 +9,7 @@ interface PromptBoxProps {
   addElementAttachment: (element: SelectedElement) => void;
   agentProgress?: { toolName?: string; iteration?: number; maxIterations?: number } | null;
   attachments: Attachment[];
+  designActive?: boolean;
   error: string;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleApply: () => void | Promise<void>;
@@ -88,6 +89,18 @@ function PromptInput({ handleApply, handleCancel, handleFileSelect, handlePaste,
 }
 
 
+function DesignActiveChip() {
+  return (
+    <div
+      className="mb-2 inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300"
+      title="A design.md spec is active for this project — every AI edit is grounded in it."
+    >
+      <span className="material-symbols-outlined" style={{ fontSize: 12 }}>design_services</span>
+      Design spec active
+    </div>
+  );
+}
+
 function PromptBoxInner(props: PromptBoxProps) {
   const isPinned = props.selectedElement && props.attachments.some((a) => a.type === "element" && a.element.mpId === props.selectedElement!.mpId);
   const suggestedElement = props.selectedElement && !isPinned ? props.selectedElement : null;
@@ -107,6 +120,7 @@ function PromptBoxInner(props: PromptBoxProps) {
         {props.isDraggingOver && !props.loading && <DragOverlay />}
         <div className={`rounded-xl p-3 ${props.loading ? "prompt-box-inner backdrop-blur-lg" : ""}`}>
           <AttachmentChips attachments={props.attachments} onRemove={props.removeAttachment} onSelectElement={props.onSelectElementAttachment} suggestedElement={suggestedElement} onPinSuggestion={handlePinSuggestion} />
+          {props.designActive && <DesignActiveChip />}
           {props.error && <p className="text-error mb-2 px-3 text-[10px]">{props.error}</p>}
           <AgentProgressIndicator progress={props.agentProgress} />
           <PromptInput

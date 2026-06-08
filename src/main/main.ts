@@ -23,6 +23,7 @@ import { registerAuthHandlers } from "./ipc/auth";
 import { registerCaptureHandlers } from "./ipc/capture";
 import { registerExportHandlers } from "./ipc/export";
 import { registerConversationHandlers } from "./ipc/conversation";
+import { registerDesignHandlers } from "./ipc/design";
 import { registerGraphicsHandlers } from "./ipc/graphics";
 import { registerProjectHandlers } from "./ipc/projects";
 import { registerSettingsHandlers } from "./ipc/settings";
@@ -93,6 +94,7 @@ app.on("ready", () => {
   registerSettingsHandlers();
   registerExportHandlers();
   registerGraphicsHandlers();
+  registerDesignHandlers();
 
   createWindow();
 });

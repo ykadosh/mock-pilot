@@ -7,6 +7,7 @@ import { PromptBox } from "../../components/PromptBox";
 import { usePromptBox } from "../../components/PromptBox.hooks";
 import { PropertiesPanel } from "../../components/PropertiesPanel";
 import { usePromptAttachments } from "../../hooks/usePromptAttachments";
+import { useProjectDesignStatus } from "../../hooks/useProjectDesignStatus";
 import { buildSelectedSelector } from "./Editor.utils";
 import { ExitBlockerDialog } from "./ExitBlockerDialog";
 import type { EditorState } from "./Editor.hooks";
@@ -84,10 +85,11 @@ function WorkspaceSidePanel(state: EditorState & { agentProcessing?: boolean; aw
   return null;
 }
 
-function WorkspacePromptBox({ state, promptBox, readOnly }: { state: EditorState; promptBox: ReturnType<typeof usePromptBox>; readOnly: boolean }) {
+function WorkspacePromptBox({ state, promptBox, readOnly, designActive }: { state: EditorState; promptBox: ReturnType<typeof usePromptBox>; readOnly: boolean; designActive: boolean }) {
   return (
     <PromptBox
       {...promptBox}
+      designActive={designActive}
       selectedElement={state.selectedElement}
       readOnly={readOnly}
       onStartNewConversation={() => { void state.conversation.newConversation(); state.openChat(); }}
@@ -102,6 +104,7 @@ function WorkspacePromptBox({ state, promptBox, readOnly }: { state: EditorState
 export function EditorWorkspace({ state }: { state: EditorState }) {
   const readOnlyConversation = !state.conversation.isActiveLatest;
   const { attachments, setAttachments } = usePromptAttachments(state.projectId);
+  const designActive = useProjectDesignStatus(state.projectId);
   const promptBox = usePromptBox({
     attachments,
     setAttachments,
@@ -132,7 +135,7 @@ export function EditorWorkspace({ state }: { state: EditorState }) {
     <>
       <WorkspaceContent {...state} />
       <WorkspaceSidePanel {...state} agentProcessing={agentBusy} awaitingContinue={promptBox.awaitingContinue} currentTool={promptBox.agentProgress?.toolName} onContinue={promptBox.handleContinue} />
-      {!state.codeEditorOpen && <WorkspacePromptBox state={state} promptBox={promptBox} readOnly={readOnlyConversation} />}
+      {!state.codeEditorOpen && <WorkspacePromptBox state={state} promptBox={promptBox} readOnly={readOnlyConversation} designActive={designActive} />}
       <ExitBlockerDialog open={blocker.state === "blocked"} onClose={() => blocker.reset?.()} onConfirm={handleConfirmExit} />
     </>
   );

@@ -73,4 +73,9 @@ contextBridge.exposeInMainWorld("api", {
   loadProjectAssets: (id: string) => ipcRenderer.invoke("load-project-assets", id),
   extractIconFontGlyphs: (id: string) => ipcRenderer.invoke("extract-icon-font-glyphs", id),
   listProjectGraphics: (id: string) => ipcRenderer.invoke("list-project-graphics", id),
+  // Project design (design.md)
+  getProjectDesign: (id: string) => ipcRenderer.invoke("get-project-design", id),
+  saveProjectDesign: (id: string, content: string) => ipcRenderer.invoke("save-project-design", id, content),
+  deleteProjectDesign: (id: string) => ipcRenderer.invoke("delete-project-design", id),
+  generateProjectDesign: (id: string) => ipcRenderer.invoke("generate-project-design", id),
 });

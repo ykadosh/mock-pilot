@@ -6,6 +6,7 @@ const sidebarItems: { key: AssetSection; label: string; icon: string }[] = [
   { key: "icons", label: "Icons", icon: "category" },
   { key: "graphics", label: "Graphics", icon: "image" },
   { key: "palette", label: "Palette", icon: "palette" },
+  { key: "design", label: "Design", icon: "design_services" },
 ];
 
 interface AssetsSidebarProps {

@@ -6,7 +6,7 @@ import { AGENT_SYSTEM_PROMPT } from "./agent-system-prompt";
 import { getToolSchemas, getToolExecutor } from "./tools";
 import { requestAgentChatCompletion } from "./agent-chat";
 import { MUTATION_TOOLS, READ_ONLY_TOOLS, PHASES, describePhaseForError, isToolAllowedInPhase } from "./agent-phases";
-import { getProjectDir } from "../../projects";
+import { getProjectDir, readProjectDesign } from "../../projects";
 
 function log(...args: unknown[]) {
   // eslint-disable-next-line no-console
@@ -328,6 +328,13 @@ async function runIteration(iter: IterationContext, iteration: number, maxIterat
   return null;
 }
 
+function buildSystemPrompt(projectId?: string): string {
+  if (!projectId) return AGENT_SYSTEM_PROMPT;
+  const design = readProjectDesign(projectId);
+  if (!design) return AGENT_SYSTEM_PROMPT;
+  return `${AGENT_SYSTEM_PROMPT}\n\n## Project Design System (design.md)\n\nThe following \`design.md\` describes this project's design language. Stay faithful to it when making visual or stylistic changes — colors, typography, spacing, component patterns, tone. Do not introduce off-brand styling. If the user's request conflicts with the spec, follow the user's explicit request but otherwise default to the spec.\n\n---\n${design}\n---\n`;
+}
+
 function initialMessages(options: AgentLoopOptions, isContinuation: boolean): AgentMessage[] {
   if (isContinuation) {
     const mode = options.continueMode ?? "new-prompt";
@@ -345,7 +352,7 @@ function initialMessages(options: AgentLoopOptions, isContinuation: boolean): Ag
   }
   const userContent = buildUserContent(options.prompt, { attachedElements: options.attachedElements, images: options.images, attachedAssets: options.attachedAssets });
   return [
-    { role: "system", content: AGENT_SYSTEM_PROMPT },
+    { role: "system", content: buildSystemPrompt(options.projectId) },
     { role: "user", content: userContent },
   ];
 }
