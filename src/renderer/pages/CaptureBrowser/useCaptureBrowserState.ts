@@ -20,6 +20,7 @@ export function useCaptureBrowserState() {
   const [webviewPreloadPath, setWebviewPreloadPath] = useState("");
   const [captureSteps, setCaptureSteps] = useState<CaptureStep[]>([]);
   const [capturePercent, setCapturePercent] = useState(0);
+  const [previewBusy, setPreviewBusy] = useState<{ active: boolean; message: string }>({ active: false, message: "" });
   const cropPrompt = useCropPrompt();
   useWebviewPreloadPath(setWebviewPreloadPath);
   useNavigationSync({ webviewRef, hasNavigated, setAddressBarValue, setCanGoBack, setCanGoForward, setCurrentUrl, setIsLoading, setIsSecure });
@@ -33,7 +34,7 @@ export function useCaptureBrowserState() {
     event.preventDefault();
   }, []);
   const toolbarProps: Omit<CaptureBrowserToolbarProps, "onCapture"> = { addressBarValue, canGoBack, canGoForward, hasNavigated, isCapturing, isLoading, isSecure, onAddressBarChange: setAddressBarValue, onAddressBarKeyDown: handleAddressBarKeyDown, onBack: () => webviewRef.current?.goBack(), onForward: () => webviewRef.current?.goForward(), onMouseDown: preventFocusSteal, onRefresh: handleRefresh };
-  return { abortCaptureRef, captureState: { capturePercent, captureSteps, isCapturing }, cropPrompt, navigationState: { canGoBack, canGoForward, currentUrl, hasNavigated, isLoading, isSecure, pendingUrl, webviewPreloadPath }, preventFocusSteal, setCapturePercent, setCaptureSteps, setIsCapturing, toolbarProps, webviewRef };
+  return { abortCaptureRef, captureState: { capturePercent, captureSteps, isCapturing }, cropPrompt, navigationState: { canGoBack, canGoForward, currentUrl, hasNavigated, isLoading, isSecure, pendingUrl, webviewPreloadPath }, preventFocusSteal, previewBusy, setCapturePercent, setCaptureSteps, setIsCapturing, setPreviewBusy, toolbarProps, webviewRef };
 }
 
 function useWebviewPreloadPath(setWebviewPreloadPath: Dispatch<SetStateAction<string>>) {

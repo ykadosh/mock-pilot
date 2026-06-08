@@ -26,6 +26,7 @@ interface CaptureArgs {
   setCapturePercent: Dispatch<SetStateAction<number>>;
   setCaptureSteps: Dispatch<SetStateAction<CaptureStep[]>>;
   setIsCapturing: Dispatch<SetStateAction<boolean>>;
+  setPreviewBusy: Dispatch<SetStateAction<{ active: boolean; message: string }>>;
   webviewRef: RefObject<Electron.WebviewTag | null>;
 }
 
@@ -51,11 +52,11 @@ async function runCapture(args: CaptureArgs) {
   webview.focus();
   let extensionSnapshot: WebviewSizeSnapshot | null = null;
   try {
+    args.setPreviewBusy({ active: true, message: "Generating crop preview…" });
     const preview = await capturePreviewForCrop(webview, log);
     const cropRegion = await args.promptForCrop(preview);
     if (!cropRegion) { await log("Capture cancelled at crop step"); return; }
-    initializeCaptureProgress(progress);
-    args.setIsCapturing(true);
+    initializeCaptureProgress(progress); args.setIsCapturing(true);
     extensionSnapshot = await applyCropExtension({ webview, preview, cropRegion, log });
     const result = await performCaptureSequence({ args, webview, log, progress, cropRegion, preview });
     await persistCaptureResult({ args, result, log, progress });
@@ -64,7 +65,7 @@ async function runCapture(args: CaptureArgs) {
   } finally {
     if (extensionSnapshot) restoreWebviewHeight(webview, extensionSnapshot);
     detachConsole();
-    args.setIsCapturing(false);
+    args.setIsCapturing(false); args.setPreviewBusy({ active: false, message: "" });
   }
 }
 

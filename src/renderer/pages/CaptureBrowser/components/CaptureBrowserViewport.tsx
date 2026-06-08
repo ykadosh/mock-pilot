@@ -6,6 +6,7 @@ interface ViewportProps {
   isLoading: boolean;
   pendingUrl: string;
   preventFocusSteal: (event: ReactMouseEvent) => void;
+  previewBusy: { active: boolean; message: string };
   webviewPreloadPath: string;
   webviewRef: RefObject<Electron.WebviewTag | null>;
 }
@@ -21,9 +22,20 @@ export function CaptureBrowserViewport(props: ViewportProps) {
 function WebviewPane(props: ViewportProps) {
   return (
     <>
-      <div className="relative flex-1"><webview ref={props.webviewRef as LegacyRef<Electron.WebviewTag>} src={props.pendingUrl} preload={`file://${props.webviewPreloadPath}`} className="h-full w-full" allowpopups={"true" as unknown as boolean} />{props.isLoading && <div className="bg-primary/20 absolute top-0 right-0 left-0 h-0.5"><div className="bg-primary h-full w-1/2 animate-pulse" /></div>}</div>
+      <div className="relative flex-1"><webview ref={props.webviewRef as LegacyRef<Electron.WebviewTag>} src={props.pendingUrl} preload={`file://${props.webviewPreloadPath}`} className="h-full w-full" allowpopups={"true" as unknown as boolean} />{props.isLoading && <div className="bg-primary/20 absolute top-0 right-0 left-0 h-0.5"><div className="bg-primary h-full w-1/2 animate-pulse" /></div>}{props.previewBusy.active && <PreviewBusyOverlay message={props.previewBusy.message} />}</div>
       <StatusFooter hasNavigated={props.hasNavigated} isCapturing={props.isCapturing} isLoading={props.isLoading} />
     </>
+  );
+}
+
+function PreviewBusyOverlay({ message }: { message: string }) {
+  return (
+    <div className="bg-surface/85 absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[6px]">
+      <div className="flex flex-col items-center gap-3">
+        <span className="material-symbols-outlined text-primary animate-spin" style={{ fontSize: 36 }}>progress_activity</span>
+        <span className="font-label-caps text-on-surface-variant text-[12px]">{message}</span>
+      </div>
+    </div>
   );
 }
 
