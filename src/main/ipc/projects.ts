@@ -10,6 +10,7 @@ import { ensureProjectDir, getProjectDir, getProjectsIndex, saveProjectsIndex, d
 import { extractFontFaceCss } from "./FontFaceUtils";
 import { extractProjectIconFontGlyphs } from "./FontGlyphUtils";
 import { handleRegenerateProjectThumbnail } from "./thumbnail";
+import { findProjectThumbnail, writeProjectThumbnail } from "./thumbnail-storage";
 
 type SaveProjectData = { url: string; title: string; html: string; thumbnail?: string };
 type ProjectAssets = { typography: unknown[]; colors: unknown[]; fontFaceCss?: string; icons?: { libraries: string[] }; components?: unknown[]; componentsCss?: string };
@@ -32,7 +33,7 @@ async function handleSaveProject(_event: Electron.IpcMainInvokeEvent, data: Save
   ensureProjectDir(id);
   const processedHtml = await downloadExternalAssets(id, extractAndSaveAssets(id, data.html));
   fs.writeFileSync(projectFilePath(id, "project.html"), processedHtml, "utf-8");
-  if (data.thumbnail) fs.writeFileSync(projectFilePath(id, "thumbnail.png"), data.thumbnail.replace(/^data:image\/png;base64,/, ""), "base64");
+  if (data.thumbnail) writeProjectThumbnail(id, data.thumbnail);
   const projects = getProjectsIndex();
   projects.unshift(meta);
   saveProjectsIndex(projects);
@@ -121,8 +122,16 @@ function handleDeleteProject(_event: Electron.IpcMainInvokeEvent, id: string) {
 }
 
 function handleGetProjectThumbnail(_event: Electron.IpcMainInvokeEvent, id: string) {
-  const p = projectFilePath(id, "thumbnail.png");
-  return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p, "base64")}` : null;
+  // Serve the thumbnail via the mp-asset:// protocol instead of inlining it as
+  // a base64 data URL. This avoids the ~33% base64 bloat, lets Chromium cache
+  // and decode the image off the main thread, and dramatically speeds up
+  // rendering the Projects page when many cards are visible at once. We add a
+  // cache-busting query so a regenerated thumbnail is picked up immediately
+  // without an app restart.
+  const found = findProjectThumbnail(id);
+  if (!found) return null;
+  const version = fs.statSync(found.path).mtimeMs;
+  return `mp-asset://assets/${id}/thumbnail.${found.extension}?v=${version}`;
 }
 
 function handleExtractIconFontGlyphs(_event: Electron.IpcMainInvokeEvent, id: string) {
