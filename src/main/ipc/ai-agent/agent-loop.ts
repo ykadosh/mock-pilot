@@ -539,37 +539,75 @@ interface BuildUserContentOptions {
   attachedAssets?: AttachedAssetsPayload;
 }
 
+function appendAttachedElements(text: string, attachedElements: NonNullable<BuildUserContentOptions["attachedElements"]>): string {
+  text += "\n\nThe user has highlighted these specific elements for modification:";
+  for (const el of attachedElements) {
+    text += `\n\n--- Element (data-mp-id="${el.mpId}", selector: ${el.selector}) ---`;
+    const visibleLines = extractVisibleText(el.outerHTML);
+    if (visibleLines.length > 0) {
+      text += `\nVisible text inside this element (selector → text):\n${visibleLines.join("\n")}`;
+      text += `\nIf the user request mentions "text", "letters", "label", "title", "name", or similar, the target is almost certainly one of the items above — use editText on its selector.`;
+    }
+    text += `\nFull outerHTML:\n${el.outerHTML}`;
+  }
+  return text;
+}
+
+function appendImages(text: string, images: NonNullable<BuildUserContentOptions["images"]>): string {
+  text += "\n\nAttached images (metadata only — pixels are NOT yet loaded into context):";
+  for (const img of images) {
+    text += `\n  - id="${img.id}" name="${img.name}" type=${img.mimeType} size=${formatBytes(img.sizeBytes)}`;
+  }
+  text += "\nDecide from the request what to do with each image:";
+  text += "\n  • To put the image INTO the page, call `saveAttachmentToAssets({id})` — it writes the file under the project's assets/ folder and returns a relative path like \"assets/abc.png\". Reference that path in your edit tools (e.g., addElement with `<img src=\"assets/abc.png\">`, or editCss with `background-image: url(\"assets/abc.png\")`). Do NOT embed base64/data URLs in HTML.";
+  text += "\n  • To LOOK AT the image (because the request requires understanding its contents — design-from-image, \"make it look like this\", colour/layout inference, etc.), call `viewImage({id})`. It injects the pixels into the conversation from that iteration onward. Don't call this if the user just wants the image placed on the page.";
+  return text;
+}
+
+function logUserContentSizes(opts: BuildUserContentOptions, sections: Record<string, number>): void {
+  const breakdown: Record<string, number | string> = { ...sections };
+  if (opts.attachedElements && opts.attachedElements.length > 0) {
+    breakdown["  attachedElements[count]"] = opts.attachedElements.length;
+    breakdown["  attachedElements[outerHTML total]"] = opts.attachedElements.reduce((s, e) => s + e.outerHTML.length, 0);
+  }
+  if (opts.attachedAssets) {
+    breakdown["  attachedAssets[components count]"] = opts.attachedAssets.components.length;
+    breakdown["  attachedAssets[components html total]"] = opts.attachedAssets.components.reduce((s, c) => s + (c.html?.length ?? 0), 0);
+    breakdown["  attachedAssets[typography]"] = opts.attachedAssets.typography.length;
+    breakdown["  attachedAssets[icons]"] = opts.attachedAssets.icons.length;
+    breakdown["  attachedAssets[graphics]"] = opts.attachedAssets.graphics.length;
+    breakdown["  attachedAssets[colors]"] = opts.attachedAssets.colors.length;
+  }
+  log("buildUserContent size breakdown:", breakdown);
+}
+
 function buildUserContent(prompt: string, opts: BuildUserContentOptions = {}): string {
-  const { attachedElements, images, attachedAssets } = opts;
+  const sections: Record<string, number> = {};
   let text = `User request: ${prompt}`;
+  sections.prompt = text.length;
 
-  if (attachedElements && attachedElements.length > 0) {
-    text += "\n\nThe user has highlighted these specific elements for modification:";
-    for (const el of attachedElements) {
-      text += `\n\n--- Element (data-mp-id="${el.mpId}", selector: ${el.selector}) ---`;
-      const visibleLines = extractVisibleText(el.outerHTML);
-      if (visibleLines.length > 0) {
-        text += `\nVisible text inside this element (selector → text):\n${visibleLines.join("\n")}`;
-        text += `\nIf the user request mentions "text", "letters", "label", "title", "name", or similar, the target is almost certainly one of the items above — use editText on its selector.`;
-      }
-      text += `\nFull outerHTML:\n${el.outerHTML}`;
-    }
+  if (opts.attachedElements && opts.attachedElements.length > 0) {
+    const before = text.length;
+    text = appendAttachedElements(text, opts.attachedElements);
+    sections.attachedElements = text.length - before;
+  }
+  if (opts.images && opts.images.length > 0) {
+    const before = text.length;
+    text = appendImages(text, opts.images);
+    sections.images = text.length - before;
+  }
+  if (opts.attachedAssets) {
+    const before = text.length;
+    text += buildAttachedAssetsText(opts.attachedAssets);
+    sections.attachedAssets = text.length - before;
   }
 
-  if (images && images.length > 0) {
-    text += "\n\nAttached images (metadata only — pixels are NOT yet loaded into context):";
-    for (const img of images) {
-      text += `\n  - id="${img.id}" name="${img.name}" type=${img.mimeType} size=${formatBytes(img.sizeBytes)}`;
-    }
-    text += "\nDecide from the request what to do with each image:";
-    text += "\n  • To put the image INTO the page, call `saveAttachmentToAssets({id})` — it writes the file under the project's assets/ folder and returns a relative path like \"assets/abc.png\". Reference that path in your edit tools (e.g., addElement with `<img src=\"assets/abc.png\">`, or editCss with `background-image: url(\"assets/abc.png\")`). Do NOT embed base64/data URLs in HTML.";
-    text += "\n  • To LOOK AT the image (because the request requires understanding its contents — design-from-image, \"make it look like this\", colour/layout inference, etc.), call `viewImage({id})`. It injects the pixels into the conversation from that iteration onward. Don't call this if the user just wants the image placed on the page.";
-  }
-
-  if (attachedAssets) text += buildAttachedAssetsText(attachedAssets);
-
+  const beforeTail = text.length;
   text += "\n\nBegin in PLAN: inspect what you need with read-only tools (batch in parallel), then call `planChanges` with a JSON array decomposing the request into concrete changes. For a single trivial edit where the target and value are already known, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot mode — completes in one iteration, skips VERIFY).";
+  sections.tail = text.length - beforeTail;
+  sections.TOTAL = text.length;
 
+  logUserContentSizes(opts, sections);
   return text;
 }
 

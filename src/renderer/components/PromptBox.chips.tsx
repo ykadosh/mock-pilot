@@ -1,5 +1,5 @@
 import type { SelectedElement } from "../pages/Editor";
-import type { Attachment, ColorAttachment, ComponentAttachment, ElementAttachment, GraphicAttachment, IconAttachment, TypographyAttachment } from "./PromptBox.types";
+import type { Attachment, ColorAttachment, ComponentAttachment, ElementAttachment, GraphicAttachment, IconAttachment, ImageAttachment, TypographyAttachment } from "./PromptBox.types";
 import { getAttachmentLabel } from "./PromptBox.hooks";
 import { buildElementSelector } from "./PropertiesPanel.utils";
 
@@ -10,17 +10,31 @@ const FONT_FAMILY_MAP: Record<string, string> = {
   "Remix Icons": "'remixicon'",
 };
 
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0B";
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+}
+
+function byteLengthUtf8(str: string): number { return typeof TextEncoder !== "undefined" ? new TextEncoder().encode(str).length : str.length; }
+
+function approxBytesFromDataUrl(dataUrl: string): number {
+  const commaIdx = dataUrl.indexOf(",");
+  if (commaIdx < 0) return 0;
+  const b64 = dataUrl.slice(commaIdx + 1);
+  const padding = (b64.match(/=+$/)?.[0].length) ?? 0;
+  return Math.max(0, Math.floor((b64.length * 3) / 4) - padding);
+}
+
+function SizeBadge({ bytes }: { bytes: number }) {
+  return <span className="ml-1 text-[10px] tabular-nums opacity-60">{formatBytes(bytes)}</span>;
+}
+
 function ChipShell({ children, onRemove, className, onClick, title }: { children: React.ReactNode; onRemove?: () => void; className: string; onClick?: () => void; title?: string }) {
-  const handleRemove = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    onRemove?.();
-  };
+  const handleRemove = (event: React.MouseEvent) => { event.stopPropagation(); onRemove?.(); };
   return (
-    <div
-      className={`flex items-center gap-2 rounded-lg border px-2 py-1 text-xs ${onClick ? "cursor-pointer" : ""} ${className}`}
-      onClick={onClick}
-      title={title}
-    >
+    <div className={`flex items-center gap-2 rounded-lg border px-2 py-1 text-xs ${onClick ? "cursor-pointer" : ""} ${className}`} onClick={onClick} title={title}>
       {children}
       {onRemove && (
         <button className="ml-1 inline-flex items-center hover:text-red-400" onClick={handleRemove}>
@@ -31,11 +45,12 @@ function ChipShell({ children, onRemove, className, onClick, title }: { children
   );
 }
 
-function ImageChip({ attachment, onRemove }: { attachment: Attachment & { type: "image" }; onRemove?: () => void }) {
+function ImageChip({ attachment, onRemove }: { attachment: ImageAttachment; onRemove?: () => void }) {
   return (
     <ChipShell className="border-slate-700/50 bg-slate-800/80 py-1 pr-2 pl-1 text-slate-300" onRemove={onRemove}>
       <img alt="Thumb" className="h-6 w-6 rounded object-cover" src={attachment.dataUrl} />
       <span className="max-w-24 truncate font-medium">{attachment.name}</span>
+      <SizeBadge bytes={approxBytesFromDataUrl(attachment.dataUrl)} />
     </ChipShell>
   );
 }
@@ -51,6 +66,7 @@ function ElementChip({ attachment, onRemove, onSelect }: { attachment: ElementAt
     >
       <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>extension</span>
       <span className="max-w-32 truncate font-mono text-[10px]">{getAttachmentLabel(attachment)}</span>
+      <SizeBadge bytes={byteLengthUtf8(attachment.element.outerHTML)} />
     </ChipShell>
   );
 }
@@ -60,6 +76,7 @@ function ComponentChip({ attachment, onRemove }: { attachment: ComponentAttachme
     <ChipShell className="border-amber-500/30 bg-amber-900/30 text-amber-200" onRemove={onRemove} title={attachment.description}>
       <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>widgets</span>
       <span className="max-w-32 truncate font-medium">{attachment.label}</span>
+      <SizeBadge bytes={byteLengthUtf8(attachment.html ?? "")} />
     </ChipShell>
   );
 }
@@ -92,6 +109,7 @@ function GraphicChip({ attachment, onRemove }: { attachment: GraphicAttachment; 
     <ChipShell className="border-slate-700/50 bg-slate-800/80 py-1 pr-2 pl-1 text-slate-300" onRemove={onRemove} title={attachment.filename}>
       <img alt={attachment.filename} className="h-6 w-6 rounded object-contain" src={src} />
       <span className="max-w-24 truncate font-medium">{attachment.filename}</span>
+      <SizeBadge bytes={attachment.sizeBytes} />
     </ChipShell>
   );
 }
@@ -110,6 +128,7 @@ function SuggestedElementChip({ element, onPin }: { element: SelectedElement; on
     <div className="flex items-center gap-2 rounded-lg border border-dashed border-violet-500/30 bg-violet-900/20 px-2 py-1 text-xs text-violet-300/70">
       <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>extension</span>
       <span className="max-w-32 truncate font-mono text-[10px]">{buildElementSelector(element)}</span>
+      <SizeBadge bytes={byteLengthUtf8(element.outerHTML)} />
       <button className="ml-1 inline-flex items-center transition-colors hover:text-violet-100" onClick={onPin} title="Add to prompt"><span className="material-symbols-outlined" style={{ fontSize: "18px" }}>add</span></button>
     </div>
   );

@@ -36,6 +36,9 @@ export async function requestAgentChatCompletion(options: AgentChatOptions): Pro
     parallel_tool_calls: true,
   };
 
+  const bodyJson = JSON.stringify(body);
+  logRequestSummary({ aiModel, messages: body.messages, tools, bodyBytes: bodyJson.length });
+
   const response = await fetch("https://api.githubcopilot.com/chat/completions", {
     method: "POST",
     headers: {
@@ -43,12 +46,13 @@ export async function requestAgentChatCompletion(options: AgentChatOptions): Pro
       "Content-Type": "application/json",
       "Copilot-Integration-Id": "copilot-4-cli",
     },
-    body: JSON.stringify(body),
+    body: bodyJson,
     signal,
   });
 
   if (!response.ok) {
     const text = await response.text();
+    logRequestFailure({ status: response.status, body: text, requestBody: bodyJson, messages: body.messages, tools });
     throw new Error(`API error (${response.status}): ${text.slice(0, 500)}`);
   }
 
@@ -69,6 +73,62 @@ function formatMessage(msg: AgentMessage): object {
     return { role: "assistant", content: msg.content || null, tool_calls: msg.tool_calls };
   }
   return { role: msg.role, content: msg.content };
+}
+
+function log(...args: unknown[]) {
+  // eslint-disable-next-line no-console
+  console.log("[AI Agent Chat]", ...args);
+}
+
+function describeContent(content: unknown): string {
+  if (typeof content === "string") return `text(${content.length} chars)`;
+  if (content === null || content === undefined) return "null";
+  if (Array.isArray(content)) {
+    const parts = content.map((p) => {
+      if (!p || typeof p !== "object") return typeof p;
+      const part = p as { type?: string; text?: string; image_url?: { url?: string } };
+      if (part.type === "text") return `text(${(part.text ?? "").length} chars)`;
+      if (part.type === "image_url") {
+        const url = part.image_url?.url ?? "";
+        const isDataUrl = url.startsWith("data:");
+        return `image_url(${isDataUrl ? `dataUrl ${url.length} chars` : url.slice(0, 60)})`;
+      }
+      return part.type ?? "unknown";
+    });
+    return `parts[${parts.join(", ")}]`;
+  }
+  return typeof content;
+}
+
+interface RequestSummaryArgs {
+  aiModel: string;
+  messages: object[];
+  tools: ToolSchema[];
+  bodyBytes: number;
+}
+
+function logRequestSummary({ aiModel, messages, tools, bodyBytes }: RequestSummaryArgs): void {
+  log(`→ POST /chat/completions  model=${aiModel}  bodyBytes=${bodyBytes}  messages=${messages.length}  tools=${tools.length}`);
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i] as { role?: string; content?: unknown; tool_calls?: unknown[]; tool_call_id?: string };
+    const extras: string[] = [];
+    if (m.tool_calls) extras.push(`tool_calls=${m.tool_calls.length}`);
+    if (m.tool_call_id) extras.push(`tool_call_id=${m.tool_call_id}`);
+    log(`   [${i}] role=${m.role} content=${describeContent(m.content)}${extras.length ? "  " + extras.join("  ") : ""}`);
+  }
+}
+
+interface RequestFailureArgs {
+  status: number;
+  body: string;
+  requestBody: string;
+  messages: object[];
+  tools: ToolSchema[];
+}
+
+function logRequestFailure({ status, body, requestBody, messages, tools }: RequestFailureArgs): void {
+  log(`← FAIL  status=${status}  responseBodyBytes=${body.length}  requestBodyBytes=${requestBody.length}  messages=${messages.length}  tools=${tools.length}`);
+  log(`   Response body: ${body.slice(0, 2000)}`);
 }
 
 export async function getAgentCredentials(): Promise<{ aiModel: string; apiToken: string }> {
