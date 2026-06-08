@@ -73,4 +73,16 @@ contextBridge.exposeInMainWorld("api", {
   loadProjectAssets: (id: string) => ipcRenderer.invoke("load-project-assets", id),
   extractIconFontGlyphs: (id: string) => ipcRenderer.invoke("extract-icon-font-glyphs", id),
   listProjectGraphics: (id: string) => ipcRenderer.invoke("list-project-graphics", id),
+  // Project design (design.md)
+  getProjectDesign: (id: string) => ipcRenderer.invoke("get-project-design", id),
+  saveProjectDesign: (id: string, content: string) => ipcRenderer.invoke("save-project-design", id, content),
+  deleteProjectDesign: (id: string) => ipcRenderer.invoke("delete-project-design", id),
+  setProjectDesignEnabled: (id: string, enabled: boolean) => ipcRenderer.invoke("set-project-design-enabled", id, enabled),
+  generateProjectDesign: (id: string) => ipcRenderer.invoke("generate-project-design", id),
+  cancelDesignGeneration: () => ipcRenderer.invoke("cancel-design-generation"),
+  onDesignGenerationProgress: (callback: (progress: { projectId: string; stage: "preparing" | "prompting" | "streaming" | "saving" | "complete" | "error"; message?: string; content?: string; error?: string }) => void) => {
+    const handler = (_event: unknown, progress: Parameters<typeof callback>[0]) => callback(progress);
+    ipcRenderer.on("design-generation-progress", handler);
+    return () => { ipcRenderer.removeListener("design-generation-progress", handler); };
+  },
 });

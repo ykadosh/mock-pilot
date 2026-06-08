@@ -229,6 +229,20 @@ declare global {
       loadProjectAssets: (id: string) => Promise<{ success: boolean; assets?: ProjectAssets }>;
       extractIconFontGlyphs: (id: string) => Promise<{ success: boolean; fonts?: { family: string; glyphs: { codepoint: string; name: string }[] }[]; error?: string }>;
       listProjectGraphics: (id: string) => Promise<{ success: boolean; graphics?: GraphicAsset[] }>;
+      // Project design
+      getProjectDesign: (id: string) => Promise<{ success: boolean; content?: string; enabled?: boolean; error?: string }>;
+      saveProjectDesign: (id: string, content: string) => Promise<{ success: boolean; error?: string }>;
+      deleteProjectDesign: (id: string) => Promise<{ success: boolean; error?: string }>;
+      setProjectDesignEnabled: (id: string, enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+      generateProjectDesign: (id: string) => Promise<{ success: boolean; content?: string; error?: string }>;
+      cancelDesignGeneration: () => Promise<{ success: boolean }>;
+      onDesignGenerationProgress: (callback: (progress: {
+        projectId: string;
+        stage: "preparing" | "prompting" | "streaming" | "saving" | "complete" | "error";
+        message?: string;
+        content?: string;
+        error?: string;
+      }) => void) => () => void;
     };
   }
 }

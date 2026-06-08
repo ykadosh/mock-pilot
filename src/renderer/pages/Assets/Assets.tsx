@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { TopNav } from "../../components/layout/TopNav";
 import { AssetsSidebar } from "../../components/layout/AssetsSidebar";
+import { DesignPage } from "./DesignPage";
 import { FontsPage } from "./FontsPage";
 import { ComponentsPage } from "./ComponentsPage";
 import { IconsPage } from "./IconsPage";
 import { GraphicsPage } from "./GraphicsPage";
 import { PalettePage } from "./PalettePage";
 
-export type AssetSection = "fonts" | "components" | "icons" | "graphics" | "palette";
+export type AssetSection = "fonts" | "components" | "icons" | "graphics" | "palette" | "design";
 
 export function Assets() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -28,6 +29,7 @@ export function Assets() {
           {activeSection === "icons" && <IconsPage />}
           {activeSection === "graphics" && <GraphicsPage />}
           {activeSection === "palette" && <PalettePage />}
+          {activeSection === "design" && <DesignPage />}
         </main>
       </div>
     </div>
