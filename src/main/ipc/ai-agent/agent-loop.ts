@@ -6,7 +6,8 @@ import { AGENT_SYSTEM_PROMPT } from "./agent-system-prompt";
 import { getToolSchemas, getToolExecutor } from "./tools";
 import { requestAgentChatCompletion } from "./agent-chat";
 import { MUTATION_TOOLS, READ_ONLY_TOOLS, PHASES, describePhaseForError, isToolAllowedInPhase } from "./agent-phases";
-import { getProjectDir, readProjectDesign } from "../../projects";
+import { getProjectDir } from "../../projects";
+import { readProjectDesign } from "../../project-design";
 
 function log(...args: unknown[]) {
   // eslint-disable-next-line no-console
@@ -331,7 +332,8 @@ async function runIteration(iter: IterationContext, iteration: number, maxIterat
 function buildSystemPrompt(projectId?: string): string {
   if (!projectId) return AGENT_SYSTEM_PROMPT;
   const design = readProjectDesign(projectId);
-  if (!design) return AGENT_SYSTEM_PROMPT;
+  if (!design) { log("Design spec: not active for project", projectId); return AGENT_SYSTEM_PROMPT; }
+  log("Design spec: injecting", design.length, "chars into system prompt for project", projectId);
   return `${AGENT_SYSTEM_PROMPT}\n\n## Project Design System (design.md)\n\nThe following \`design.md\` describes this project's design language. Stay faithful to it when making visual or stylistic changes — colors, typography, spacing, component patterns, tone. Do not introduce off-brand styling. If the user's request conflicts with the spec, follow the user's explicit request but otherwise default to the spec.\n\n---\n${design}\n---\n`;
 }
 

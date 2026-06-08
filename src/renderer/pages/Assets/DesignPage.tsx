@@ -29,7 +29,7 @@ function readFileAsText(file: File): Promise<string> {
 
 export function DesignPage() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { content, setContent, status, error, save, generate, dirty, hasSaved } = useDesignDoc(projectId);
+  const { content, setContent, status, stage, error, save, generate, dirty, hasSaved, enabled, setEnabled } = useDesignDoc(projectId);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +44,8 @@ export function DesignPage() {
   return (
     <div className="mx-auto flex h-full max-w-5xl flex-col">
       <DesignPageHeader
-        status={status} hasSaved={hasSaved} dirty={dirty} busy={busy}
+        status={status} stage={stage} hasSaved={hasSaved} dirty={dirty} busy={busy}
+        enabled={enabled} onToggleEnabled={(v) => void setEnabled(v)}
         onUpload={() => fileInputRef.current?.click()}
         onGenerate={() => void generate()}
         onSave={() => void save()}

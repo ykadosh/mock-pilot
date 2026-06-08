@@ -23,31 +23,6 @@ export function getProjectDir(id: string) {
   return path.join(projectsDir, id);
 }
 
-export function getProjectDesignPath(id: string) {
-  return path.join(getProjectDir(id), "design.md");
-}
-
-export function readProjectDesign(id: string): string | null {
-  const designPath = getProjectDesignPath(id);
-  if (!fs.existsSync(designPath)) return null;
-  try {
-    const content = fs.readFileSync(designPath, "utf-8");
-    return content.trim().length > 0 ? content : null;
-  } catch {
-    return null;
-  }
-}
-
-export function writeProjectDesign(id: string, content: string) {
-  ensureProjectDir(id);
-  fs.writeFileSync(getProjectDesignPath(id), content, "utf-8");
-}
-
-export function deleteProjectDesign(id: string) {
-  const designPath = getProjectDesignPath(id);
-  if (fs.existsSync(designPath)) fs.unlinkSync(designPath);
-}
-
 export function getDirSize(dirPath: string): number {
   let total = 0;
   if (!fs.existsSync(dirPath)) return 0;

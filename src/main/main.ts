@@ -94,7 +94,7 @@ app.on("ready", () => {
   registerSettingsHandlers();
   registerExportHandlers();
   registerGraphicsHandlers();
-  registerDesignHandlers();
+  registerDesignHandlers(() => mainWindow);
 
   createWindow();
 });
