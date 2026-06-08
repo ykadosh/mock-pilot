@@ -64,10 +64,15 @@ function useHistoryMessageSync(history: EditorHistory, pendingLabelRef: PendingL
 
 function useHistoryPersistence(history: EditorHistory, projectId?: string) {
   const { currentHtml, pointer } = history;
+  const lastPersistedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!projectId || !currentHtml || pointer <= 0) return;
-    window.api.updateProjectHtml(projectId, currentHtml);
+    // Skip initial load: opening a project must not bump its updatedAt.
+    if (lastPersistedRef.current === currentHtml) return;
+    const isInitial = lastPersistedRef.current === null;
+    lastPersistedRef.current = currentHtml;
+    if (!isInitial) window.api.updateProjectHtml(projectId, currentHtml);
   }, [currentHtml, pointer, projectId]);
 }
 
