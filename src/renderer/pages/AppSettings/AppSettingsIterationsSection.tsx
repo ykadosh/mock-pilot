@@ -26,7 +26,7 @@ export function AgentIterationsSection({ maxIterations, onMaxIterationsChange, s
         {ITERATION_OPTIONS.map((option) => (
           <label
             key={option.value}
-            className={`gap-md px-md py-sm hover:bg-surface-container-high flex cursor-pointer items-center transition-colors ${maxIterations === option.value ? "bg-surface-container-high" : ""}`}
+            className={`gap-md px-md py-sm hover:bg-surface-container-high relative flex cursor-pointer items-center transition-colors ${maxIterations === option.value ? "bg-surface-container-high" : ""}`}
           >
             <input
               type="radio"

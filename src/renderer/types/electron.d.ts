@@ -189,10 +189,11 @@ declare global {
       authLogout: () => Promise<{ success: boolean }>;
       authCheckGhCli: () => Promise<{ connected: boolean; login?: string }>;
       // App settings
-      getAppSettings: () => Promise<{ aiModel: string; maxIterations?: number }>;
-      saveAppSettings: (settings: { aiModel: string; maxIterations?: number }) => Promise<{ success: boolean }>;
+      getAppSettings: () => Promise<{ aiModel: string; maxIterations?: number; auditMode?: boolean }>;
+      saveAppSettings: (settings: { aiModel: string; maxIterations?: number; auditMode?: boolean }) => Promise<{ success: boolean }>;
       getStorageInfo: () => Promise<{ totalBytes: number; projectCount: number }>;
       getProjectSize: (id: string) => Promise<{ totalBytes: number }>;
+      isDevMode: () => Promise<boolean>;
       // Updates
       checkForUpdates: () => Promise<{
         updateAvailable: boolean;

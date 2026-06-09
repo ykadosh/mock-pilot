@@ -1,11 +1,12 @@
 import { TopNav } from "../../components/layout/TopNav";
 import { useAppSettingsState } from "./AppSettings.hooks";
+import { AppSettingsDevelopmentSection } from "./AppSettingsDevelopmentSection";
 import { AgentIterationsSection } from "./AppSettingsIterationsSection";
 import { ModelConfigurationSection } from "./AppSettingsModelSection";
 import { ConnectivitySection, StorageSection, UpdatesSection } from "./AppSettingsStatusSections";
 
 export function AppSettings() {
-  const { appVersion, auth, ghCliStatus, handleCheckForUpdates, handleDownloadUpdate, handleMaxIterationsChange, handleModelChange, saved, settings, storage, updateStatus } = useAppSettingsState();
+  const { appVersion, auth, ghCliStatus, handleAuditModeChange, handleCheckForUpdates, handleDownloadUpdate, handleMaxIterationsChange, handleModelChange, isDevMode, saved, settings, storage, updateStatus } = useAppSettingsState();
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -15,6 +16,7 @@ export function AppSettings() {
           <ConnectivitySection authenticated={auth.authenticated} ghCliStatus={ghCliStatus} login={auth.login} />
           <ModelConfigurationSection onModelChange={handleModelChange} saved={saved} selectedModel={settings.aiModel} />
           <AgentIterationsSection maxIterations={settings.maxIterations ?? 20} onMaxIterationsChange={handleMaxIterationsChange} saved={saved} />
+          {isDevMode && <AppSettingsDevelopmentSection auditMode={settings.auditMode ?? false} onAuditModeChange={handleAuditModeChange} saved={saved} />}
           <StorageSection storage={storage} />
           <UpdatesSection appVersion={appVersion} handleCheckForUpdates={handleCheckForUpdates} handleDownloadUpdate={handleDownloadUpdate} updateStatus={updateStatus} />
         </div>

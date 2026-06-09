@@ -50,9 +50,10 @@ contextBridge.exposeInMainWorld("api", {
   authCheckGhCli: () => ipcRenderer.invoke("auth-check-gh-cli"),
   // App settings
   getAppSettings: () => ipcRenderer.invoke("get-app-settings"),
-  saveAppSettings: (settings: { aiModel: string }) => ipcRenderer.invoke("save-app-settings", settings),
+  saveAppSettings: (settings: { aiModel: string; maxIterations?: number; auditMode?: boolean }) => ipcRenderer.invoke("save-app-settings", settings),
   getStorageInfo: () => ipcRenderer.invoke("get-storage-info"),
   getProjectSize: (id: string) => ipcRenderer.invoke("get-project-size", id),
+  isDevMode: () => ipcRenderer.invoke("is-dev-mode") as Promise<boolean>,
   // Updates
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
