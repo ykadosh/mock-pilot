@@ -45,21 +45,26 @@ function tokenize(s: string): string[] {
   return s.toLowerCase().match(/[a-z0-9]+/g) ?? [];
 }
 
+/** Maximum proportion of tokens that may overlap with the plan item before evidence is treated as a paraphrase (≥70% overlap → reject). */
 const PARAPHRASE_THRESHOLD = 0.7;
+/** Minimum length for a token to count as a "substantive" fresh observation (filters out filler like "is", "a"). */
+const MIN_SUBSTANTIVE_TOKEN_LENGTH = 2;
+/** Number of fresh substantive tokens that always bypass the paraphrase check (concrete evidence). */
+const FRESH_TOKEN_BYPASS = 4;
 
 /**
  * Detect evidence that is just a paraphrase of the plan item (target + action) with no
  * additional concrete observable detail. The bar is generous: the evidence passes as soon
- * as it contains any tokens not already present in the plan item, OR uses ≥4 fresh tokens.
- * This is meant to catch rubber-stamp evidence like "card layout updated as planned" against
- * a plan item of {target: "card layout", action: "update layout"}.
+ * as it contains FRESH_TOKEN_BYPASS or more fresh substantive tokens. This is meant to
+ * catch rubber-stamp evidence like "card layout updated as planned" against a plan item
+ * of {target: "card layout", action: "update layout"}.
  */
 function isParaphraseOfPlan(evidence: string, item: PlannedChange): boolean {
   const evTokens = tokenize(evidence);
   if (evTokens.length === 0) return true;
   const planTokenSet = new Set(tokenize(`${item.target} ${item.action} ${item.approach ?? ""}`));
-  const fresh = evTokens.filter((t) => !planTokenSet.has(t) && t.length > 2);
-  if (fresh.length >= 4) return false;
+  const fresh = evTokens.filter((t) => !planTokenSet.has(t) && t.length > MIN_SUBSTANTIVE_TOKEN_LENGTH);
+  if (fresh.length >= FRESH_TOKEN_BYPASS) return false;
   const overlap = evTokens.length - fresh.length;
   return overlap / evTokens.length >= PARAPHRASE_THRESHOLD;
 }

@@ -481,19 +481,26 @@ function logMetrics({ state, iterations, durationMs, result }: LogMetricsArgs): 
  * Heuristic quality signals — the issue (#84) flags >20% nudge rate and >2× the minimum
  * expected iterations (where the plan size is a rough lower bound) as red flags.
  */
+const MAX_ACCEPTABLE_NUDGE_RATE = 0.2;
+const EXCESSIVE_ITERATION_MULTIPLIER = 2;
+/** Lower bound on planned-mode iterations: 1 plan + 1 modify + 1 verify/finish. */
+const MIN_PLANNED_ITERATIONS = 3;
+/** Extra slack added per plan item on top of MIN_PLANNED_ITERATIONS (rough modify budget). */
+const ITERATIONS_PER_PLAN_ITEM = 2;
+
 function computeQualityWarnings(state: LoopState, iterations: number): string[] {
   const warnings: string[] = [];
   if (iterations > 0) {
     const nudgeRate = state.nudgeCount / iterations;
-    if (nudgeRate > 0.2) {
+    if (nudgeRate > MAX_ACCEPTABLE_NUDGE_RATE) {
       warnings.push(`High nudge rate: ${state.nudgeCount}/${iterations} iterations (${Math.round(nudgeRate * 100)}%) were wasted on text-only responses.`);
     }
   }
-  // Minimum expected iterations for a planned run is roughly: 1 (plan) + 1 (modify) + 1 (verify+finish) = 3,
-  // plus extra modify iterations only if there are many plan items. For single-shot it's 1.
-  const expectedMin = state.singleShot ? 1 : Math.max(3, state.plan.length + 2);
-  if (iterations > expectedMin * 2) {
-    warnings.push(`Loop took ${iterations} iterations, more than 2× the expected minimum of ${expectedMin}. Review the trace for redundant tool calls or wasted nudges.`);
+  // Single-shot mode is expected to complete in 1 iteration; otherwise expect at least
+  // MIN_PLANNED_ITERATIONS, plus ITERATIONS_PER_PLAN_ITEM slack per planned change.
+  const expectedMin = state.singleShot ? 1 : Math.max(MIN_PLANNED_ITERATIONS, state.plan.length + ITERATIONS_PER_PLAN_ITEM);
+  if (iterations > expectedMin * EXCESSIVE_ITERATION_MULTIPLIER) {
+    warnings.push(`Loop took ${iterations} iterations, more than ${EXCESSIVE_ITERATION_MULTIPLIER}× the expected minimum of ${expectedMin}. Review the trace for redundant tool calls or wasted nudges.`);
   }
   if (state.rejectedToolCount > 0) {
     warnings.push(`${state.rejectedToolCount} tool call(s) were rejected by the phase guard — the agent may be confused about phase transitions.`);
