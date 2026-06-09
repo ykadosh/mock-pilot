@@ -35,7 +35,7 @@ function ModelOption({ model, onModelChange, selected }: { model: ModelInfo; onM
   const containerClassName = selected ? "bg-surface-container-high" : "";
   const indicatorClassName = selected ? "border-primary bg-primary" : "border-outline";
   return (
-    <label className={`gap-md px-md py-sm hover:bg-surface-container-high flex cursor-pointer items-center transition-colors ${containerClassName}`}>
+    <label className={`gap-md px-md py-sm hover:bg-surface-container-high relative flex cursor-pointer items-center transition-colors ${containerClassName}`}>
       <input type="radio" name="llm_model" checked={selected} onChange={() => void onModelChange(model.id)} className="sr-only" />
       <div className={`h-3 w-3 flex-shrink-0 rounded-full border-2 ${indicatorClassName}`} />
       <div className="min-w-0 flex-1">

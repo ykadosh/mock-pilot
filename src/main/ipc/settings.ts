@@ -5,7 +5,7 @@ import path from "path";
 import { compareVersions } from "../export";
 import { appSettingsPath, ensureProjectsDir, getDirSize, getProjectDir, getProjectsIndex, projectsDir } from "../projects";
 
-type AppSettings = { aiModel: string; maxIterations?: number };
+type AppSettings = { aiModel: string; maxIterations?: number; auditMode?: boolean };
 type ReleaseAsset = { name: string; browser_download_url: string };
 type ReleaseInfo = { tag_name: string; html_url: string; assets: ReleaseAsset[] };
 
@@ -64,6 +64,10 @@ function getAppVersion() {
   return app.getVersion();
 }
 
+function handleIsDevMode() {
+  return process.env.NODE_ENV === "development";
+}
+
 export function registerSettingsHandlers() {
   ipcMain.handle("get-app-settings", getAppSettings);
   ipcMain.handle("save-app-settings", handleSaveAppSettings);
@@ -73,4 +77,5 @@ export function registerSettingsHandlers() {
   ipcMain.handle("open-external", handleOpenExternal);
   ipcMain.handle("open-project-in-browser", handleOpenProjectInBrowser);
   ipcMain.handle("get-app-version", getAppVersion);
+  ipcMain.handle("is-dev-mode", handleIsDevMode);
 }

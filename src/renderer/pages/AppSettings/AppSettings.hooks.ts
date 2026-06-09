@@ -11,6 +11,8 @@ interface AppSettingsController {
   handleDownloadUpdate: () => void;
   handleMaxIterationsChange: (value: number) => Promise<void>;
   handleModelChange: (modelId: string) => Promise<void>;
+  handleAuditModeChange: (value: boolean) => Promise<void>;
+  isDevMode: boolean;
   saved: boolean;
   settings: AppSettingsData;
   storage: StorageInfo | null;
@@ -23,12 +25,27 @@ async function loadInitialAppSettingsData() {
     window.api.getStorageInfo(),
     window.api.authCheckGhCli(),
     window.api.getAppVersion(),
+    window.api.isDevMode(),
   ]);
 }
 
 function flashSavedState(setSaved: Dispatch<SetStateAction<boolean>>) {
   setSaved(true);
   setTimeout(() => setSaved(false), 2000);
+}
+
+function useSettingMutators(settings: AppSettingsData, setSettings: Dispatch<SetStateAction<AppSettingsData>>, setSaved: Dispatch<SetStateAction<boolean>>) {
+  const update = async <K extends keyof AppSettingsData>(key: K, value: AppSettingsData[K]) => {
+    const next = { ...settings, [key]: value };
+    setSettings(next);
+    await window.api.saveAppSettings(next);
+    flashSavedState(setSaved);
+  };
+  return {
+    handleModelChange: (modelId: string) => update("aiModel", modelId),
+    handleMaxIterationsChange: (value: number) => update("maxIterations", value),
+    handleAuditModeChange: (value: boolean) => update("auditMode", value),
+  };
 }
 
 export function useAppSettingsState(): AppSettingsController {
@@ -38,14 +55,16 @@ export function useAppSettingsState(): AppSettingsController {
   const [ghCliStatus, setGhCliStatus] = useState<GhCliStatus | null>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ checking: false });
   const [appVersion, setAppVersion] = useState("");
+  const [isDevMode, setIsDevMode] = useState(false);
   const auth = useAuth();
 
   useEffect(() => {
-    void loadInitialAppSettingsData().then(([nextSettings, nextStorage, nextGhCliStatus, version]) => {
+    void loadInitialAppSettingsData().then(([nextSettings, nextStorage, nextGhCliStatus, version, devMode]) => {
       if (nextSettings) setSettings(nextSettings);
       setStorage(nextStorage);
       setGhCliStatus(nextGhCliStatus);
       setAppVersion(version);
+      setIsDevMode(devMode);
     });
   }, []);
 
@@ -54,18 +73,7 @@ export function useAppSettingsState(): AppSettingsController {
     setUpdateStatus({ checking: false, ...(await window.api.checkForUpdates()) });
   };
   const handleDownloadUpdate = () => { if (updateStatus.downloadUrl) window.api.openExternal(updateStatus.downloadUrl); };
-  const handleModelChange = async (modelId: string) => {
-    const nextSettings = { ...settings, aiModel: modelId };
-    setSettings(nextSettings);
-    await window.api.saveAppSettings(nextSettings);
-    flashSavedState(setSaved);
-  };
-  const handleMaxIterationsChange = async (value: number) => {
-    const nextSettings = { ...settings, maxIterations: value };
-    setSettings(nextSettings);
-    await window.api.saveAppSettings(nextSettings);
-    flashSavedState(setSaved);
-  };
+  const { handleModelChange, handleMaxIterationsChange, handleAuditModeChange } = useSettingMutators(settings, setSettings, setSaved);
 
-  return { appVersion, auth, ghCliStatus, handleCheckForUpdates, handleDownloadUpdate, handleMaxIterationsChange, handleModelChange, saved, settings, storage, updateStatus };
+  return { appVersion, auth, ghCliStatus, handleCheckForUpdates, handleDownloadUpdate, handleMaxIterationsChange, handleModelChange, handleAuditModeChange, isDevMode, saved, settings, storage, updateStatus };
 }

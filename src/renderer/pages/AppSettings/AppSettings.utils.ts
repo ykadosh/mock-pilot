@@ -6,6 +6,7 @@ export interface StorageInfo {
 export interface AppSettingsData {
   aiModel: string;
   maxIterations?: number;
+  auditMode?: boolean;
 }
 
 export interface GhCliStatus {
