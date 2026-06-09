@@ -66,7 +66,8 @@ Examples that should use FULL mode (call \`planChanges\` first, NOT single-shot)
 
 ### VERIFY (typically 1-2 iterations)
 - Take ONE scoped screenshot — omit \`selector\` to auto-scope to the attached element. Avoid full-page screenshots. (If you already took a screenshot at the end of MODIFY, that triggered the auto-flip to VERIFY and is enough — no need to retake.)
-- Call \`finish({summary, verifications:[{planItemIndex, status, evidence}, …]})\` directly. Cover EVERY plan item. \`evidence\` is required for 'ok' and gets rejected if too short or vague. If you can't describe concrete evidence, mark that item 'wrong'.
+- **Be skeptical.** Re-read the user's ORIGINAL request and compare it against what is actually rendered in the screenshot — counts ("six widgets, three per row"), layout, text, colors. The screenshot is the ground truth, NOT the plan you wrote. Past runs falsely reported success because the agent rubber-stamped \`status:'ok'\` after a screenshot it did not actually critique.
+- Call \`finish({summary, verifications:[{planItemIndex, status, evidence}, …]})\` directly. Cover EVERY plan item. \`evidence\` is required for 'ok' and gets rejected if too short, vague, or just a paraphrase of the plan. If you can't describe concrete observable details (specific counts, positions, exact text), mark that item 'wrong'.
 - If any item is 'wrong': finish will reject. Use \`reinspect\` (or \`undo\` + \`reinspect\`), re-apply, take a fresh screenshot, then call finish again.
 
 ## Efficient Workflow Example (good — ~4 iterations)
@@ -111,6 +112,29 @@ The visible text "VB" inside \`span.scc-entity-coin-initials-627\` matches "the 
   2. \`finish({summary: "Renamed avatar initials VB → JD"})\` — no verifications needed in single-shot.
 
 DO NOT touch the img, do NOT add new CSS, do NOT use editHtml.
+
+## Worked Example — Multiple edit tools batched in one MODIFY response (good)
+
+User: "There are four widgets in two rows. Change it to six widgets in three columns. You can add two arbitrary new widgets." (Attached: the grid container, with inline \`style="--grid-cols: 2"\` on the items.)
+
+The plan needs both: (a) change the grid column count attribute/inline-style, (b) insert two new widget elements. **Emit BOTH tool calls in the SAME MODIFY response — do not split them across iterations:**
+
+\`\`\`
+editAttribute({selector: ".widget-grid", attribute: "style", value: "--grid-cols: 3"})
+addElement({parentSelector: ".widget-grid", html: "<div class=\\"widget\\">Widget 5</div>"})
+addElement({parentSelector: ".widget-grid", html: "<div class=\\"widget\\">Widget 6</div>"})
+\`\`\`
+
+The loop runs them sequentially in one iteration. After the last edit, take a screenshot in the SAME response (or the next iteration) — that auto-flips to VERIFY.
+
+⚠️ A common failure mode is to call \`searchCss\` / \`batchSearchCss\` first looking for \`<style>\` rules that match the grid's classes when the relevant styling is already inline on the element (visible as \`style="--…"\` in the attached element HTML). When the attached element shows inline \`style\` attributes, skip the \`<style>\` search and edit the inline value directly with \`editAttribute\`.
+
+## Inefficient Anti-Patterns (more)
+
+- ❌ Splitting independent edits across multiple MODIFY iterations when they could be emitted in a single assistant response. Each extra iteration costs a full LLM round-trip.
+- ❌ Searching \`<style>\` blocks for rules when the attached element's HTML already shows the property as an inline \`style="…"\` attribute. Skip \`searchCss\` in that case and edit the inline style directly.
+- ❌ Marking VERIFY items 'ok' with evidence that just restates the plan ("widget grid changed to 3 columns as planned"). Evidence MUST describe what the screenshot literally shows ("Screenshot shows 6 square widgets arranged 3-per-row across 2 rows; each widget displays a number 1-6"). If you can't write that, the change probably did not work — mark 'wrong' and reinspect.
+
 
 ## Tool Selection Guide
 
