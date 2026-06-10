@@ -1,6 +1,6 @@
 {
   "name": "mock-pilot",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "MockPilot - Electron app",
   "author": "",
   "main": ".vite/build/main.js",
