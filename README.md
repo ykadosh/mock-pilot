@@ -16,7 +16,7 @@
 
 ---
 
-MockPilot lets you capture live web pages, strip away the noise, and edit the result as a self-contained HTML mockup. Perfect for designers, product managers, and developers who need quick, realistic mockups without firing up Figma.
+MockPilot lets you capture live web pages, turn it into a self-contained HTML mockup, and edit it using natural language. Perfect for designers, product managers, and developers who need quick, realistic mockups without firing up Figma.
 
 <div align="center">
 <img src="screenshot.png" alt="MockPilot editor" width="800" />
