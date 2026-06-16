@@ -55,6 +55,8 @@ export interface AgentLoopResult {
   maxIterationsReached?: boolean;
   /** Conversation messages so far — returned when maxIterationsReached so the caller can resume. */
   messages?: AgentMessage[];
+  /** Non-fatal quality warnings about the run (e.g., excessive nudges, very long loops). */
+  qualityWarnings?: string[];
 }
 
 const FINISH_PREFIX = "__FINISH__:";
@@ -274,13 +276,15 @@ function nudgeHintForPhase(phase: AgentPhase): string {
   switch (phase) {
     case "PLAN": return "Use read-only tools in parallel to gather any info you need, then call `planChanges` with a JSON array of {target, action} describing what you intend to change. Once planned, just call your edit tool — the loop will move you to MODIFY automatically. For a single trivial edit, you may skip `planChanges` and emit the edit tool and `finish` in the same response (single-shot — completes in one iteration, skips VERIFY).";
     case "MODIFY": return "Apply your planned edits (batch into the fewest tool calls). When done, take a screenshot — that moves you to VERIFY automatically.";
-    case "VERIFY": return "Call `finish` directly, passing a `verifications` array (one entry per plan item: {planItemIndex, status:'ok', evidence}) describing what you literally see in the screenshot. Or `reinspect` if the result is wrong.";
+    case "VERIFY": return "Be skeptical: re-read the user's original request, compare it against the screenshot (counts, layout, text), and either call `finish` with a `verifications` array (one entry per plan item: {planItemIndex, status:'ok'|'wrong', evidence}) describing what you literally see, or `reinspect` if the result does not match the request.";
   }
 }
 
-function nudgeMessageForPhase(phase: AgentPhase): string {
+function nudgeMessageForPhase(phase: AgentPhase, nudgeCount: number): string {
   const def = PHASES[phase];
-  return `You must call at least one tool — text-only responses are not allowed. You are in phase ${phase}. ${nudgeHintForPhase(phase)} Allowed tools: ${def.allowedTools.join(", ")}.`;
+  const base = `You must call at least one tool — text-only responses are not allowed. You are in phase ${phase}. ${nudgeHintForPhase(phase)} Allowed tools: ${def.allowedTools.join(", ")}.`;
+  if (nudgeCount <= 1) return base;
+  return `WARNING: You have now wasted ${nudgeCount} iteration(s) responding without a tool call. The next response MUST begin with a tool call, not narration like "Now I will…" or "Let me…". ${base}`;
 }
 
 async function runIteration(iter: IterationContext, iteration: number, maxIterations: number): Promise<AgentLoopResult | null> {
@@ -301,7 +305,7 @@ async function runIteration(iter: IterationContext, iteration: number, maxIterat
     if (content) iter.onProgress?.({ type: "thinking", content });
     iter.messages.push({ role: "assistant", content });
     if (iteration < maxIterations) {
-      iter.messages.push({ role: "user", content: nudgeMessageForPhase(iter.state.phase) });
+      iter.messages.push({ role: "user", content: nudgeMessageForPhase(iter.state.phase, iter.state.nudgeCount) });
       return null;
     }
     return { success: true, html: iter.context.getHtml(), summary: content || "Reached maximum iterations.", iterations: iteration, maxIterationsReached: true, messages: iter.messages };
@@ -464,6 +468,44 @@ function logMetrics({ state, iterations, durationMs, result }: LogMetricsArgs): 
   log(`  Rejected tools:    ${state.rejectedToolCount}`);
   log(`  Success:           ${result.success}`);
   log(`  Max iters reached: ${Boolean(result.maxIterationsReached)}`);
+
+  const warnings = computeQualityWarnings(state, iterations);
+  if (warnings.length > 0) {
+    log("  Quality warnings:");
+    for (const w of warnings) log(`    ⚠ ${w}`);
+    result.qualityWarnings = warnings;
+  }
+}
+
+/**
+ * Heuristic quality signals — the issue (#84) flags >20% nudge rate and >2× the minimum
+ * expected iterations (where the plan size is a rough lower bound) as red flags.
+ */
+const MAX_ACCEPTABLE_NUDGE_RATE = 0.2;
+const EXCESSIVE_ITERATION_MULTIPLIER = 2;
+/** Lower bound on planned-mode iterations: 1 plan + 1 modify + 1 verify/finish. */
+const MIN_PLANNED_ITERATIONS = 3;
+/** Extra slack added per plan item on top of MIN_PLANNED_ITERATIONS (rough modify budget). */
+const ITERATIONS_PER_PLAN_ITEM = 2;
+
+function computeQualityWarnings(state: LoopState, iterations: number): string[] {
+  const warnings: string[] = [];
+  if (iterations > 0) {
+    const nudgeRate = state.nudgeCount / iterations;
+    if (nudgeRate > MAX_ACCEPTABLE_NUDGE_RATE) {
+      warnings.push(`High nudge rate: ${state.nudgeCount}/${iterations} iterations (${Math.round(nudgeRate * 100)}%) were wasted on text-only responses.`);
+    }
+  }
+  // Single-shot mode is expected to complete in 1 iteration; otherwise expect at least
+  // MIN_PLANNED_ITERATIONS, plus ITERATIONS_PER_PLAN_ITEM slack per planned change.
+  const expectedMin = state.singleShot ? 1 : Math.max(MIN_PLANNED_ITERATIONS, state.plan.length + ITERATIONS_PER_PLAN_ITEM);
+  if (iterations > expectedMin * EXCESSIVE_ITERATION_MULTIPLIER) {
+    warnings.push(`Loop took ${iterations} iterations, more than ${EXCESSIVE_ITERATION_MULTIPLIER}× the expected minimum of ${expectedMin}. Review the trace for redundant tool calls or wasted nudges.`);
+  }
+  if (state.rejectedToolCount > 0) {
+    warnings.push(`${state.rejectedToolCount} tool call(s) were rejected by the phase guard — the agent may be confused about phase transitions.`);
+  }
+  return warnings;
 }
 
 function describeNode(el: cheerio.Element, $: cheerio.CheerioAPI): string | null {
@@ -557,9 +599,16 @@ function appendAttachedElements(text: string, attachedElements: NonNullable<Buil
       text += `\nVisible text inside this element (selector → text):\n${visibleLines.join("\n")}`;
       text += `\nIf the user request mentions "text", "letters", "label", "title", "name", or similar, the target is almost certainly one of the items above — use editText on its selector.`;
     }
+    if (hasInlineStyles(el.outerHTML)) {
+      text += `\nNote: this element (or its descendants) carries inline \`style="…"\` attributes. The styling you may want to change is likely already inline — DO NOT call \`searchCss\` / \`batchSearchCss\` looking for matching <style> rules; use \`editAttribute\` to edit the inline \`style\` directly (or \`editCss\` to add a new override rule).`;
+    }
     text += `\nFull outerHTML:\n${el.outerHTML}`;
   }
   return text;
+}
+
+function hasInlineStyles(outerHTML: string): boolean {
+  return /\sstyle\s*=\s*["'][^"']+["']/.test(outerHTML);
 }
 
 function appendImages(text: string, images: NonNullable<BuildUserContentOptions["images"]>): string {
@@ -645,7 +694,7 @@ function nextActionHint(toolName: string, state: LoopState): string {
       const example = indices.length > 0
         ? `[${indices.map((i) => `{"planItemIndex":${i},"status":"ok","evidence":"…what you literally see…"}`).join(",")}]`
         : "[]";
-      return `\n→ Next: call \`finish\` with a \`verifications\` array covering all ${indices.length} plan item(s). Example: verifications=${example}. Describe the actual rendered state, not a paraphrase of the plan.`;
+      return `\n→ Next: call \`finish\` with a \`verifications\` array covering all ${indices.length} plan item(s). Example: verifications=${example}. Be skeptical — re-read the original user request and compare it to what is actually rendered (counts, layout, text). If the screenshot does not clearly show the requested outcome, mark those items 'wrong' and \`reinspect\` rather than rubber-stamping 'ok'. Describe the actual rendered state, not a paraphrase of the plan.`;
     }
   }
 }

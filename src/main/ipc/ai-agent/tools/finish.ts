@@ -41,6 +41,34 @@ function checkAllItemsCovered(verifications: Verification[], plan: PlannedChange
   return null;
 }
 
+function tokenize(s: string): string[] {
+  return s.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+}
+
+/** Maximum proportion of tokens that may overlap with the plan item before evidence is treated as a paraphrase (≥70% overlap → reject). */
+const PARAPHRASE_THRESHOLD = 0.7;
+/** Minimum length for a token to count as a "substantive" fresh observation (filters out filler like "is", "a"). */
+const MIN_SUBSTANTIVE_TOKEN_LENGTH = 2;
+/** Number of fresh substantive tokens that always bypass the paraphrase check (concrete evidence). */
+const FRESH_TOKEN_BYPASS = 4;
+
+/**
+ * Detect evidence that is just a paraphrase of the plan item (target + action) with no
+ * additional concrete observable detail. The bar is generous: the evidence passes as soon
+ * as it contains FRESH_TOKEN_BYPASS or more fresh substantive tokens. This is meant to
+ * catch rubber-stamp evidence like "card layout updated as planned" against a plan item
+ * of {target: "card layout", action: "update layout"}.
+ */
+function isParaphraseOfPlan(evidence: string, item: PlannedChange): boolean {
+  const evTokens = tokenize(evidence);
+  if (evTokens.length === 0) return true;
+  const planTokenSet = new Set(tokenize(`${item.target} ${item.action} ${item.approach ?? ""}`));
+  const fresh = evTokens.filter((t) => !planTokenSet.has(t) && t.length > MIN_SUBSTANTIVE_TOKEN_LENGTH);
+  if (fresh.length >= FRESH_TOKEN_BYPASS) return false;
+  const overlap = evTokens.length - fresh.length;
+  return overlap / evTokens.length >= PARAPHRASE_THRESHOLD;
+}
+
 function validateOneVerification(v: Verification, plan: PlannedChange[]): string | null {
   const idx = Number(v.planItemIndex);
   if (!Number.isInteger(idx) || idx < 0 || idx >= plan.length) {
@@ -53,6 +81,9 @@ function validateOneVerification(v: Verification, plan: PlannedChange[]): string
     const ev = (v.evidence || "").trim();
     if (ev.length < EVIDENCE_MIN_LENGTH) {
       return `Item ${idx} marked 'ok' but evidence is too short (need ≥${EVIDENCE_MIN_LENGTH} chars describing what you literally see in the screenshot/HTML). Do not paraphrase the plan — describe the actual rendered state.`;
+    }
+    if (isParaphraseOfPlan(ev, plan[idx])) {
+      return `Item ${idx} marked 'ok' but evidence appears to be a paraphrase of the plan ("${plan[idx].target}: ${plan[idx].action}") with no concrete observable details. Re-read the user's original request, look at the screenshot, and describe specifics: counts, positions, colors, exact text. If you cannot, mark this item 'wrong' and reinspect.`;
     }
   }
   return null;
@@ -100,7 +131,7 @@ export const finish: ToolDefinition = {
     type: "function",
     function: {
       name: "finish",
-      description: "Call this tool when you have applied all modifications AND inspected the result (screenshot or getElementInfo). For each plan item, include an entry in `verifications` with status 'ok' and concrete evidence describing what you literally see. If anything is wrong, include those items with status='wrong' and notes — finish will be rejected and you should reinspect/undo and re-edit. In single-shot mode, verifications can be omitted.",
+      description: "Call this tool when you have applied all modifications AND inspected the result (screenshot or getElementInfo). For each plan item, include an entry in `verifications` with status 'ok' and concrete evidence describing what you literally see — be skeptical and compare the screenshot against the user's ORIGINAL request (counts, layout, text). If the screenshot does not clearly show the requested outcome, mark items 'wrong' (with notes) and reinspect rather than rubber-stamping. Past runs falsely reported success by paraphrasing the plan instead of describing the actual rendered state. In single-shot mode, verifications can be omitted.",
       parameters: {
         type: "object",
         properties: {
