@@ -81,7 +81,15 @@ async function runScreenshot(context: ToolContext, args: Record<string, unknown>
     context.markInspection?.();
     const byteSize = Math.round(result.buffer.length * 3 / 4);
     const note = autoDefaulted ? ` (auto-scoped to attached element "${selector}")` : "";
-    return `[Screenshot: ${result.width}x${result.height}px, ${byteSize} bytes${note}]\ndata:image/png;base64,${result.buffer}`;
+    const dataUrl = `data:image/png;base64,${result.buffer}`;
+    if (context.pushUserMessageParts) {
+      context.pushUserMessageParts([
+        { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
+        { type: "text", text: `^ Screenshot from takeScreenshot (${result.width}x${result.height}px${note}). Analyze the pixels to verify the change — describe what you literally see.` },
+      ]);
+      return `[Screenshot captured: ${result.width}x${result.height}px, ${byteSize} bytes${note}] The image is attached to the next user message — analyze the pixels there to verify the change.`;
+    }
+    return `[Screenshot: ${result.width}x${result.height}px, ${byteSize} bytes${note}]\n${dataUrl}`;
   } finally {
     await browser.close();
   }

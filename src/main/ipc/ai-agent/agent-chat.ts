@@ -32,6 +32,7 @@ export async function requestAgentChatCompletion(options: AgentChatOptions): Pro
     model: aiModel,
     messages: messages.map(formatMessage),
     tools,
+    tool_choice: "required" as const,
     temperature: 0.2,
     parallel_tool_calls: true,
   };

@@ -81,6 +81,10 @@ interface LoopState {
   toolStats: Map<string, { count: number; ms: number }>;
   /** True once any mutation tool has run. Used to drive MODIFY→VERIFY auto-transition. */
   hasMutated: boolean;
+  /** Parts (image_url / text) queued by tools during execution. Flushed as a single user message
+   *  AFTER all tool results in the batch are appended — inserting a user message between
+   *  assistant.tool_calls and its tool results is a protocol violation (400 Bad Request). */
+  pendingUserParts: object[];
 }
 
 interface CreateContextArgs {
@@ -126,7 +130,7 @@ function createContext({ state, fullHTML, projectAssets, signal, defaultSelector
     get singleShot() { return { value: state.singleShot }; },
     setSingleShot: (value: boolean) => { state.singleShot = value; },
     getImageAttachment: (id: string) => imageAttachments.get(id) ?? null,
-    pushUserMessageParts: (parts: object[]) => { getMessages().push({ role: "user", content: parts }); },
+    pushUserMessageParts: (parts: object[]) => { state.pendingUserParts.push(...parts); },
     getProjectAssetsDir: () => projectId ? path.join(getProjectDir(projectId), "assets") : null,
   };
 }
@@ -235,6 +239,16 @@ function validateBatch(batch: ToolCall[], args: ProcessToolCallsArgs): ToolCall[
   return executable;
 }
 
+/** Flush any user-content parts queued by tools during this batch as a single user message.
+ *  Must be called AFTER all tool result messages in the batch are appended, so the sequence stays
+ *  assistant.tool_calls → tool.result(s) → user(image). Otherwise the API returns 400. */
+function flushPendingUserParts(args: ProcessToolCallsArgs): void {
+  const parts = args.state.pendingUserParts;
+  if (parts.length === 0) return;
+  args.messages.push({ role: "user", content: parts.slice() });
+  parts.length = 0;
+}
+
 async function processToolCalls(args: ProcessToolCallsArgs): Promise<ProcessToolCallsResult> {
   let phaseChanged = false;
   const batches = planExecution(args.toolCalls);
@@ -250,8 +264,13 @@ async function processToolCalls(args: ProcessToolCallsArgs): Promise<ProcessTool
       await runParallelReadOnlyBatch(executable, args);
     } else {
       const finished = await runSequentialBatch(executable, args, phaseChanged);
-      if (finished) return finished;
+      if (finished) {
+        flushPendingUserParts(args);
+        return finished;
+      }
     }
+
+    flushPendingUserParts(args);
 
     phaseChanged = phaseChanged || executable.some((tc) => tc.function.name === "reinspect");
   }
@@ -393,6 +412,7 @@ function createInitialState(initialPhase: AgentPhase): LoopState {
     toolMs: 0,
     toolStats: new Map(),
     hasMutated: false,
+    pendingUserParts: [],
   };
 }
 
