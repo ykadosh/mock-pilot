@@ -65,11 +65,19 @@ function handleAuthLogout() {
 async function handleAuthCheckGhCli() {
   const execFileAsync = promisify(execFile);
   try {
-    const { stdout: token } = await execFileAsync("gh", ["auth", "token"], { encoding: "utf-8", env: shellEnv });
-    if (!token.trim()) return { connected: false };
-    const { stdout: userJson } = await execFileAsync("gh", ["api", "user"], { encoding: "utf-8", env: shellEnv });
-    const user = JSON.parse(userJson.trim());
-    return { connected: true, login: user.login };
+    const { stdout: token } = await execFileAsync("gh", ["auth", "token"], { encoding: "utf-8", env: shellEnv, timeout: 3000 });
+    const trimmed = token.trim();
+    if (!trimmed) return { connected: false };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch("https://api.github.com/user", { headers: { "Authorization": `Bearer ${trimmed}` }, signal: controller.signal });
+      if (!res.ok) return { connected: false };
+      const user = await res.json();
+      return { connected: true, login: user.login };
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch {
     return { connected: false };
   }
