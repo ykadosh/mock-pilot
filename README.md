@@ -19,13 +19,8 @@
 MockPilot lets you capture live web pages, turn it into a self-contained HTML mockup, and edit it using natural language. Perfect for designers, product managers, and developers who need quick, realistic mockups without firing up Figma.
 
 <div align="center">
-<img src="screenshot.png" alt="MockPilot editor" width="800" />
-</div>
 
-<div align="center">
-
-[![Watch the demo](https://img.youtube.com/vi/N2od8DU8a2Q/maxresdefault.jpg)](https://www.youtube.com/watch?v=N2od8DU8a2Q)
-
+[![Watch the demo](screenshot.png)](https://www.youtube.com/watch?v=N2od8DU8a2Q)  
 ▶️ [Watch the demo on YouTube](https://www.youtube.com/watch?v=N2od8DU8a2Q)
 
 </div>
